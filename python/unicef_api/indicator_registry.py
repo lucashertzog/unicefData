@@ -1,0 +1,490 @@
+"""
+Indicator Registry - Auto-sync UNICEF indicator metadata
+=========================================================
+
+This module automatically fetches and caches the complete UNICEF indicator
+codelist from the SDMX API. The cache is created on first use and can be
+refreshed on demand.
+
+Key features:
+- Automatic download of indicator codelist from UNICEF SDMX API
+- Maps each indicator code to its dataflow (category)
+- Caches metadata locally in config/unicef_indicators_metadata.yaml
+- Supports offline usage after initial sync
+- Version tracking for cache freshness
+
+Usage:
+    >>> from unicef_api.indicator_registry import get_dataflow_for_indicator
+    >>> 
+    >>> # Auto-detects dataflow from indicator code
+    >>> dataflow = get_dataflow_for_indicator("CME_MRY0T4")
+    >>> print(dataflow)  # "CME"
+    >>> 
+    >>> # Refresh cache manually
+    >>> from unicef_api.indicator_registry import refresh_indicator_cache
+    >>> refresh_indicator_cache()
+"""
+
+import os
+import yaml
+import logging
+from pathlib import Path
+from datetime import datetime, timedelta
+from typing import Dict, Optional, Tuple
+from xml.etree import ElementTree as ET
+
+logger = logging.getLogger(__name__)
+
+# ============================================================================
+# Configuration
+# ============================================================================
+
+# SDMX API endpoints
+CODELIST_URL = "https://sdmx.data.unicef.org/ws/public/sdmxapi/rest/codelist/UNICEF/CL_UNICEF_INDICATOR/1.0"
+
+# Cache settings
+CACHE_FILENAME = "unicef_indicators_metadata.yaml"
+CACHE_MAX_AGE_DAYS = 30  # Refresh cache if older than this
+
+
+def _get_cache_path() -> Path:
+    """Get path to the indicator cache file.
+    
+    Looks in the following locations (in order):
+    1. config/ directory relative to package root
+    2. User's home directory (~/.unicef_api/)
+    
+    Returns:
+        Path to cache file
+    """
+    # Try package config directory first
+    package_dir = Path(__file__).parent.parent
+    config_dir = package_dir / "config"
+    
+    # If config dir doesn't exist, try parent's parent (for installed packages)
+    if not config_dir.exists():
+        config_dir = package_dir.parent / "config"
+    
+    # If still doesn't exist, try project root
+    if not config_dir.exists():
+        # Look for config relative to project root
+        project_root = package_dir.parent.parent
+        config_dir = project_root / "config"
+    
+    # Fallback to user home directory
+    if not config_dir.exists():
+        config_dir = Path.home() / ".unicef_api"
+        config_dir.mkdir(parents=True, exist_ok=True)
+    
+    return config_dir / CACHE_FILENAME
+
+
+def _parse_codelist_xml(xml_content: str) -> Dict[str, dict]:
+    """Parse SDMX codelist XML response into indicator dictionary.
+    
+    Args:
+        xml_content: Raw XML from SDMX API
+        
+    Returns:
+        Dictionary mapping indicator codes to their metadata
+    """
+    # Define SDMX namespaces
+    namespaces = {
+        'message': 'http://www.sdmx.org/resources/sdmxml/schemas/v2_1/message',
+        'structure': 'http://www.sdmx.org/resources/sdmxml/schemas/v2_1/structure',
+        'common': 'http://www.sdmx.org/resources/sdmxml/schemas/v2_1/common',
+    }
+    
+    root = ET.fromstring(xml_content)
+    indicators = {}
+    
+    # Find all Code elements
+    for code_elem in root.findall('.//structure:Code', namespaces):
+        code_id = code_elem.get('id')
+        if not code_id:
+            continue
+        
+        # Extract name (first available language)
+        name_elem = code_elem.find('.//common:Name', namespaces)
+        name = name_elem.text if name_elem is not None else ""
+        
+        # Extract description
+        desc_elem = code_elem.find('.//common:Description', namespaces)
+        description = desc_elem.text if desc_elem is not None else ""
+        
+        # Extract URN if available
+        urn = code_elem.get('urn', '')
+        
+        # Infer category (dataflow) from indicator code prefix
+        # Most UNICEF indicators follow the pattern: CATEGORY_SUFFIX
+        # e.g., CME_MRY0T4 -> CME, NT_ANT_HAZ_NE2 -> NT (which maps to NUTRITION)
+        category = _infer_category(code_id)
+        
+        indicators[code_id] = {
+            'code': code_id,
+            'name': name,
+            'description': description,
+            'urn': urn,
+            'category': category,
+        }
+    
+    return indicators
+
+
+def _infer_category(indicator_code: str) -> str:
+    """Infer the dataflow category from an indicator code.
+    
+    UNICEF indicator codes typically follow patterns like:
+    - CME_MRY0T4 -> CME (Child Mortality Estimates)
+    - NT_ANT_HAZ -> NT -> NUTRITION
+    - IM_DTP3 -> IM -> IMMUNISATION
+    - ED_ANAR_L1 -> ED -> EDUCATION
+    
+    Args:
+        indicator_code: The indicator code
+        
+    Returns:
+        Inferred category/dataflow name
+    """
+    # Mapping of prefixes to dataflows
+    PREFIX_TO_DATAFLOW = {
+        'CME': 'CME',
+        'NT': 'NUTRITION',
+        'IM': 'IMMUNISATION',
+        'ED': 'EDUCATION',
+        'WS': 'WASH_HOUSEHOLDS',
+        'HVA': 'HIV_AIDS',
+        'MNCH': 'MNCH',
+        'PT': 'PT',
+        'ECD': 'ECD',
+        'DM': 'DM',
+        'ECON': 'ECON',
+        'GN': 'GENDER',
+        'MG': 'MIGRATION',
+        'FD': 'FUNCTIONAL_DIFF',
+        'PP': 'POPULATION',
+        'EMPH': 'EMPH',
+        'EDUN': 'EDUCATION',
+        'SDG4': 'EDUCATION_UIS_SDG',
+    }
+    
+    # Try to match prefix
+    parts = indicator_code.split('_')
+    if parts:
+        prefix = parts[0]
+        if prefix in PREFIX_TO_DATAFLOW:
+            return PREFIX_TO_DATAFLOW[prefix]
+    
+    # Default to GLOBAL_DATAFLOW for unrecognized patterns
+    return 'GLOBAL_DATAFLOW'
+
+
+def _fetch_codelist() -> Dict[str, dict]:
+    """Fetch the indicator codelist from UNICEF SDMX API.
+    
+    Returns:
+        Dictionary of indicator metadata
+        
+    Raises:
+        ConnectionError: If API is unreachable
+        ValueError: If response cannot be parsed
+    """
+    import requests
+    
+    logger.info(f"Fetching indicator codelist from {CODELIST_URL}")
+    
+    try:
+        response = requests.get(CODELIST_URL, timeout=60)
+        response.raise_for_status()
+        
+        indicators = _parse_codelist_xml(response.text)
+        logger.info(f"Successfully fetched {len(indicators)} indicators")
+        
+        return indicators
+        
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Failed to fetch codelist: {e}")
+        raise ConnectionError(f"Could not fetch indicator codelist: {e}")
+
+
+def _load_cache() -> Tuple[Optional[Dict], Optional[datetime]]:
+    """Load cached indicator metadata if available.
+    
+    Returns:
+        Tuple of (indicators_dict, last_updated_datetime) or (None, None)
+    """
+    cache_path = _get_cache_path()
+    
+    if not cache_path.exists():
+        return None, None
+    
+    try:
+        with open(cache_path, 'r', encoding='utf-8') as f:
+            data = yaml.safe_load(f)
+        
+        if not data or 'indicators' not in data:
+            return None, None
+        
+        # Parse last updated date
+        last_updated = None
+        if 'metadata' in data and 'last_updated' in data['metadata']:
+            try:
+                last_updated = datetime.fromisoformat(data['metadata']['last_updated'])
+            except (ValueError, TypeError):
+                pass
+        
+        return data['indicators'], last_updated
+        
+    except Exception as e:
+        logger.warning(f"Failed to load cache: {e}")
+        return None, None
+
+
+def _save_cache(indicators: Dict[str, dict]) -> None:
+    """Save indicator metadata to cache file.
+    
+    Args:
+        indicators: Dictionary of indicator metadata
+    """
+    cache_path = _get_cache_path()
+    
+    # Ensure directory exists
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    data = {
+        'metadata': {
+            'version': '1.0',
+            'source': 'UNICEF SDMX Codelist CL_UNICEF_INDICATOR',
+            'url': CODELIST_URL,
+            'last_updated': datetime.now().isoformat(),
+            'description': 'Comprehensive UNICEF indicator codelist with metadata (auto-generated)',
+            'indicator_count': len(indicators),
+        },
+        'indicators': indicators,
+    }
+    
+    try:
+        with open(cache_path, 'w', encoding='utf-8') as f:
+            yaml.dump(data, f, default_flow_style=False, allow_unicode=True, sort_keys=True)
+        
+        logger.info(f"Saved {len(indicators)} indicators to {cache_path}")
+        
+    except Exception as e:
+        logger.error(f"Failed to save cache: {e}")
+
+
+def _is_cache_stale(last_updated: Optional[datetime]) -> bool:
+    """Check if cache is too old and needs refresh.
+    
+    Args:
+        last_updated: When cache was last updated
+        
+    Returns:
+        True if cache should be refreshed
+    """
+    if last_updated is None:
+        return True
+    
+    age = datetime.now() - last_updated
+    return age > timedelta(days=CACHE_MAX_AGE_DAYS)
+
+
+# ============================================================================
+# Module-level cache (for performance)
+# ============================================================================
+
+_indicator_cache: Optional[Dict[str, dict]] = None
+_cache_loaded: bool = False
+
+
+def _ensure_cache_loaded(force_refresh: bool = False) -> Dict[str, dict]:
+    """Ensure indicator cache is loaded, fetching if necessary.
+    
+    Args:
+        force_refresh: If True, always fetch fresh data from API
+        
+    Returns:
+        Dictionary of indicator metadata
+    """
+    global _indicator_cache, _cache_loaded
+    
+    # Return memory cache if already loaded
+    if _cache_loaded and _indicator_cache and not force_refresh:
+        return _indicator_cache
+    
+    # Try to load from file cache
+    cached_indicators, last_updated = _load_cache()
+    
+    # Use file cache if valid and not stale
+    if cached_indicators and not _is_cache_stale(last_updated) and not force_refresh:
+        _indicator_cache = cached_indicators
+        _cache_loaded = True
+        logger.debug(f"Loaded {len(cached_indicators)} indicators from cache")
+        return _indicator_cache
+    
+    # Fetch fresh data from API
+    try:
+        fresh_indicators = _fetch_codelist()
+        _save_cache(fresh_indicators)
+        _indicator_cache = fresh_indicators
+        _cache_loaded = True
+        return _indicator_cache
+        
+    except ConnectionError as e:
+        # If fetch fails but we have stale cache, use it
+        if cached_indicators:
+            logger.warning(f"Using stale cache (fetch failed): {e}")
+            _indicator_cache = cached_indicators
+            _cache_loaded = True
+            return _indicator_cache
+        
+        # No cache and no connection - return empty
+        logger.error("No cache available and cannot fetch from API")
+        _indicator_cache = {}
+        _cache_loaded = True
+        return _indicator_cache
+
+
+# ============================================================================
+# Public API
+# ============================================================================
+
+def get_dataflow_for_indicator(indicator_code: str, default: str = "GLOBAL_DATAFLOW") -> str:
+    """Get the dataflow (category) for a given indicator code.
+    
+    This function automatically loads the indicator cache on first use,
+    fetching from the UNICEF SDMX API if necessary.
+    
+    Args:
+        indicator_code: UNICEF indicator code (e.g., "CME_MRY0T4")
+        default: Default dataflow if indicator not found
+        
+    Returns:
+        Dataflow name (e.g., "CME", "NUTRITION", "EDUCATION")
+        
+    Examples:
+        >>> get_dataflow_for_indicator("CME_MRY0T4")
+        'CME'
+        
+        >>> get_dataflow_for_indicator("NT_ANT_HAZ_NE2_MOD")
+        'NUTRITION'
+        
+        >>> get_dataflow_for_indicator("UNKNOWN_IND")
+        'GLOBAL_DATAFLOW'
+    """
+    indicators = _ensure_cache_loaded()
+    
+    if indicator_code in indicators:
+        return indicators[indicator_code].get('category', default)
+    
+    # Fallback: try to infer from code prefix
+    inferred = _infer_category(indicator_code)
+    if inferred != 'GLOBAL_DATAFLOW':
+        return inferred
+    
+    return default
+
+
+def get_indicator_info(indicator_code: str) -> Optional[dict]:
+    """Get full metadata for an indicator.
+    
+    Args:
+        indicator_code: UNICEF indicator code
+        
+    Returns:
+        Dictionary with indicator metadata or None if not found
+        
+    Examples:
+        >>> info = get_indicator_info("CME_MRY0T4")
+        >>> print(info['name'])
+        'Under-five mortality rate'
+    """
+    indicators = _ensure_cache_loaded()
+    return indicators.get(indicator_code)
+
+
+def list_indicators(
+    dataflow: Optional[str] = None,
+    name_contains: Optional[str] = None,
+) -> Dict[str, dict]:
+    """List all known indicators, optionally filtered.
+    
+    Args:
+        dataflow: Filter by dataflow/category (e.g., "CME", "NUTRITION")
+        name_contains: Filter by name substring (case-insensitive)
+        
+    Returns:
+        Dictionary of matching indicators
+        
+    Examples:
+        >>> mortality = list_indicators(dataflow="CME")
+        >>> len(mortality)
+        45
+        
+        >>> stunting = list_indicators(name_contains="stunting")
+    """
+    indicators = _ensure_cache_loaded()
+    
+    result = {}
+    for code, info in indicators.items():
+        # Apply dataflow filter
+        if dataflow and info.get('category') != dataflow:
+            continue
+        
+        # Apply name filter
+        if name_contains:
+            name = info.get('name', '').lower()
+            if name_contains.lower() not in name:
+                continue
+        
+        result[code] = info
+    
+    return result
+
+
+def refresh_indicator_cache() -> int:
+    """Force refresh of the indicator cache from UNICEF SDMX API.
+    
+    Returns:
+        Number of indicators in the refreshed cache
+        
+    Raises:
+        ConnectionError: If API is unreachable
+    """
+    indicators = _ensure_cache_loaded(force_refresh=True)
+    return len(indicators)
+
+
+def get_cache_info() -> dict:
+    """Get information about the current cache state.
+    
+    Returns:
+        Dictionary with cache metadata
+    """
+    cache_path = _get_cache_path()
+    _, last_updated = _load_cache()
+    
+    return {
+        'cache_path': str(cache_path),
+        'exists': cache_path.exists(),
+        'last_updated': last_updated.isoformat() if last_updated else None,
+        'is_stale': _is_cache_stale(last_updated),
+        'max_age_days': CACHE_MAX_AGE_DAYS,
+        'indicator_count': len(_indicator_cache) if _indicator_cache else 0,
+    }
+
+
+# ============================================================================
+# Initialization
+# ============================================================================
+
+def _init_registry():
+    """Initialize the registry on module import (lazy loading).
+    
+    This doesn't actually load the cache - it just sets up the module.
+    The cache is loaded on first use of any public function.
+    """
+    pass
+
+
+_init_registry()

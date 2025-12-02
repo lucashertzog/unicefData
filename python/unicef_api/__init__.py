@@ -50,7 +50,14 @@ from unicef_api.sdmx_client import (
 from unicef_api.config import (
     UNICEF_DATAFLOWS,
     COMMON_INDICATORS,
+)
+
+from unicef_api.indicator_registry import (
     get_dataflow_for_indicator,
+    get_indicator_info,
+    list_indicators,
+    refresh_indicator_cache,
+    get_cache_info,
 )
 
 from unicef_api.utils import (

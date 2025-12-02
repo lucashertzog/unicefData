@@ -1,0 +1,511 @@
+#' Indicator Registry - Auto-sync UNICEF Indicator Metadata
+#' 
+#' This module automatically fetches and caches the complete UNICEF indicator
+#' codelist from the SDMX API. The cache is created on first use and can be
+#' refreshed on demand.
+#'
+#' @description
+#' Key features:
+#' - Automatic download of indicator codelist from UNICEF SDMX API
+#' - Maps each indicator code to its dataflow (category)
+#' - Caches metadata locally in config/unicef_indicators_metadata.yaml
+#' - Supports offline usage after initial sync
+#' - Version tracking for cache freshness
+#'
+#' @examples
+#' # Auto-detect dataflow from indicator code
+#' dataflow <- get_dataflow_for_indicator("CME_MRY0T4")
+#' print(dataflow)  # "CME"
+#'
+#' # Refresh cache manually
+#' refresh_indicator_cache()
+#'
+#' @name indicator_registry
+NULL
+
+# ==============================================================================
+# Configuration
+# ==============================================================================
+
+CODELIST_URL <- "https://sdmx.data.unicef.org/ws/public/sdmxapi/rest/codelist/UNICEF/CL_UNICEF_INDICATOR/1.0"
+CACHE_FILENAME <- "unicef_indicators_metadata.yaml"
+CACHE_MAX_AGE_DAYS <- 30
+
+# Module-level cache (environment for mutable state)
+.indicator_cache <- new.env(parent = emptyenv())
+.indicator_cache$data <- NULL
+.indicator_cache$loaded <- FALSE
+
+
+# ==============================================================================
+# Internal Functions
+# ==============================================================================
+
+#' Get path to the indicator cache file
+#' @keywords internal
+.get_cache_path <- function() {
+  # Try package config directory first
+  package_dir <- system.file(package = "unicefdata")
+  if (nzchar(package_dir)) {
+    config_dir <- file.path(package_dir, "config")
+    if (dir.exists(config_dir)) {
+      return(file.path(config_dir, CACHE_FILENAME))
+    }
+  }
+  
+  # Try project root config directory
+  # Look for config relative to R directory
+  script_dir <- getwd()
+  candidates <- c(
+    file.path(script_dir, "config"),
+    file.path(script_dir, "..", "config"),
+    file.path(script_dir, "..", "..", "config")
+  )
+  
+  for (config_dir in candidates) {
+    if (dir.exists(config_dir)) {
+      return(file.path(config_dir, CACHE_FILENAME))
+    }
+  }
+  
+  # Fallback to user home directory
+  home_config <- file.path(Sys.getenv("HOME"), ".unicef_api")
+  if (!dir.exists(home_config)) {
+    dir.create(home_config, recursive = TRUE, showWarnings = FALSE)
+  }
+  
+  return(file.path(home_config, CACHE_FILENAME))
+}
+
+
+#' Infer dataflow category from indicator code prefix
+#' @param indicator_code Character. The indicator code
+#' @return Character. The inferred dataflow name
+#' @keywords internal
+.infer_category <- function(indicator_code) {
+  # Mapping of prefixes to dataflows
+  prefix_map <- list(
+    CME = "CME",
+    NT = "NUTRITION",
+    IM = "IMMUNISATION",
+    ED = "EDUCATION",
+    WS = "WASH_HOUSEHOLDS",
+    HVA = "HIV_AIDS",
+    MNCH = "MNCH",
+    PT = "PT",
+    ECD = "ECD",
+    DM = "DM",
+    ECON = "ECON",
+    GN = "GENDER",
+    MG = "MIGRATION",
+    FD = "FUNCTIONAL_DIFF",
+    PP = "POPULATION",
+    EMPH = "EMPH",
+    EDUN = "EDUCATION",
+    SDG4 = "EDUCATION_UIS_SDG"
+  )
+  
+  # Extract prefix (first part before underscore)
+  parts <- strsplit(indicator_code, "_")[[1]]
+  if (length(parts) > 0) {
+    prefix <- parts[1]
+    if (prefix %in% names(prefix_map)) {
+      return(prefix_map[[prefix]])
+    }
+  }
+  
+  return("GLOBAL_DATAFLOW")
+}
+
+
+#' Parse SDMX codelist XML response
+#' @param xml_content Character. Raw XML content from API
+#' @return Named list of indicator metadata
+#' @keywords internal
+.parse_codelist_xml <- function(xml_content) {
+  # Requires xml2 package
+  if (!requireNamespace("xml2", quietly = TRUE)) {
+    stop("Package 'xml2' is required for parsing SDMX XML. Install with: install.packages('xml2')")
+  }
+  
+  doc <- xml2::read_xml(xml_content)
+  
+  # Define namespaces
+  ns <- c(
+    structure = "http://www.sdmx.org/resources/sdmxml/schemas/v2_1/structure",
+    common = "http://www.sdmx.org/resources/sdmxml/schemas/v2_1/common"
+  )
+  
+  # Find all Code elements
+  codes <- xml2::xml_find_all(doc, ".//structure:Code", ns)
+  
+  indicators <- list()
+  
+  for (code_elem in codes) {
+    code_id <- xml2::xml_attr(code_elem, "id")
+    if (is.na(code_id) || code_id == "") next
+    
+    # Extract name
+    name_elem <- xml2::xml_find_first(code_elem, ".//common:Name", ns)
+    name <- if (!is.na(name_elem)) xml2::xml_text(name_elem) else ""
+    
+    # Extract description
+    desc_elem <- xml2::xml_find_first(code_elem, ".//common:Description", ns)
+    description <- if (!is.na(desc_elem)) xml2::xml_text(desc_elem) else ""
+    
+    # Extract URN
+    urn <- xml2::xml_attr(code_elem, "urn")
+    if (is.na(urn)) urn <- ""
+    
+    # Infer category from code
+    category <- .infer_category(code_id)
+    
+    indicators[[code_id]] <- list(
+      code = code_id,
+      name = name,
+      description = description,
+      urn = urn,
+      category = category
+    )
+  }
+  
+  return(indicators)
+}
+
+
+#' Fetch indicator codelist from UNICEF SDMX API
+#' @return Named list of indicator metadata
+#' @keywords internal
+.fetch_codelist <- function() {
+  message("Fetching indicator codelist from UNICEF SDMX API...")
+  
+  if (!requireNamespace("httr", quietly = TRUE)) {
+    stop("Package 'httr' is required for API requests. Install with: install.packages('httr')")
+  }
+  
+  response <- httr::GET(
+    CODELIST_URL,
+    httr::timeout(60),
+    httr::add_headers(Accept = "application/xml")
+  )
+  
+  if (httr::http_error(response)) {
+    stop(sprintf("Failed to fetch codelist: HTTP %d", httr::status_code(response)))
+  }
+  
+  xml_content <- httr::content(response, as = "text", encoding = "UTF-8")
+  indicators <- .parse_codelist_xml(xml_content)
+  
+  message(sprintf("Successfully fetched %d indicators", length(indicators)))
+  
+  return(indicators)
+}
+
+
+#' Load cached indicator metadata
+#' @return List with 'indicators' and 'last_updated' or NULL
+#' @keywords internal
+.load_cache <- function() {
+  cache_path <- .get_cache_path()
+  
+  if (!file.exists(cache_path)) {
+    return(NULL)
+  }
+  
+  tryCatch({
+    if (!requireNamespace("yaml", quietly = TRUE)) {
+      stop("Package 'yaml' is required. Install with: install.packages('yaml')")
+    }
+    
+    data <- yaml::read_yaml(cache_path)
+    
+    if (is.null(data) || is.null(data$indicators)) {
+      return(NULL)
+    }
+    
+    # Parse last updated
+    last_updated <- NULL
+    if (!is.null(data$metadata) && !is.null(data$metadata$last_updated)) {
+      last_updated <- tryCatch(
+        as.POSIXct(data$metadata$last_updated, format = "%Y-%m-%dT%H:%M:%S"),
+        error = function(e) NULL
+      )
+    }
+    
+    return(list(
+      indicators = data$indicators,
+      last_updated = last_updated
+    ))
+    
+  }, error = function(e) {
+    warning(sprintf("Failed to load cache: %s", e$message))
+    return(NULL)
+  })
+}
+
+
+#' Save indicator metadata to cache file
+#' @param indicators Named list of indicator metadata
+#' @keywords internal
+.save_cache <- function(indicators) {
+  if (!requireNamespace("yaml", quietly = TRUE)) {
+    warning("Package 'yaml' is required to save cache")
+    return(invisible(NULL))
+  }
+  
+  cache_path <- .get_cache_path()
+  
+  # Ensure directory exists
+  cache_dir <- dirname(cache_path)
+  if (!dir.exists(cache_dir)) {
+    dir.create(cache_dir, recursive = TRUE, showWarnings = FALSE)
+  }
+  
+  data <- list(
+    metadata = list(
+      version = "1.0",
+      source = "UNICEF SDMX Codelist CL_UNICEF_INDICATOR",
+      url = CODELIST_URL,
+      last_updated = format(Sys.time(), "%Y-%m-%dT%H:%M:%S"),
+      description = "Comprehensive UNICEF indicator codelist with metadata (auto-generated)",
+      indicator_count = length(indicators)
+    ),
+    indicators = indicators
+  )
+  
+  tryCatch({
+    yaml::write_yaml(data, cache_path)
+    message(sprintf("Saved %d indicators to %s", length(indicators), cache_path))
+  }, error = function(e) {
+    warning(sprintf("Failed to save cache: %s", e$message))
+  })
+  
+  invisible(NULL)
+}
+
+
+#' Check if cache is stale
+#' @param last_updated POSIXct. When cache was last updated
+#' @return Logical. TRUE if cache should be refreshed
+#' @keywords internal
+.is_cache_stale <- function(last_updated) {
+  if (is.null(last_updated)) return(TRUE)
+  
+  age_days <- as.numeric(difftime(Sys.time(), last_updated, units = "days"))
+  return(age_days > CACHE_MAX_AGE_DAYS)
+}
+
+
+#' Ensure indicator cache is loaded
+#' @param force_refresh Logical. If TRUE, always fetch fresh data
+#' @return Named list of indicator metadata
+#' @keywords internal
+.ensure_cache_loaded <- function(force_refresh = FALSE) {
+  # Return memory cache if already loaded
+  if (.indicator_cache$loaded && !is.null(.indicator_cache$data) && !force_refresh) {
+    return(.indicator_cache$data)
+  }
+  
+  # Try to load from file cache
+  cached <- .load_cache()
+  
+  # Use file cache if valid and not stale
+  if (!is.null(cached) && !.is_cache_stale(cached$last_updated) && !force_refresh) {
+    .indicator_cache$data <- cached$indicators
+    .indicator_cache$loaded <- TRUE
+    return(.indicator_cache$data)
+  }
+  
+  # Fetch fresh data from API
+  tryCatch({
+    fresh_indicators <- .fetch_codelist()
+    .save_cache(fresh_indicators)
+    .indicator_cache$data <- fresh_indicators
+    .indicator_cache$loaded <- TRUE
+    return(.indicator_cache$data)
+    
+  }, error = function(e) {
+    # If fetch fails but we have stale cache, use it
+    if (!is.null(cached)) {
+      warning(sprintf("Using stale cache (fetch failed): %s", e$message))
+      .indicator_cache$data <- cached$indicators
+      .indicator_cache$loaded <- TRUE
+      return(.indicator_cache$data)
+    }
+    
+    # No cache and no connection
+    warning("No cache available and cannot fetch from API")
+    .indicator_cache$data <- list()
+    .indicator_cache$loaded <- TRUE
+    return(.indicator_cache$data)
+  })
+}
+
+
+# ==============================================================================
+# Public API
+# ==============================================================================
+
+#' Get Dataflow for Indicator
+#'
+#' Returns the dataflow (category) for a given indicator code. This function
+#' automatically loads the indicator cache on first use, fetching from the
+#' UNICEF SDMX API if necessary.
+#'
+#' @param indicator_code Character. UNICEF indicator code (e.g., "CME_MRY0T4")
+#' @param default Character. Default dataflow if indicator not found (default: "GLOBAL_DATAFLOW")
+#'
+#' @return Character. Dataflow name (e.g., "CME", "NUTRITION", "EDUCATION")
+#'
+#' @examples
+#' \dontrun{
+#' get_dataflow_for_indicator("CME_MRY0T4")
+#' # Returns: "CME"
+#'
+#' get_dataflow_for_indicator("NT_ANT_HAZ_NE2_MOD")
+#' # Returns: "NUTRITION"
+#' }
+#'
+#' @export
+get_dataflow_for_indicator <- function(indicator_code, default = "GLOBAL_DATAFLOW") {
+  indicators <- .ensure_cache_loaded()
+  
+  if (indicator_code %in% names(indicators)) {
+    category <- indicators[[indicator_code]]$category
+    if (!is.null(category) && nzchar(category)) {
+      return(category)
+    }
+  }
+  
+  # Fallback: try to infer from code prefix
+  inferred <- .infer_category(indicator_code)
+  if (inferred != "GLOBAL_DATAFLOW") {
+    return(inferred)
+  }
+  
+  return(default)
+}
+
+
+#' Get Indicator Info
+#'
+#' Returns full metadata for an indicator.
+#'
+#' @param indicator_code Character. UNICEF indicator code
+#'
+#' @return Named list with indicator metadata or NULL if not found
+#'
+#' @examples
+#' \dontrun{
+#' info <- get_indicator_info("CME_MRY0T4")
+#' print(info$name)
+#' # "Under-five mortality rate"
+#' }
+#'
+#' @export
+get_indicator_info <- function(indicator_code) {
+  indicators <- .ensure_cache_loaded()
+  
+  if (indicator_code %in% names(indicators)) {
+    return(indicators[[indicator_code]])
+  }
+  
+  return(NULL)
+}
+
+
+#' List Indicators
+#'
+#' List all known indicators, optionally filtered by dataflow or name.
+#'
+#' @param dataflow Character. Filter by dataflow/category (e.g., "CME", "NUTRITION")
+#' @param name_contains Character. Filter by name substring (case-insensitive)
+#'
+#' @return Named list of matching indicators
+#'
+#' @examples
+#' \dontrun{
+#' # Get all mortality indicators
+#' mortality <- list_indicators(dataflow = "CME")
+#'
+#' # Search by name
+#' stunting <- list_indicators(name_contains = "stunting")
+#' }
+#'
+#' @export
+list_indicators <- function(dataflow = NULL, name_contains = NULL) {
+  indicators <- .ensure_cache_loaded()
+  
+  result <- list()
+  
+  for (code in names(indicators)) {
+    info <- indicators[[code]]
+    
+    # Apply dataflow filter
+    if (!is.null(dataflow)) {
+      if (is.null(info$category) || info$category != dataflow) {
+        next
+      }
+    }
+    
+    # Apply name filter
+    if (!is.null(name_contains)) {
+      name <- if (!is.null(info$name)) tolower(info$name) else ""
+      if (!grepl(tolower(name_contains), name, fixed = TRUE)) {
+        next
+      }
+    }
+    
+    result[[code]] <- info
+  }
+  
+  return(result)
+}
+
+
+#' Refresh Indicator Cache
+#'
+#' Force refresh of the indicator cache from UNICEF SDMX API.
+#'
+#' @return Integer. Number of indicators in the refreshed cache
+#'
+#' @examples
+#' \dontrun{
+#' n <- refresh_indicator_cache()
+#' message(sprintf("Refreshed cache with %d indicators", n))
+#' }
+#'
+#' @export
+refresh_indicator_cache <- function() {
+  indicators <- .ensure_cache_loaded(force_refresh = TRUE)
+  return(length(indicators))
+}
+
+
+#' Get Cache Info
+#'
+#' Get information about the current cache state.
+#'
+#' @return Named list with cache metadata
+#'
+#' @examples
+#' \dontrun{
+#' info <- get_cache_info()
+#' print(info$cache_path)
+#' print(info$indicator_count)
+#' }
+#'
+#' @export
+get_cache_info <- function() {
+  cache_path <- .get_cache_path()
+  cached <- .load_cache()
+  
+  list(
+    cache_path = cache_path,
+    exists = file.exists(cache_path),
+    last_updated = if (!is.null(cached$last_updated)) format(cached$last_updated) else NULL,
+    is_stale = .is_cache_stale(cached$last_updated),
+    max_age_days = CACHE_MAX_AGE_DAYS,
+    indicator_count = if (!is.null(.indicator_cache$data)) length(.indicator_cache$data) else 0
+  )
+}

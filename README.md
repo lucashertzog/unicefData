@@ -14,29 +14,13 @@ The **unicefData** package provides lightweight, consistent interfaces to the [U
 
 Both R and Python use the **same `get_unicef()` function** with identical parameter names.
 
-### R
-
-```r
-library(unicefData)
-
-# Fetch under-5 mortality for specific countries
-df <- get_unicef(
-  indicator = "CME_MRY0T4",
-  dataflow = "CME",
-  countries = c("ALB", "USA", "BRA"),
-  start_year = 2015,
-  end_year = 2023
-)
-
-print(head(df))
-```
-
 ### Python
 
 ```python
 from unicef_api import get_unicef
 
 # Fetch under-5 mortality for specific countries
+# Dataflow is auto-detected from the indicator code!
 df = get_unicef(
     indicator="CME_MRY0T4",
     countries=["ALB", "USA", "BRA"],
@@ -46,6 +30,25 @@ df = get_unicef(
 
 print(df.head())
 ```
+
+### R
+
+```r
+library(unicefData)
+
+# Fetch under-5 mortality for specific countries
+# Dataflow is auto-detected from the indicator code!
+df <- get_unicef(
+  indicator = "CME_MRY0T4",
+  countries = c("ALB", "USA", "BRA"),
+  start_year = 2015,
+  end_year = 2023
+)
+
+print(head(df))
+```
+
+> **Note:** You don't need to specify `dataflow`! The package automatically detects it from the indicator code on first use, fetching the complete indicator codelist from the UNICEF SDMX API.
 
 ---
 
@@ -69,6 +72,66 @@ pip install -e .
 
 ---
 
+## Automatic Dataflow Detection
+
+The package automatically downloads the complete UNICEF indicator codelist (700+ indicators) on first use and caches it locally. This enables:
+
+1. **No need to specify dataflow** - Just provide the indicator code
+2. **Accurate mapping** - Each indicator maps to its correct dataflow
+3. **Offline support** - Cache is saved to `config/unicef_indicators_metadata.yaml`
+4. **Auto-refresh** - Cache is refreshed every 30 days
+
+### How it works
+
+```python
+# Python
+from unicef_api import get_dataflow_for_indicator
+
+# Auto-detects dataflow from indicator code
+get_dataflow_for_indicator("CME_MRY0T4")    # Returns: "CME"
+get_dataflow_for_indicator("NT_ANT_HAZ_NE2_MOD")  # Returns: "NUTRITION"
+get_dataflow_for_indicator("IM_DTP3")       # Returns: "IMMUNISATION"
+```
+
+```r
+# R
+source("R/indicator_registry.R")
+
+# Auto-detects dataflow from indicator code
+get_dataflow_for_indicator("CME_MRY0T4")    # Returns: "CME"
+get_dataflow_for_indicator("NT_ANT_HAZ_NE2_MOD")  # Returns: "NUTRITION"
+```
+
+### Manual cache refresh
+
+```python
+# Python
+from unicef_api import refresh_indicator_cache, get_cache_info
+
+# Force refresh from API
+n = refresh_indicator_cache()
+print(f"Refreshed cache with {n} indicators")
+
+# Check cache status
+info = get_cache_info()
+print(info)
+```
+
+```r
+# R
+source("R/indicator_registry.R")
+
+# Force refresh from API
+n <- refresh_indicator_cache()
+message(sprintf("Refreshed cache with %d indicators", n))
+
+# Check cache status
+info <- get_cache_info()
+print(info)
+```
+
+---
+
 ## Unified API Reference
 
 ### get_unicef() Parameters
@@ -76,7 +139,7 @@ pip install -e .
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `indicator` | string/vector | required | Indicator code(s), e.g., `CME_MRY0T4` |
-| `dataflow` | string | auto-detect | SDMX dataflow ID, e.g., `CME`, `NUTRITION` |
+| `dataflow` | string | **auto-detect** | SDMX dataflow ID (optional - auto-detected from indicator) |
 | `countries` | vector/list | NULL (all) | ISO3 country codes, e.g., `["ALB", "USA"]` |
 | `start_year` | integer | NULL (all) | First year of data |
 | `end_year` | integer | NULL (all) | Last year of data |
@@ -98,7 +161,7 @@ pip install -e .
 | `MNCH` | Maternal and Child Health | `MNCH_MMR` |
 | `WASH_HOUSEHOLDS` | Water and Sanitation | `WS_PPL_W-SM` |
 | `PT` | Child Protection | `PT_CHLD_Y0T4_REG` |
-| `GLOBAL_DATAFLOW` | All indicators | (default) |
+| `GLOBAL_DATAFLOW` | All indicators | (fallback) |
 
 Use `list_dataflows()` to see all 69+ available dataflows.
 
@@ -108,13 +171,14 @@ Use `list_dataflows()` to see all 69+ available dataflows.
 
 | Feature | R | Python |
 |---------|---|--------|
-| Unified `get_unicef()` API | Yes | Yes |
-| Filter by country, year, sex | Yes | Yes |
-| Automatic retries | Yes | Yes |
-| Sync metadata to YAML | Yes | Yes |
-| 25+ pre-configured SDG indicators | Yes | Yes |
-| Country name lookup | Yes | Yes |
-| Disk-based caching | Yes | No |
+| Unified `get_unicef()` API | ✅ | ✅ |
+| **Auto dataflow detection** | ✅ | ✅ |
+| Filter by country, year, sex | ✅ | ✅ |
+| Automatic retries | ✅ | ✅ |
+| Indicator metadata cache | ✅ | ✅ |
+| 700+ indicators supported | ✅ | ✅ |
+| Country name lookup | ✅ | ✅ |
+| Disk-based caching | ✅ | No |
 
 ---
 

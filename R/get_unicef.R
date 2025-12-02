@@ -146,9 +146,54 @@ get_unicef <- function(
     # message("Note: 'retry' is deprecated. Use 'max_retries' instead.")
   }
   
-  # Validate required parameters
+  # Auto-detect dataflow from indicator code if not provided
+  if (is.null(dataflow) && !is.null(indicator)) {
+    # Use indicator registry to get dataflow
+    # Source the registry if get_dataflow_for_indicator is not available
+    if (!exists("get_dataflow_for_indicator", mode = "function")) {
+      registry_path <- file.path(dirname(sys.frame(1)$ofile %||% "."), "indicator_registry.R")
+      if (file.exists(registry_path)) {
+        source(registry_path, local = FALSE)
+      }
+    }
+    
+    # Try to auto-detect dataflow
+    first_indicator <- if (is.character(indicator)) indicator[1] else as.character(indicator)[1]
+    
+    if (exists("get_dataflow_for_indicator", mode = "function")) {
+      dataflow <- get_dataflow_for_indicator(first_indicator)
+      message(sprintf("Auto-detected dataflow '%s' for indicator '%s'", dataflow, first_indicator))
+    } else {
+      # Fallback: infer from indicator prefix
+      parts <- strsplit(first_indicator, "_")[[1]]
+      prefix <- parts[1]
+      
+      # Common prefix mappings
+      prefix_map <- list(
+        CME = "CME",
+        NT = "NUTRITION",
+        IM = "IMMUNISATION",
+        ED = "EDUCATION",
+        WS = "WASH_HOUSEHOLDS",
+        HVA = "HIV_AIDS",
+        MNCH = "MNCH",
+        PT = "PT",
+        ECD = "ECD"
+      )
+      
+      if (prefix %in% names(prefix_map)) {
+        dataflow <- prefix_map[[prefix]]
+        message(sprintf("Inferred dataflow '%s' from indicator prefix '%s'", dataflow, prefix))
+      } else {
+        dataflow <- "GLOBAL_DATAFLOW"
+        message(sprintf("Using GLOBAL_DATAFLOW for indicator '%s'", first_indicator))
+      }
+    }
+  }
+  
+  # Validate: at least dataflow or indicator must be specified
   if (is.null(dataflow)) {
-    stop("'dataflow' is required. Use list_dataflows() to see available options.", call. = FALSE)
+    stop("Either 'indicator' or 'dataflow' must be specified. Use list_dataflows() to see available options.", call. = FALSE)
   }
   detail <- match.arg(detail)
   stopifnot(is.character(dataflow), length(dataflow) >= 1)
