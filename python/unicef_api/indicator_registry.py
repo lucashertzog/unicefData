@@ -50,33 +50,28 @@ CACHE_MAX_AGE_DAYS = 30  # Refresh cache if older than this
 def _get_cache_path() -> Path:
     """Get path to the indicator cache file.
     
-    Looks in the following locations (in order):
-    1. config/ directory relative to package root
-    2. User's home directory (~/.unicef_api/)
+    Saves to Python-specific metadata directory:
+    1. python/metadata/current/ (relative to package)
+    2. Fallback: User's home directory (~/.unicef_api/)
     
     Returns:
         Path to cache file
     """
-    # Try package config directory first
-    package_dir = Path(__file__).parent.parent
-    config_dir = package_dir / "config"
+    # Primary location: python/metadata/current/ directory
+    package_dir = Path(__file__).parent  # unicef_api/
+    python_dir = package_dir.parent  # python/
+    metadata_dir = python_dir / "metadata" / "current"
     
-    # If config dir doesn't exist, try parent's parent (for installed packages)
-    if not config_dir.exists():
-        config_dir = package_dir.parent / "config"
+    # Create directory if it doesn't exist (should already exist from other metadata)
+    if metadata_dir.exists() or python_dir.exists():
+        metadata_dir.mkdir(parents=True, exist_ok=True)
+        return metadata_dir / CACHE_FILENAME
     
-    # If still doesn't exist, try project root
-    if not config_dir.exists():
-        # Look for config relative to project root
-        project_root = package_dir.parent.parent
-        config_dir = project_root / "config"
+    # Fallback to user home directory (for installed packages)
+    home_cache = Path.home() / ".unicef_api"
+    home_cache.mkdir(parents=True, exist_ok=True)
     
-    # Fallback to user home directory
-    if not config_dir.exists():
-        config_dir = Path.home() / ".unicef_api"
-        config_dir.mkdir(parents=True, exist_ok=True)
-    
-    return config_dir / CACHE_FILENAME
+    return home_cache / CACHE_FILENAME
 
 
 def _parse_codelist_xml(xml_content: str) -> Dict[str, dict]:

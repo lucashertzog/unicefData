@@ -5017,7 +5017,7 @@ indicators:
 metadata:
   description: Comprehensive UNICEF indicator codelist with metadata (auto-generated)
   indicator_count: 733
-  last_updated: '2025-12-02T00:22:24.781895'
+  last_updated: '2025-12-02T00:34:19.358995'
   source: UNICEF SDMX Codelist CL_UNICEF_INDICATOR
   url: https://sdmx.data.unicef.org/ws/public/sdmxapi/rest/codelist/UNICEF/CL_UNICEF_INDICATOR/1.0
   version: '1.0'

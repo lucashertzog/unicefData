@@ -42,29 +42,44 @@ CACHE_MAX_AGE_DAYS <- 30
 # ==============================================================================
 
 #' Get path to the indicator cache file
+#' 
+#' Saves to R-specific metadata directory:
+#' 1. R/metadata/current/ (relative to working directory or script location)
+#' 2. Fallback: User's home directory (~/.unicef_api/)
+#' 
 #' @keywords internal
 .get_cache_path <- function() {
-  # Try package config directory first
-  package_dir <- system.file(package = "unicefdata")
-  if (nzchar(package_dir)) {
-    config_dir <- file.path(package_dir, "config")
-    if (dir.exists(config_dir)) {
-      return(file.path(config_dir, CACHE_FILENAME))
+  # Primary location: R/metadata/current/ directory
+  # Try to find R directory relative to current working directory
+  script_dir <- getwd()
+  
+  candidates <- c(
+    file.path(script_dir, "metadata", "current"),           # If in R/
+    file.path(script_dir, "R", "metadata", "current"),      # If in project root
+    file.path(script_dir, "..", "metadata", "current"),     # If in R/examples/
+    file.path(script_dir, "..", "R", "metadata", "current") # If in project subdirectory
+  )
+  
+  for (metadata_dir in candidates) {
+    parent_dir <- dirname(metadata_dir)
+    # Check if parent exists (metadata/ directory)
+    if (dir.exists(dirname(parent_dir))) {
+      # Create current/ if needed
+      if (!dir.exists(metadata_dir)) {
+        dir.create(metadata_dir, recursive = TRUE, showWarnings = FALSE)
+      }
+      if (dir.exists(metadata_dir)) {
+        return(file.path(metadata_dir, CACHE_FILENAME))
+      }
     }
   }
   
-  # Try project root config directory
-  # Look for config relative to R directory
-  script_dir <- getwd()
-  candidates <- c(
-    file.path(script_dir, "config"),
-    file.path(script_dir, "..", "config"),
-    file.path(script_dir, "..", "..", "config")
-  )
-  
-  for (config_dir in candidates) {
-    if (dir.exists(config_dir)) {
-      return(file.path(config_dir, CACHE_FILENAME))
+  # Try package installation directory
+  package_dir <- system.file(package = "unicefdata")
+  if (nzchar(package_dir)) {
+    metadata_dir <- file.path(package_dir, "metadata", "current")
+    if (dir.exists(metadata_dir)) {
+      return(file.path(metadata_dir, CACHE_FILENAME))
     }
   }
   
@@ -76,7 +91,6 @@ CACHE_MAX_AGE_DAYS <- 30
   
   return(file.path(home_config, CACHE_FILENAME))
 }
-
 
 #' Infer dataflow category from indicator code prefix
 #' @param indicator_code Character. The indicator code
