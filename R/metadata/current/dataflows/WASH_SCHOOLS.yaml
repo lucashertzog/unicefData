@@ -1,0 +1,83 @@
+id: WASH_SCHOOLS
+name: WASH Schools
+version: '1.0'
+agency: UNICEF
+synced_at: '2025-12-02T21:31:12Z'
+dimensions:
+- id: REF_AREA
+  position: 1
+  codelist: CL_COUNTRY
+  top_values:
+  - KHM
+  - CIV
+  - GHA
+  - FJI
+  - GAB
+  - UNICEF_WCARO
+  - TCD
+  - ARM
+  - NPL
+  - PER
+- id: INDICATOR
+  position: 2
+  codelist: CL_UNICEF_INDICATOR
+  top_values:
+  - WS_SCH_W-I
+  - WS_SCH_W-B
+  - WS_SCH_W-L
+  - WS_SCH_W-N
+- id: SERVICE_TYPE
+  position: 3
+  codelist: CL_WASH_SERVICE_TYPE
+  top_values: WAT
+- id: SCH_TYPE
+  position: 4
+  codelist: CL_SCHOOL_TYPE
+  top_values:
+  - _T
+  - PRI_SCH
+  - SEC_SCH
+  - PRE_SCH
+- id: RESIDENCE
+  position: 5
+  codelist: CL_RESIDENCE
+  top_values:
+  - _T
+  - R
+  - U
+time_dimension: TIME_PERIOD
+primary_measure: OBS_VALUE
+attributes:
+- id: UNIT_MULTIPLIER
+  codelist: CL_UNIT_MULT
+  top_values: []
+- id: UNIT_MEASURE
+  codelist: CL_UNIT_MEASURE
+  top_values: PCNT
+- id: SERIES_FOOTNOTE
+  codelist: ~
+  top_values: []
+- id: SOURCE_LINK
+  codelist: ~
+  top_values: []
+- id: OBS_STATUS
+  codelist: CL_OBS_STATUS
+  top_values: []
+- id: OBS_CONF
+  codelist: CL_CONF_STATUS
+  top_values: []
+- id: DATA_SOURCE
+  codelist: ~
+  top_values: WHO/UNICEF Joint Monitoring Programme ()
+- id: TIME_PERIOD_METHOD
+  codelist: ~
+  top_values: []
+- id: COVERAGE_TIME
+  codelist: ~
+  top_values: []
+- id: FREQ_COLL
+  codelist: CL_FREQ_COLL
+  top_values: []
+- id: OBS_FOOTNOTE
+  codelist: ~
+  top_values: []

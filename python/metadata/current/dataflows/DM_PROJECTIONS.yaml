@@ -1,0 +1,82 @@
+id: DM_PROJECTIONS
+name: Projection Demography
+version: '1.0'
+agency: UNICEF
+synced_at: '2025-12-02T21:22:25.399601+00:00'
+dimensions:
+- id: REF_AREA
+  position: 1
+  codelist: CL_COUNTRY
+  top_values:
+  - BDI
+  - COM
+  - DJI
+  - ERI
+  - ETH
+  - KEN
+  - MDG
+  - MWI
+  - MUS
+  - MYT
+- id: INDICATOR
+  position: 2
+  codelist: CL_UNICEF_INDICATOR
+  top_values:
+  - DM_POP_TOT
+- id: RESIDENCE
+  position: 3
+  codelist: CL_RESIDENCE
+  top_values:
+  - _T
+- id: SEX
+  position: 4
+  codelist: CL_SEX
+  top_values:
+  - _T
+- id: AGE
+  position: 5
+  codelist: CL_AGE
+  top_values:
+  - _T
+time_dimension: TIME_PERIOD
+primary_measure: null
+attributes:
+- id: OBS_STATUS
+  codelist: CL_OBS_STATUS
+  top_values:
+  - PR
+- id: OBS_CONF
+  codelist: CL_CONF_STATUS
+  top_values: []
+- id: DATA_SOURCE
+  codelist: null
+  top_values:
+  - United Nations, Department of Economic and Social Affairs, Population Division
+    (2024). World Population Prospects 2024.
+- id: UNIT_MEASURE
+  codelist: CL_UNIT_MEASURE
+  top_values:
+  - PS
+- id: UNIT_MULTIPLIER
+  codelist: CL_UNIT_MULT
+  top_values:
+  - '3'
+- id: COVERAGE_TIME
+  codelist: null
+  top_values: []
+- id: FREQ_COLL
+  codelist: CL_FREQ_COLL
+  top_values: []
+- id: SOURCE_LINK
+  codelist: null
+  top_values:
+  - https://population.un.org/wpp/
+- id: TIME_PERIOD_METHOD
+  codelist: null
+  top_values: []
+- id: SERIES_FOOTNOTE
+  codelist: null
+  top_values: []
+- id: OBS_FOOTNOTE
+  codelist: null
+  top_values: []

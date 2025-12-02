@@ -1,0 +1,141 @@
+id: CME_SUBNAT_NGA
+name: CME Nigeria
+version: '1.0'
+agency: UNICEF
+synced_at: '2025-12-02T21:22:01.762143+00:00'
+dimensions:
+- id: REF_AREA
+  position: 1
+  codelist: CL_CME_REF_AREA_SUBNAT
+  top_values:
+  - NGA-10_1
+  - NGA-11_1
+  - NGA-12_1
+  - NGA-13_1
+  - NGA-14_1
+  - NGA-15_1
+  - NGA-16_1
+  - NGA-17_1
+  - NGA-18_1
+  - NGA-19_1
+- id: INDICATOR
+  position: 2
+  codelist: CL_INDICATOR_CME
+  top_values:
+  - MRM0
+  - MRY0T4
+- id: SEX
+  position: 3
+  codelist: CL_SEX
+  top_values:
+  - _T
+- id: WEALTH_QUINTILE
+  position: 4
+  codelist: CL_WEALTH_QUINTILE
+  top_values:
+  - _T
+- id: SERIES_NAME
+  position: 5
+  codelist: CL_SERIES_CME
+  top_values:
+  - UN_IGME
+- id: SERIES_YEAR
+  position: 6
+  codelist: CL_SERIES_YEAR_CME
+  top_values:
+  - '2021'
+time_dimension: TIME_PERIOD
+primary_measure: null
+attributes:
+- id: COUNTRY_NOTES
+  codelist: null
+  top_values: []
+- id: REGIONAL_GROUP
+  codelist: CL_REGIONAL_GROUPS
+  top_values: []
+- id: CONNECTION
+  codelist: null
+  top_values: []
+- id: DEATH_CATEGORY
+  codelist: null
+  top_values: []
+- id: CATEGORY
+  codelist: null
+  top_values: []
+- id: OBS_STATUS
+  codelist: CL_OBS_STATUS_CME
+  top_values:
+  - A
+- id: UNIT_MEASURE
+  codelist: CL_UNIT_MEASURE
+  top_values:
+  - D_PER_1000_B
+- id: SERIES_CATEGORY
+  codelist: CL_SERIES_CATEGORY_CME
+  top_values: []
+- id: SERIES_TYPE
+  codelist: CL_SERIES_TYPE_CME
+  top_values: []
+- id: STD_ERR
+  codelist: null
+  top_values: []
+- id: REF_DATE
+  codelist: null
+  top_values:
+  - '2020'
+  - '2021'
+- id: AGE_GROUP_OF_WOMEN
+  codelist: CL_AGE
+  top_values: []
+- id: TIME_SINCE_FIRST_BIRTH
+  codelist: CL_TSFB_CME
+  top_values: []
+- id: DEFINITION
+  codelist: null
+  top_values: []
+- id: INTERVAL
+  codelist: null
+  top_values:
+  - '1'
+- id: SERIES_METHOD
+  codelist: CL_METHOD_CME
+  top_values: []
+- id: LOWER_BOUND
+  codelist: null
+  top_values:
+  - '19.6709048503053'
+  - '19.1043516084517'
+  - '51.3828333828421'
+  - '50.0294153807079'
+  - '27.6848053719767'
+  - '26.6652478364725'
+  - '78.5123735585764'
+  - '75.4519205073239'
+  - '22.6679070084469'
+  - '21.7813577889941'
+- id: UPPER_BOUND
+  codelist: null
+  top_values:
+  - '34.1184892793018'
+  - '34.3117522396866'
+  - '85.6337501978863'
+  - '86.3723601170727'
+  - '48.1500075220193'
+  - '48.2065421314913'
+  - '121.310359467363'
+  - '119.115595341457'
+  - '38.7129840993667'
+  - '38.7345962866114'
+- id: STATUS
+  codelist: null
+  top_values: []
+- id: YEAR_TO_ACHIEVE
+  codelist: null
+  top_values: []
+- id: MODEL
+  codelist: CL_MODEL
+  top_values: []
+- id: ADMIN_LEVEL
+  codelist: CL_ADMIN_LEVEL
+  top_values:
+  - '1'

@@ -1,0 +1,159 @@
+id: CME_SUBNAT_MDG
+name: CME Madagascar
+version: '1.0'
+agency: UNICEF
+synced_at: '2025-12-02T21:21:52.702635+00:00'
+dimensions:
+- id: REF_AREA
+  position: 1
+  codelist: CL_CME_REF_AREA_SUBNAT
+  top_values:
+  - MDG-1-1_1
+  - MDG-1-2_1
+  - MDG-1-3_1
+  - MDG-1-4_1
+  - MDG-1_1
+  - MDG-2-1_1
+  - MDG-2-2_1
+  - MDG-2_1
+  - MDG-3-1_1
+  - MDG-3-2_1
+- id: INDICATOR
+  position: 2
+  codelist: CL_INDICATOR_CME
+  top_values:
+  - MRM0
+  - MRY0T4
+- id: SEX
+  position: 3
+  codelist: CL_SEX
+  top_values:
+  - _T
+- id: WEALTH_QUINTILE
+  position: 4
+  codelist: CL_WEALTH_QUINTILE
+  top_values:
+  - _T
+- id: SERIES_NAME
+  position: 5
+  codelist: CL_SERIES_CME
+  top_values:
+  - UN_IGME
+  - '1992'
+- id: SERIES_YEAR
+  position: 6
+  codelist: CL_SERIES_YEAR_CME
+  top_values:
+  - '2021'
+time_dimension: TIME_PERIOD
+primary_measure: null
+attributes:
+- id: COUNTRY_NOTES
+  codelist: null
+  top_values: []
+- id: REGIONAL_GROUP
+  codelist: CL_REGIONAL_GROUPS
+  top_values: []
+- id: CONNECTION
+  codelist: null
+  top_values: []
+- id: DEATH_CATEGORY
+  codelist: null
+  top_values: []
+- id: CATEGORY
+  codelist: null
+  top_values: []
+- id: OBS_STATUS
+  codelist: CL_OBS_STATUS_CME
+  top_values:
+  - A
+  - IN
+- id: UNIT_MEASURE
+  codelist: CL_UNIT_MEASURE
+  top_values:
+  - D_PER_1000_B
+- id: SERIES_CATEGORY
+  codelist: CL_SERIES_CATEGORY_CME
+  top_values:
+  - DHS
+- id: SERIES_TYPE
+  codelist: CL_SERIES_TYPE_CME
+  top_values:
+  - D
+- id: STD_ERR
+  codelist: null
+  top_values:
+  - '9.070394068599073'
+  - '10.43588913882933'
+  - '10.77421204973152'
+  - '16.35073779996328'
+  - '7.974764376891579'
+  - '16.05551349843313'
+  - '12.8498068752134'
+  - '15.32990817489108'
+  - '5.880183178432633'
+  - '7.184626546078244'
+- id: REF_DATE
+  codelist: null
+  top_values:
+  - '2020.1'
+  - '2020'
+  - '2021'
+- id: AGE_GROUP_OF_WOMEN
+  codelist: CL_AGE
+  top_values: []
+- id: TIME_SINCE_FIRST_BIRTH
+  codelist: CL_TSFB_CME
+  top_values: []
+- id: DEFINITION
+  codelist: null
+  top_values: []
+- id: INTERVAL
+  codelist: null
+  top_values:
+  - '1'
+  - '2.2'
+- id: SERIES_METHOD
+  codelist: CL_METHOD_CME
+  top_values:
+  - FBH
+- id: LOWER_BOUND
+  codelist: null
+  top_values:
+  - '20.1450526892066'
+  - '19.4420335554542'
+  - '46.3889616437727'
+  - '44.9409093465251'
+  - '24.0471991956385'
+  - '22.8375032590338'
+  - '65.3993263908742'
+  - '64.2038597966328'
+  - '17.3355771755933'
+  - '17.1224578220416'
+- id: UPPER_BOUND
+  codelist: null
+  top_values:
+  - '31.9323981716801'
+  - '32.7439162861451'
+  - '64.5677834481113'
+  - '65.9467632131128'
+  - '38.6313986595005'
+  - '39.0802714396227'
+  - '94.1266033173022'
+  - '96.6347576636884'
+  - '29.473469739245'
+  - '30.425940936821'
+- id: STATUS
+  codelist: null
+  top_values: []
+- id: YEAR_TO_ACHIEVE
+  codelist: null
+  top_values: []
+- id: MODEL
+  codelist: CL_MODEL
+  top_values: []
+- id: ADMIN_LEVEL
+  codelist: CL_ADMIN_LEVEL
+  top_values:
+  - '2'
+  - '1'

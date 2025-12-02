@@ -1,0 +1,72 @@
+id: ECONOMIC
+name: Economic
+version: '1.0'
+agency: UNICEF
+synced_at: '2025-12-02T21:30:29Z'
+dimensions:
+- id: REF_AREA
+  position: 1
+  codelist: CL_COUNTRY
+  top_values:
+  - AFG
+  - AGO
+  - ALB
+  - ARG
+  - ARM
+  - AU_AFRICA
+  - AU_CENTRAL_AFRICA
+  - AU_EASTERN_AFRICA
+  - AU_SOUTHERN_AFRICA
+  - AUREC_COMESA
+- id: INDICATOR
+  position: 2
+  codelist: CL_UNICEF_INDICATOR
+  top_values:
+  - ECON_GVT_HLTH_EXP_PTGDP
+  - ECON_GVT_HLTH_EXP_PTEXP
+  - ECON_GVT_EDU_EXP_PTEXP
+  - ECON_GVT_EXP_PTGDP
+  - ECON_SOC_PRO_EXP_PTEXP
+  - ECON_GVT_EDU_EXP_PTGDP
+  - ECON_ODA_INFLOW_USD
+  - ECON_ODA_INFLOW_PTGNI
+  - ECON_GVT_REV_PTGDP
+  - ECON_SOC_PRO_EXP_PTGDP
+time_dimension: TIME_PERIOD
+primary_measure: OBS_VALUE
+attributes:
+- id: SOWC_FLAG_A
+  codelist: CL_OBS_SOWC_NOTES
+  top_values: []
+- id: TIME_PERIOD_METHOD
+  codelist: CL_TIME_PERIOD_METHOD
+  top_values: []
+- id: FREQ_COLL
+  codelist: CL_FREQ_COLL
+  top_values: []
+- id: SERIES_FOOTNOTE
+  codelist: ~
+  top_values: []
+- id: OBS_FOOTNOTE
+  codelist: ~
+  top_values: []
+- id: UNIT_MULTIPLIER
+  codelist: CL_UNIT_MULT
+  top_values: '6'
+- id: UNIT_MEASURE
+  codelist: CL_UNIT_MEASURE
+  top_values:
+  - PCNT
+  - USD
+- id: OBS_STATUS
+  codelist: CL_OBS_STATUS
+  top_values: []
+- id: OBS_CONF
+  codelist: CL_CONF_STATUS
+  top_values: []
+- id: DATA_SOURCE
+  codelist: ~
+  top_values:
+  - World Bank World Developent Indicators
+  - UNICEF Aggregates
+  - World Bank ASPIRE

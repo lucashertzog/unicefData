@@ -1,0 +1,88 @@
+id: WASH_HOUSEHOLDS
+name: WASH Households
+version: '1.0'
+agency: UNICEF
+synced_at: '2025-12-02T21:31:05Z'
+dimensions:
+- id: REF_AREA
+  position: 1
+  codelist: CL_COUNTRY
+  top_values:
+  - PHL
+  - BEN
+  - UNICEF_ROSA
+  - AU_NORTHERN_AFRICA
+  - AU_SOUTHERN_AFRICA
+  - TUV
+  - AUREC_COMESA
+  - AUREC_EAC
+  - ECU
+  - ETH
+- id: INDICATOR
+  position: 2
+  codelist: CL_UNICEF_INDICATOR
+  top_values:
+  - WS_PPL_S-UI
+  - WS_PPL_W-P
+  - WS_PPL_W-PRE
+  - WS_PPL_W-UI
+  - WS_PPL_W-I
+  - WS_PPL_W-ALB
+  - WS_PPL_W-L
+  - WS_PPL_S-L
+  - WS_PPL_S-LAT
+  - WS_PPL_S-OD
+- id: SERVICE_TYPE
+  position: 3
+  codelist: CL_WASH_SERVICE_TYPE
+  top_values:
+  - SAN
+  - WAT
+  - HYG
+- id: WEALTH_QUINTILE
+  position: 4
+  codelist: CL_WEALTH_QUINTILE
+  top_values: _T
+- id: RESIDENCE
+  position: 5
+  codelist: CL_RESIDENCE
+  top_values:
+  - _T
+  - U
+  - R
+time_dimension: TIME_PERIOD
+primary_measure: OBS_VALUE
+attributes:
+- id: UNIT_MULTIPLIER
+  codelist: CL_UNIT_MULT
+  top_values: []
+- id: UNIT_MEASURE
+  codelist: CL_UNIT_MEASURE
+  top_values: PCNT
+- id: SERIES_FOOTNOTE
+  codelist: ~
+  top_values: []
+- id: SOURCE_LINK
+  codelist: ~
+  top_values: []
+- id: OBS_STATUS
+  codelist: CL_OBS_STATUS
+  top_values: []
+- id: OBS_CONF
+  codelist: CL_CONF_STATUS
+  top_values: []
+- id: DATA_SOURCE
+  codelist: ~
+  top_values: WHO/UNICEF Joint Monitoring Programme ()
+- id: TIME_PERIOD_METHOD
+  codelist: ~
+  top_values: []
+- id: COVERAGE_TIME
+  codelist: ~
+  top_values: []
+- id: FREQ_COLL
+  codelist: CL_FREQ_COLL
+  top_values: []
+- id: OBS_FOOTNOTE
+  codelist: ~
+  top_values: []

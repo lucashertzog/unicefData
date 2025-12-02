@@ -1,0 +1,93 @@
+id: CME_CAUSE_OF_DEATH
+name: CME Cause of death
+version: '1.0'
+agency: UNICEF
+synced_at: '2025-12-02T21:21:18.623093+00:00'
+dimensions:
+- id: REF_AREA
+  position: 1
+  codelist: CL_REF_AREA_SDG
+  top_values:
+  - AFG
+  - AGO
+  - ALB
+  - AND
+  - ARE
+  - ARG
+  - ARM
+  - ATG
+  - AUS
+  - AUT
+- id: INDICATOR
+  position: 2
+  codelist: CME_CAUSE_OF_DEATH_SER_TYPE
+  top_values:
+  - DEATHS
+  - FRACTION
+  - RATE
+- id: CAUSE_OF_DEATH
+  position: 3
+  codelist: CME_CAUSE_OF_DEATH_INDICATOR
+  top_values:
+  - DIARRHOEAL
+  - ASPHY_TRAUMA
+- id: SEX
+  position: 4
+  codelist: CME_CAUSE_OF_DEATH_SEX
+  top_values:
+  - _T
+- id: AGE_GROUP
+  position: 5
+  codelist: CL_CME_CAUSE_OF_DEATH_AGE
+  top_values:
+  - M1T59
+  - Y0T4
+  - M0
+  - Y10T14
+  - Y10T19
+  - Y5T14
+  - Y5T19
+  - Y5T9
+- id: SERIES_NAME
+  position: 6
+  codelist: null
+  top_values:
+  - CA CODE
+time_dimension: TIME_PERIOD
+primary_measure: null
+attributes:
+- id: UNIT_MEASURE
+  codelist: CL_UNIT_MEASURE
+  top_values:
+  - D
+  - PCNT
+  - D_PER_1000_B
+  - D_PER_1000_5
+  - D_PER_1000_1M
+  - D_PER_1000_10
+- id: LOWER_BOUND
+  codelist: null
+  top_values:
+  - '0.0'
+  - '1.0'
+  - '2.0'
+  - '3.0'
+  - '6.0'
+  - '4.0'
+  - '5.0'
+  - '7.0'
+  - '10.0'
+  - '9.0'
+- id: UPPER_BOUND
+  codelist: null
+  top_values:
+  - '0.0'
+  - '1.0'
+  - '2.0'
+  - '3.0'
+  - '4.0'
+  - '5.0'
+  - '0.01'
+  - '6.0'
+  - '7.0'
+  - '10.0'

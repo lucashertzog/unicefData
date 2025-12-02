@@ -1,0 +1,222 @@
+id: PT
+name: Child Protection
+version: '1.0'
+agency: UNICEF
+synced_at: '2025-12-02T21:23:17.874194+00:00'
+dimensions:
+- id: REF_AREA
+  position: 1
+  codelist: CL_COUNTRY
+  top_values:
+  - CIV
+  - SWZ
+  - BFA
+  - TUN
+  - BEN
+  - LAO
+  - LBR
+  - NGA
+  - THA
+  - MWI
+- id: INDICATOR
+  position: 2
+  codelist: CL_UNICEF_INDICATOR
+  top_values:
+  - PT_CHLD_Y0T4_REG
+  - PT_F_15-49_W-BTNG
+  - PT_M_15-49_W-BTNG
+  - PT_CHLD_1-14_PS-PSY-V_CGVR
+  - PT_ADLT_PS_NEC
+  - PT_CHLD_1-14_PS-PSY-V_CGVR_TND
+  - PT_CHLD_DN
+  - PT_CHLD_RES-CARE
+  - PT_ST_13-15_BUL_30-DYS
+  - PT_ADLS_10-14_LBR_HC
+- id: SEX
+  position: 3
+  codelist: CL_SEX
+  top_values:
+  - _T
+  - F
+  - M
+- id: AGE
+  position: 4
+  codelist: CL_AGE
+  top_values:
+  - Y15T49
+  - Y0T4
+  - Y1T14
+  - Y5T17
+  - _T
+  - Y10T14
+  - Y0T17
+  - Y13T15
+  - Y15T19
+  - Y20T24
+- id: EDUCATION_LEVEL
+  position: 5
+  codelist: CL_EDU_LEVEL
+  top_values:
+  - _T
+  - AGG_3S_H
+  - ISCED11_1
+  - ISCED11A_01
+  - AGG_0_1
+  - NSC
+- id: WEALTH_QUINTILE
+  position: 6
+  codelist: CL_WEALTH_QUINTILE
+  top_values:
+  - _T
+  - Q1
+  - Q2
+  - Q3
+  - Q4
+  - Q5
+  - B40
+  - R60
+- id: RESIDENCE
+  position: 7
+  codelist: CL_RESIDENCE
+  top_values:
+  - _T
+  - U
+  - R
+- id: NUMBER_CHLD
+  position: 8
+  codelist: CL_NUMBER_CHLD
+  top_values:
+  - _T
+time_dimension: TIME_PERIOD
+primary_measure: null
+attributes:
+- id: SOWC_FLAG_F
+  codelist: CL_OBS_SOWC_NOTES
+  top_values: []
+- id: SOWC_FLAG_E
+  codelist: CL_OBS_SOWC_NOTES
+  top_values:
+  - v
+- id: SOWC_FLAG_D
+  codelist: CL_OBS_SOWC_NOTES
+  top_values:
+  - i
+- id: SOWC_FLAG_C
+  codelist: CL_OBS_SOWC_NOTES
+  top_values:
+  - p
+- id: SOWC_FLAG_A
+  codelist: CL_OBS_SOWC_NOTES
+  top_values: []
+- id: SOWC_FLAG_B
+  codelist: CL_OBS_SOWC_NOTES
+  top_values:
+  - y
+- id: UNIT_MULTIPLIER
+  codelist: CL_UNIT_MULT
+  top_values: []
+- id: UNIT_MEASURE
+  codelist: CL_UNIT_MEASURE
+  top_values:
+  - PCNT
+  - RATE_100000
+- id: OBS_STATUS
+  codelist: CL_OBS_STATUS
+  top_values:
+  - RP
+  - RA
+  - E
+  - U
+- id: OBS_CONF
+  codelist: CL_CONF_STATUS
+  top_values:
+  - F
+- id: DATA_SOURCE
+  codelist: null
+  top_values:
+  - MICS 2019-20
+  - MICS 2023
+  - DHS, MICS and other national surveys
+  - DHS 2022
+  - MICS 2022
+  - MICS 2021-22
+  - DHS 2021
+  - DHS 2019-20
+  - DHS, MICS, LFS and other national surveys
+  - MICS 2021
+- id: LOWER_BOUND
+  codelist: null
+  top_values: []
+- id: UPPER_BOUND
+  codelist: null
+  top_values: []
+- id: WGTD_SAMPL_SIZE
+  codelist: null
+  top_values: []
+- id: UNWGTD_SAMPL_SIZE
+  codelist: null
+  top_values: []
+- id: SOURCE_LINK
+  codelist: null
+  top_values:
+  - '-'
+  - https://dataunodc.un.org/dp-prisons-persons-held
+  - https://ec.europa.eu/eurostat/databrowser/explore/all/popul?lang=en&subtheme=crim&display=list&sort=category
+  - https://ec.europa.eu/eurostat/databrowser/view/crim_pris_age/default/table?lang=en;
+  - https://ec.europa.eu/eurostat/databrowser/view/CRIM_PRIS_AGE__custom_1836269/default/table?lang=en
+  - https://www.dosm.gov.my/uploads/release-content/file_20241101121857.pdf
+  - http://cns.bf/IMG/pdf/annuaire_statistique_2022_de_la_justice_vf_ns.pdf
+  - https://www.statbank.dk/STRAF70
+  - https://dataunodc.un.org/data/Prison/Persons%20held%20in%20prison
+  - https://sdppublik.ditjenpas.go.id/
+- id: TIME_PERIOD_METHOD
+  codelist: null
+  top_values:
+  - EOF
+- id: COVERAGE_TIME
+  codelist: null
+  top_values:
+  - '2022'
+  - '2023'
+  - 2019-20
+  - '2021'
+  - 2021-22
+  - 2015-24
+  - 2022-23
+  - 2019-21
+  - 2016-24
+  - 2011-23
+- id: FREQ_COLL
+  codelist: CL_FREQ_COLL
+  top_values:
+  - '0'
+- id: SERIES_FOOTNOTE
+  codelist: null
+  top_values:
+  - Work is underway to populate the UNICEF global database with historical country-level
+    data.
+  - While trend data are available, changes in the indicator definitions, age groups
+    covered, as well as the measures and questions used to collect the information
+    have changed over time. These factors affect the comparability of available data
+    sources and require careful review and assessment in order to accurately and reliably
+    draw conclusions about trends over time for most countries. For this reason, trend
+    data for this indicator are not included in UNICEF global databases.
+- id: OBS_FOOTNOTE
+  codelist: null
+  top_values:
+  - Two clusters could not be visited due to insecurity and evictions during the field
+    work period
+  - The respondent to CD module is any HH member
+  - One out of 238 EAs was not visited due to bad weather
+  - Due to prolonged insecurity concerns, some parts of states, including Borno state,
+    were not sampled
+  - Two selected EAs in rural areas of Cabo Delgado and Zambezia provinces were not
+    visited due to security concerns.
+  - Estimated coverage of birth registration was obtained on the basis of the reported
+    completeness of the national civil registration system
+  - Some parts of Boucle Du Mouhoun, Cascades, Center North, East, North and Sahel
+    could not be visited due to insecurity
+  - Only one (1) of the selected enumeration districts was not visited because of
+    safety concerns during the fieldwork period
+  - Mandera County could not be visited due to insecurity
+  - Births registered

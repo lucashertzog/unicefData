@@ -1,0 +1,108 @@
+id: IMMUNISATION
+name: Immunisation
+version: '1.0'
+agency: UNICEF
+synced_at: '2025-12-02T21:23:03.259433+00:00'
+dimensions:
+- id: REF_AREA
+  position: 1
+  codelist: CL_COUNTRY
+  top_values:
+  - GMB
+  - CIV
+  - BFA
+  - BRA
+  - COL
+  - ECU
+  - GUY
+  - PER
+  - BOL
+  - GTM
+- id: INDICATOR
+  position: 2
+  codelist: CL_UNICEF_INDICATOR
+  top_values:
+  - IM_DTP1
+  - IM_DTP3
+  - IM_IPV1
+  - IM_HIB3
+  - IM_MCV1
+  - IM_POL3
+  - IM_HEPB3
+  - IM_MCV2
+  - IM_RCV1
+  - IM_PCV3
+- id: VACCINE
+  position: 3
+  codelist: CL_CHLD_HLTH_VACCINES
+  top_values:
+  - DTP1
+  - DTP3
+  - IPV1
+  - HIB3
+  - MCV1
+  - POL3
+  - HEPB3
+  - MCV2
+  - RCV1
+  - PCV3
+- id: AGE
+  position: 4
+  codelist: CL_AGE
+  top_values:
+  - M12T23
+  - Y0
+  - Y02
+  - Y15
+  - Y06
+  - Y04
+  - Y05
+  - Y03
+  - Y07
+  - Y11
+time_dimension: TIME_PERIOD
+primary_measure: null
+attributes:
+- id: SOWC_FLAG_A
+  codelist: CL_OBS_SOWC_NOTES
+  top_values: []
+- id: UNIT_MULTIPLIER
+  codelist: CL_UNIT_MULT
+  top_values:
+  - '0'
+- id: UNIT_MEASURE
+  codelist: CL_UNIT_MEASURE
+  top_values:
+  - PCNT
+- id: OBS_STATUS
+  codelist: CL_OBS_STATUS
+  top_values:
+  - E
+- id: OBS_CONF
+  codelist: CL_CONF_STATUS
+  top_values: []
+- id: DATA_SOURCE
+  codelist: null
+  top_values:
+  - WHO/UNICEF estimates of national immunization coverage, 2024 revision
+  - WHO/UNICEF estimates of Human papillomavirus immunization coverage, 2024 revision
+- id: SOURCE_LINK
+  codelist: null
+  top_values: []
+- id: TIME_PERIOD_METHOD
+  codelist: null
+  top_values: []
+- id: COVERAGE_TIME
+  codelist: null
+  top_values: []
+- id: FREQ_COLL
+  codelist: CL_FREQ_COLL
+  top_values: []
+- id: SERIES_FOOTNOTE
+  codelist: null
+  top_values: []
+- id: OBS_FOOTNOTE
+  codelist: null
+  top_values:
+  - Female target population who received the last dose of HPV vaccine in the reporting
+    year

@@ -1,0 +1,260 @@
+id: NUTRITION
+name: Nutrition
+version: '1.0'
+agency: UNICEF
+synced_at: '2025-12-02T21:23:10.783903+00:00'
+dimensions:
+- id: REF_AREA
+  position: 1
+  codelist: CL_COUNTRY
+  top_values:
+  - PER
+  - MEX
+  - TZA
+  - MLI
+  - IND
+  - JOR
+  - NGA
+  - CIV
+  - MWI
+  - YEM
+- id: INDICATOR
+  position: 2
+  codelist: CL_UNICEF_INDICATOR
+  top_values:
+  - NT_ANT_WAZ_NE2
+  - NT_ANT_HAZ_NE2
+  - NT_ANT_WHZ_NE2
+  - NT_ANT_WHZ_NE3
+  - NT_ANT_WHZ_PO2
+  - NT_ANE_WOM_15_49_MOD
+  - NT_IOD_ANY_TH
+  - NT_IOD_ANY_TS
+- id: SEX
+  position: 3
+  codelist: CL_SEX
+  top_values:
+  - _T
+  - M
+  - F
+- id: AGE
+  position: 4
+  codelist: CL_AGE
+  top_values:
+  - Y0T4
+  - _T
+  - Y15T49
+  - M12T23
+  - M0T11
+  - M24T35
+  - M24T59
+  - M6T11
+  - M0T23
+  - M12T17
+- id: WEALTH_QUINTILE
+  position: 5
+  codelist: CL_WEALTH_QUINTILE
+  top_values:
+  - _T
+  - Q2
+  - Q3
+  - Q4
+  - Q1
+  - Q5
+  - B40
+  - B60
+  - B80
+  - R40
+- id: RESIDENCE
+  position: 6
+  codelist: CL_RESIDENCE
+  top_values:
+  - _T
+  - U
+  - R
+- id: MATERNAL_EDU_LVL
+  position: 7
+  codelist: CL_EDU_LEVEL
+  top_values:
+  - _T
+  - AGG_2_3
+  - AGG_3S_H
+  - AGG_0_1
+  - ISCED11_1
+  - AGG_5T8
+  - ISCED11A_01
+- id: HEAD_OF_HOUSE
+  position: 8
+  codelist: CL_SEX
+  top_values:
+  - _T
+time_dimension: TIME_PERIOD
+primary_measure: null
+attributes:
+- id: DATA_SOURCE_PRIORITY
+  codelist: null
+  top_values:
+  - '1'
+  - '0'
+- id: SOWC_FLAG_A
+  codelist: CL_OBS_SOWC_NOTES
+  top_values: []
+- id: REPORTING_LVL
+  codelist: REPORTING_LVL
+  top_values:
+  - C
+- id: INDICATOR_METADATA
+  codelist: null
+  top_values:
+  - https://data.unicef.org/indicator-profile/NT_ANT_WAZ_NE2
+  - https://data.unicef.org/indicator-profile/NT_ANT_HAZ_NE2
+  - https://data.unicef.org/indicator-profile/NT_ANT_WHZ_NE2
+  - https://data.unicef.org/indicator-profile/NT_ANT_WHZ_NE3
+  - https://data.unicef.org/indicator-profile/NT_ANT_WHZ_PO2
+  - https://data.unicef.org/indicator-profile/NT_ANE_WOM_15_49_MOD
+  - https://data.unicef.org/indicator-profile/NT_IOD_ANY_TH
+  - https://data.unicef.org/indicator-profile/NT_IOD_ANY_TS
+- id: UNIT_MULTIPLIER
+  codelist: CL_UNIT_MULT
+  top_values:
+  - '0'
+- id: UNIT_MEASURE
+  codelist: CL_UNIT_MEASURE
+  top_values:
+  - PCNT
+- id: DATA_SOURCE
+  codelist: null
+  top_values:
+  - WHO Global Anaemia estimates. Prevalence of anaemia in women of reproductive age
+    (%). Global Health Observatory (GHO) data. Geneva  World Health Organization (https
+    //www.who.int/data/gho)
+  - Encuesta Demográfica y de Salud Familiar-ENDES 2020 Nacional y Departamental
+  - National Family Health Survey (NFHS-5)  2019-21  India. Mumbai  IIPS
+  - Jordan Population and Family and Health Survey 2023
+  - Encuesta Demográfica y de Salud Familiar-ENDES 2022 Nacional y Departamental
+  - Peru Encuesta Demográfica y de Salud Familiar-ENDES 2023 Nacional y Departamental
+  - Encuesta Demográfica y de Salud Familiar-ENDES 2021 Nacional y Departamental
+  - Encuesta Nacional de Salud y Nutrición Continua COVID-19  Mexico 2020
+  - The 2022 Tanzania Demographic and Health Survey and Malaria Indicator Survey
+  - Enquête Démographique et de Santé de Côte d’Ivoire  2021. Rockville  Maryland  USA   INS/Côte
+    d’Ivoire et ICF
+- id: OBS_STATUS
+  codelist: CL_OBS_STATUS
+  top_values:
+  - RA
+  - RP
+  - U
+  - ER
+- id: OBS_CONF
+  codelist: CL_CONF_STATUS
+  top_values: []
+- id: LOWER_BOUND
+  codelist: null
+  top_values:
+  - '0'
+  - '0.1'
+  - '0.2'
+  - '0.3'
+  - '0.4'
+  - '0.5'
+  - '0.6'
+  - '0.8'
+  - '0.7'
+  - '0.9'
+- id: UPPER_BOUND
+  codelist: null
+  top_values:
+  - '0'
+  - '0.7'
+  - '0.2'
+  - '1'
+  - '0.1'
+  - '0.9'
+  - '3.6'
+  - '2.6'
+  - '2.7'
+  - '1.3'
+- id: STD_ERR
+  codelist: null
+  top_values:
+  - '0.3'
+  - '0.4'
+  - '0.2'
+  - '0.1'
+  - '0.5'
+  - '0.6'
+  - '0.7'
+  - '0.9'
+  - '0.8'
+  - '1'
+- id: WGTD_SAMPL_SIZE
+  codelist: null
+  top_values:
+  - '427.1'
+  - '70'
+  - '77'
+  - '67'
+  - '470.1'
+  - '483.7'
+  - '147'
+  - '345.1'
+  - '973.5'
+  - '484.5'
+- id: SOURCE_LINK
+  codelist: null
+  top_values:
+  - https://data.unicef.org/topic/nutrition/malnutrition/
+  - https://data.unicef.org/topic/nutrition/iodine/
+- id: TIME_PERIOD_METHOD
+  codelist: null
+  top_values:
+  - MOF
+  - OTHER
+- id: COVERAGE_TIME
+  codelist: null
+  top_values:
+  - 1991-2023
+  - 1988-2022
+  - 1987-2024
+  - 1991-2022
+  - 2000-2023
+  - 1990-2023
+  - 1992-2020
+  - 1988-2021
+  - 1992-2021
+  - 1990-2021
+- id: FREQ_COLL
+  codelist: CL_FREQ_COLL
+  top_values:
+  - '0'
+- id: SERIES_FOOTNOTE
+  codelist: null
+  top_values:
+  - UNICEF/WHO/World Bank Joint Malnutrition Estimates Expanded Databases  March 2025
+  - UNICEF Global Databases on Iodized salt  New York  June 2024
+- id: OBS_FOOTNOTE
+  codelist: null
+  top_values:
+  - Height/length modality (standing/lying) was not collected
+  - Oedema data was not considered in the analysis
+  - exludes North Sinai
+  - Oedema data was not considered in the analysis  Height/length modality (standing/lying)
+    was not collected
+  - Age-Adjusted  Oedema data was not considered in the analysis
+  - Reduced age range  Oedema data was not considered in the analysis Age 0-5 months
+    not covered  unadjusted for age
+  - Reduced age range  Oedema data was not considered in the analysis Age 0-5 months
+    not covered  unadjusted
+  - Unweighted sample size is between 25 and 49
+  - Age-Adjusted
+  - Unweighted sample size is between 25 and 49  Height/length modality (standing/lying)
+    was not collected
+- id: CUSTODIAN
+  codelist: null
+  top_values:
+  - UNICEF Division of Data  Analysis  Planning and Monitoring
+  - Nutrition Section  Programme Dvision and the Data and Analytics Section  Division
+    of Data  Analytics  Planning and Monitoring  UNICEF
+- id: PUBLICATION_DATE
+  codelist: null
+  top_values: []

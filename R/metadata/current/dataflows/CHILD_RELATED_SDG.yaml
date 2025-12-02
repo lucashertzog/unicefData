@@ -1,0 +1,92 @@
+id: CHILD_RELATED_SDG
+name: Child-related SDGs 2020
+version: '1.0'
+agency: UNICEF
+synced_at: '2025-12-02T21:29:36Z'
+dimensions:
+- id: REF_AREA
+  position: 1
+  codelist: CL_COUNTRY
+  top_values: WORLD
+- id: INDICATOR
+  position: 2
+  codelist: CHILD_RELATED_SDG_INDICATORS
+  top_values:
+  - SH_FPL_MTMM
+  - SP_DYN_ADKL
+- id: SEX
+  position: 3
+  codelist: CL_SEX
+  top_values: 'FALSE'
+- id: AGE
+  position: 4
+  codelist: CL_AGE
+  top_values:
+  - Y15T19
+  - Y15T48
+- id: RESIDENCE
+  position: 5
+  codelist: CL_RESIDENCE
+  top_values: _T
+- id: WEALTH_QUINTILE
+  position: 6
+  codelist: CL_WEALTH_QUINTILE
+  top_values: _T
+- id: DISABILITY_STATUS
+  position: 7
+  codelist: CL_DISABILITY
+  top_values: _T
+- id: EDUCATION_LEVEL
+  position: 8
+  codelist: CL_EDU_LEVEL
+  top_values: _T
+- id: SKILL_TYPE
+  position: 9
+  codelist: SDG_SKILL_TYPE
+  top_values: _T
+- id: DISCRIMINATION
+  position: 10
+  codelist: CL_DISCRIMINATION
+  top_values: _T
+- id: SDG_INDICATOR
+  position: 11
+  codelist: CHILD_RELATED_SDGID_INDICATORS
+  top_values:
+  - 3_7_1
+  - 3_7_2
+time_dimension: TIME_PERIOD
+primary_measure: OBS_VALUE
+attributes:
+- id: LAST_SURVEY
+  codelist: ~
+  top_values: []
+- id: TARGET
+  codelist: ~
+  top_values: '3.7'
+- id: OBS_FOOTNOTE
+  codelist: ~
+  top_values: []
+- id: GOAL
+  codelist: ~
+  top_values: '3'
+- id: LOWER_BOUND
+  codelist: ~
+  top_values: []
+- id: UPPER_BOUND
+  codelist: ~
+  top_values: []
+- id: DATA_SOURCE
+  codelist: ~
+  top_values:
+  - United Nations, Department of Economic and Social Affairs, Population Division
+    (2019). World Population Prospects 2019, Online Edition.
+  - 'United Nations, Department of Economic and Social Affairs, Population Division
+    (2020). Estimates and Projections of Family Planning Indicators 2020. '
+- id: OBS_STATUS
+  codelist: CL_OBS_STATUS
+  top_values: E
+- id: UNIT_MEASURE
+  codelist: CL_UNIT_MEASURE
+  top_values:
+  - PCNT
+  - PER1000

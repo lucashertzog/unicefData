@@ -1,0 +1,135 @@
+id: CME_SUBNAT_NPL
+name: CME Nepal
+version: '1.0'
+agency: UNICEF
+synced_at: '2025-12-02T21:30:01Z'
+dimensions:
+- id: REF_AREA
+  position: 1
+  codelist: CL_CME_REF_AREA_SUBNAT
+  top_values:
+  - NP01
+  - NP0101
+  - NP0102
+  - NP0103
+  - NP0104
+  - NP0105
+  - NP0106
+  - NP0107
+  - NP0108
+  - NP0109
+- id: INDICATOR
+  position: 2
+  codelist: CL_INDICATOR_CME
+  top_values:
+  - MRM0
+  - MRY0T4
+- id: SEX
+  position: 3
+  codelist: CL_SEX
+  top_values: _T
+- id: WEALTH_QUINTILE
+  position: 4
+  codelist: CL_WEALTH_QUINTILE
+  top_values: _T
+- id: SERIES_NAME
+  position: 5
+  codelist: CL_SERIES_CME
+  top_values: UN_IGME
+- id: SERIES_YEAR
+  position: 6
+  codelist: CL_SERIES_YEAR_CME
+  top_values: '2021'
+time_dimension: TIME_PERIOD
+primary_measure: OBS_VALUE
+attributes:
+- id: COUNTRY_NOTES
+  codelist: ~
+  top_values: []
+- id: REGIONAL_GROUP
+  codelist: CL_REGIONAL_GROUPS
+  top_values: []
+- id: CONNECTION
+  codelist: ~
+  top_values: []
+- id: DEATH_CATEGORY
+  codelist: ~
+  top_values: []
+- id: CATEGORY
+  codelist: ~
+  top_values: []
+- id: OBS_STATUS
+  codelist: CL_OBS_STATUS_CME
+  top_values: A
+- id: UNIT_MEASURE
+  codelist: CL_UNIT_MEASURE
+  top_values: D_PER_1000_B
+- id: SERIES_CATEGORY
+  codelist: CL_SERIES_CATEGORY_CME
+  top_values: []
+- id: SERIES_TYPE
+  codelist: CL_SERIES_TYPE_CME
+  top_values: []
+- id: STD_ERR
+  codelist: ~
+  top_values: []
+- id: REF_DATE
+  codelist: ~
+  top_values:
+  - '2020'
+  - '2021'
+- id: AGE_GROUP_OF_WOMEN
+  codelist: CL_AGE
+  top_values: []
+- id: TIME_SINCE_FIRST_BIRTH
+  codelist: CL_TSFB_CME
+  top_values: []
+- id: DEFINITION
+  codelist: ~
+  top_values: []
+- id: INTERVAL
+  codelist: ~
+  top_values: '1'
+- id: SERIES_METHOD
+  codelist: CL_METHOD_CME
+  top_values: []
+- id: LOWER_BOUND
+  codelist: ~
+  top_values:
+  - '4.86666248966616'
+  - '5.0305074944099'
+  - '5.5371640717543'
+  - '5.64095014841787'
+  - '5.83032191140155'
+  - '5.9187019651219'
+  - '5.9298388290757'
+  - '5.94317487199381'
+  - '5.99903583892323'
+  - '6.21531181734942'
+- id: UPPER_BOUND
+  codelist: ~
+  top_values:
+  - '16.1632490269252'
+  - '16.1887136416452'
+  - '17.7415670172058'
+  - '17.9884900680664'
+  - '18.2740177369967'
+  - '19.1893381323249'
+  - '20.7961151915596'
+  - '20.8014776043894'
+  - '20.8397330256616'
+  - '21.0422467899423'
+- id: STATUS
+  codelist: ~
+  top_values: []
+- id: YEAR_TO_ACHIEVE
+  codelist: ~
+  top_values: []
+- id: MODEL
+  codelist: CL_MODEL
+  top_values: []
+- id: ADMIN_LEVEL
+  codelist: CL_ADMIN_LEVEL
+  top_values:
+  - '2'
+  - '1'

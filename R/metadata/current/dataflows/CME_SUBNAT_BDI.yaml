@@ -1,0 +1,135 @@
+id: CME_SUBNAT_BDI
+name: CME Burundi
+version: '1.0'
+agency: UNICEF
+synced_at: '2025-12-02T21:29:48Z'
+dimensions:
+- id: REF_AREA
+  position: 1
+  codelist: CL_CME_REF_AREA_SUBNAT
+  top_values:
+  - BDI001
+  - BDI001001
+  - BDI001002
+  - BDI001003
+  - BDI001004
+  - BDI001005
+  - BDI002
+  - BDI002002
+  - BDI002003
+  - BDI002004
+- id: INDICATOR
+  position: 2
+  codelist: CL_INDICATOR_CME
+  top_values:
+  - MRM0
+  - MRY0T4
+- id: SEX
+  position: 3
+  codelist: CL_SEX
+  top_values: _T
+- id: WEALTH_QUINTILE
+  position: 4
+  codelist: CL_WEALTH_QUINTILE
+  top_values: _T
+- id: SERIES_NAME
+  position: 5
+  codelist: CL_SERIES_CME
+  top_values: UN_IGME
+- id: SERIES_YEAR
+  position: 6
+  codelist: CL_SERIES_YEAR_CME
+  top_values: '2021'
+time_dimension: TIME_PERIOD
+primary_measure: OBS_VALUE
+attributes:
+- id: COUNTRY_NOTES
+  codelist: ~
+  top_values: []
+- id: REGIONAL_GROUP
+  codelist: CL_REGIONAL_GROUPS
+  top_values: []
+- id: CONNECTION
+  codelist: ~
+  top_values: []
+- id: DEATH_CATEGORY
+  codelist: ~
+  top_values: []
+- id: CATEGORY
+  codelist: ~
+  top_values: []
+- id: OBS_STATUS
+  codelist: CL_OBS_STATUS_CME
+  top_values: A
+- id: UNIT_MEASURE
+  codelist: CL_UNIT_MEASURE
+  top_values: D_PER_1000_B
+- id: SERIES_CATEGORY
+  codelist: CL_SERIES_CATEGORY_CME
+  top_values: []
+- id: SERIES_TYPE
+  codelist: CL_SERIES_TYPE_CME
+  top_values: []
+- id: STD_ERR
+  codelist: ~
+  top_values: []
+- id: REF_DATE
+  codelist: ~
+  top_values:
+  - '2020'
+  - '2021'
+- id: AGE_GROUP_OF_WOMEN
+  codelist: CL_AGE
+  top_values: []
+- id: TIME_SINCE_FIRST_BIRTH
+  codelist: CL_TSFB_CME
+  top_values: []
+- id: DEFINITION
+  codelist: ~
+  top_values: []
+- id: INTERVAL
+  codelist: ~
+  top_values: '1'
+- id: SERIES_METHOD
+  codelist: CL_METHOD_CME
+  top_values: []
+- id: LOWER_BOUND
+  codelist: ~
+  top_values:
+  - '8.04933828218541'
+  - '8.57549450112456'
+  - '8.59944758185281'
+  - '8.64528199000194'
+  - '8.70191588195895'
+  - '9.05655463795333'
+  - '9.09559043131939'
+  - '9.11007375633033'
+  - '9.1583811179284'
+  - '9.17519238466876'
+- id: UPPER_BOUND
+  codelist: ~
+  top_values:
+  - '21.4332685545814'
+  - '21.4399072338846'
+  - '23.2892358788515'
+  - '23.6035164695352'
+  - '23.6066831566987'
+  - '23.6670179149083'
+  - '23.7208514735669'
+  - '23.7984180268244'
+  - '24.0225880261145'
+  - '24.4017367773489'
+- id: STATUS
+  codelist: ~
+  top_values: []
+- id: YEAR_TO_ACHIEVE
+  codelist: ~
+  top_values: []
+- id: MODEL
+  codelist: CL_MODEL
+  top_values: []
+- id: ADMIN_LEVEL
+  codelist: CL_ADMIN_LEVEL
+  top_values:
+  - '2'
+  - '1'

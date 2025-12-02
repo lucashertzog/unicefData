@@ -1,0 +1,76 @@
+id: SDG_PROG_ASSESSMENT
+name: SDG Progress assessment
+version: '1.1'
+agency: UNICEF
+synced_at: '2025-12-02T21:31:03Z'
+dimensions:
+- id: COUNTRY
+  position: 1
+  codelist: CL_COUNTRY
+  top_values:
+  - TKL
+  - AIA
+  - DMA
+  - VGB
+  - KNA
+  - PLW
+  - SMR
+  - VAT
+  - AND
+  - MCO
+- id: INDICATOR
+  position: 2
+  codelist: CL_SDG_ASSESSMENT_INDICATOR
+  top_values:
+  - C010401a
+  - C060101
+  - C060201c
+  - C060201a
+  - C010201
+  - C020201
+  - C020202b
+  - C030201
+  - C030202
+  - C060201b
+time_dimension: TIME_PERIOD
+primary_measure: OBS_VALUE
+attributes:
+- id: TARGET_2030
+  codelist: ~
+- id: HISTORIC_PERFORMANCE
+  codelist: CL_HIST_PERF
+- id: FOOTNOTE
+  codelist: ~
+  top_values: []
+- id: GOAL
+  codelist: CL_SP_GOAL
+  top_values:
+  - SURVIVE
+  - PROTECTION
+  - ENVIRONMENT
+  - FAIR
+  - LEARN
+- id: DATA_SOURCE
+  codelist: ~
+  top_values:
+  - WHO/UNICEF Joint Monitoring Programme for Water Supply, Sanitation and Hygiene
+    (2021)
+  - 'Source: ILO estimates based on country data compled through the ILO Social Security
+    Inquiry (SSI)'
+  - UNESCO Institute for Statistics; Data extracted on 01 April 2022.
+  - Registration UNSD & WPP2019
+- id: UNIT_MEASURE
+  codelist: CL_UNIT_MEASURE
+  top_values:
+  - PCNT
+  - PER1000POP
+- id: OBS_STATUS
+  codelist: CL_OBS_STATUS
+  top_values:
+  - O
+  - E
+- id: LATEST_DATA_POINT_YEAR
+  codelist: ~
+  top_values: []
+- id: EFFORT_NEEDED
+  codelist: CL_EFFORT_NEEDED

@@ -1,0 +1,110 @@
+id: CME
+name: Child Mortality
+version: '1.0'
+agency: UNICEF
+synced_at: '2025-12-02T21:21:16.455907+00:00'
+dimensions:
+- id: REF_AREA
+  position: 1
+  codelist: CL_COUNTRY
+  top_values:
+  - AFG
+  - AGO
+  - ALB
+  - ARG
+  - ARM
+  - AZE
+  - BDI
+  - BEN
+  - BFA
+  - BGD
+- id: INDICATOR
+  position: 2
+  codelist: CL_UNICEF_INDICATOR
+  top_values:
+  - CME_MRY0T4
+  - CME_TMY0T4
+  - CME_MRY0
+  - CME_MRY10T14
+  - CME_MRY10T19
+  - CME_MRY15T19
+  - CME_MRY15T24
+  - CME_MRY1T4
+  - CME_MRY20T24
+  - CME_MRY5T14
+- id: SEX
+  position: 3
+  codelist: CL_SEX
+  top_values:
+  - _T
+  - F
+  - M
+- id: WEALTH_QUINTILE
+  position: 4
+  codelist: CL_WEALTH_QUINTILE
+  top_values:
+  - _T
+  - Q1
+  - Q2
+  - Q3
+  - Q4
+  - Q5
+time_dimension: TIME_PERIOD
+primary_measure: null
+attributes:
+- id: DATA_SOURCE
+  codelist: null
+  top_values:
+  - UN_IGME
+- id: COUNTRY_NOTES
+  codelist: null
+  top_values:
+  - The UN IGME estimates are not the official statistics of the United Arab Emirates.
+- id: REF_PERIOD
+  codelist: null
+  top_values:
+  - 2015-2023
+  - 2000-2023
+- id: UNIT_MEASURE
+  codelist: CL_UNIT_MEASURE
+  top_values:
+  - D
+  - D_PER_1000_B
+  - D_PER_1000_5
+  - D_PER_1000_10
+  - D_PER_1000_15
+  - D_PER_1000_1
+  - D_PER_1000_20
+  - D_PER_1000_1M
+  - PCNT
+  - STILLBIRTHS
+- id: LOWER_BOUND
+  codelist: null
+  top_values:
+  - '0'
+  - '1'
+  - '3'
+  - '2'
+  - '5'
+  - '13'
+  - '4'
+  - '7'
+  - '12'
+  - '16'
+- id: UPPER_BOUND
+  codelist: null
+  top_values:
+  - '0'
+  - '1'
+  - '3'
+  - '2'
+  - '6'
+  - '4'
+  - '19'
+  - '5'
+  - '8'
+  - '14'
+- id: OBS_STATUS
+  codelist: CL_OBS_STATUS
+  top_values:
+  - A

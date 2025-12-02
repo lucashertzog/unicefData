@@ -1,0 +1,220 @@
+id: PT_CM
+name: Child Marriage
+version: '1.0'
+agency: UNICEF
+synced_at: '2025-12-02T21:30:56Z'
+dimensions:
+- id: REF_AREA
+  position: 1
+  codelist: CL_COUNTRY
+  top_values:
+  - BEN
+  - CIV
+  - GAB
+  - GHA
+  - GMB
+  - IND
+  - KEN
+  - KHM
+  - LBR
+  - MDG
+- id: INDICATOR
+  position: 2
+  codelist: CL_UNICEF_INDICATOR
+  top_values:
+  - PT_F_20-24_MRD_U18
+  - PT_F_20-24_MRD_U15
+  - PT_F_15-19_MRD
+  - PT_F_20-24_MRD_U18_PRJ
+  - PT_F_20-24_MRD_U15_PRJ
+  - PT_M_20-24_MRD_U18
+  - PT_M_15-19_MRD
+  - PT_F_TMRD18
+  - PT_F_TMRD15
+  - PT_CM_BIRTHS20
+- id: SEX
+  position: 3
+  codelist: CL_SEX
+  top_values: _T
+- id: AGE
+  position: 4
+  codelist: CL_AGE
+  top_values:
+  - Y20T24
+  - Y15T19
+  - _T
+  - Y15T17
+  - Y18T19
+- id: EDUCATION_LEVEL
+  position: 5
+  codelist: CL_EDU_LEVEL
+  top_values:
+  - _T
+  - AGG_3S_H
+  - ISCED11_1
+  - ISCED11A_01
+  - AGG_0_1
+  - NSC
+- id: WEALTH_QUINTILE
+  position: 6
+  codelist: CL_WEALTH_QUINTILE
+  top_values:
+  - _T
+  - Q3
+  - Q2
+  - Q5
+  - Q4
+  - Q1
+- id: RESIDENCE
+  position: 7
+  codelist: CL_RESIDENCE
+  top_values:
+  - _T
+  - U
+  - R
+- id: SCHOOL_ED_LEVEL
+  position: 8
+  codelist: CL_SCHOOL_STATUS
+  top_values:
+  - _T
+  - INSCHOOL
+  - OUTSCHOOL
+- id: RELIGIOUS_GROUP
+  position: 9
+  codelist: CL_RELIGIOUS_GROUP
+  top_values: _T
+- id: ETHNIC_GROUP
+  position: 10
+  codelist: CL_ETHNIC_GROUP
+  top_values: _T
+- id: PROJ_SCENARIO
+  position: 11
+  codelist: CL_PROJECTION_SCENARIO
+  top_values:
+  - _T
+  - AARR10
+  - AARR10_DOUBLE
+- id: CH_MARRIAGE_STATUS
+  position: 12
+  codelist: CL_MARITAL_STATUS
+  top_values:
+  - _T
+  - MRD_18PLUS
+  - MRD_U18
+  - MRD_NEVER
+time_dimension: TIME_PERIOD
+primary_measure: OBS_VALUE
+attributes:
+- id: SOWC_FLAG_D
+  codelist: ~
+  top_values: i
+- id: OBS_CONF
+  codelist: CL_CONF_STATUS
+  top_values: 'FALSE'
+- id: M49
+  codelist: ~
+  top_values:
+  - '116'
+  - '204'
+  - '266'
+  - '270'
+  - '288'
+  - '356'
+  - '384'
+  - '404'
+  - '430'
+  - '450'
+- id: OBS_STATUS
+  codelist: CL_OBS_STATUS
+  top_values:
+  - E
+  - RP
+  - RA
+  - U
+- id: TIME_PERIOD_METHOD
+  codelist: CL_TIME_PERIOD_METHOD
+  top_values: EOF
+- id: COVERAGE_TIME
+  codelist: ~
+  top_values:
+  - 2015-24
+  - '2023'
+  - '2030'
+  - '2022'
+  - 2019-20
+  - '2021'
+  - 2021-22
+  - 2019-21
+  - 2022-23
+  - '2024'
+- id: FREQ_COLL
+  codelist: CL_FREQ_COLL
+  top_values: '0'
+- id: OBS_FOOTNOTE
+  codelist: ~
+  top_values:
+  - Includes reference to visiting unions
+  - Due to prolonged insecurity concerns, some parts of states, including Borno state,
+    were not sampled
+  - Mandera County could not be visited due to insecurity
+  - Two clusters could not be visited due to insecurity and evictions during the field
+    work period
+  - Two selected EAs in rural areas of Cabo Delgado and Zambezia provinces were not
+    visited due to security concerns.
+  - Based on 12 countries with a population coverage 89 per cent of the regional population
+    of women aged 20-24 years
+  - One out of 238 EAs was not visited due to bad weather
+  - North Sinai are not covered
+  - 41 out of the 880 selected enumeration areas could not be visited because they
+    were inaccessible due to security and safety reasons during the fieldwork period.
+  - Only one (1) of the selected enumeration districts was not visited because of
+    safety concerns during the fieldwork period
+- id: UNWGTD_SAMPL_SIZE
+  codelist: ~
+  top_values: []
+- id: WGTD_SAMPL_SIZE
+  codelist: ~
+  top_values: []
+- id: LOWER_BOUND
+  codelist: ~
+  top_values: []
+- id: UPPER_BOUND
+  codelist: ~
+  top_values: []
+- id: DATA_SOURCE
+  codelist: ~
+  top_values:
+  - UNICEF estimates based on the most recent DHS, MICS and other national surveys
+  - DHS 2022
+  - UNICEF estimates based on DHS, MICS and other national surveys
+  - MICS 2019-20
+  - MICS 2023
+  - DHS 2019-20
+  - MICS 2022
+  - DHS 2019-21
+  - DHS 2021
+  - MICS 2021-22
+- id: UNIT_MULTIPLIER
+  codelist: CL_UNIT_MULT
+  top_values: []
+- id: UNIT_MEASURE
+  codelist: CL_UNIT_MEASURE
+  top_values:
+  - PCNT
+  - NUMBER
+- id: SOWC_FLAG_C
+  codelist: CL_OBS_SOWC_NOTES
+  top_values: p
+- id: SOWC_FLAG_B
+  codelist: CL_OBS_SOWC_NOTES
+  top_values: 'y'
+- id: SOWC_FLAG_A
+  codelist: CL_OBS_SOWC_NOTES
+  top_values: []
+- id: SOURCE_LINK
+  codelist: ~
+  top_values: []
+- id: SERIES_FOOTNOTE
+  codelist: ~
+  top_values: Work is underway to populate the UNICEF global database with historical
+    country-level data.

@@ -1,0 +1,89 @@
+id: PT_CONFLICT
+name: Children Exposed to Conflict
+version: '1.0'
+agency: UNICEF
+synced_at: '2025-12-02T21:23:22.997443+00:00'
+dimensions:
+- id: REF_AREA
+  position: 1
+  codelist: CL_GEO_REPO
+  top_values:
+  - AFG_V1
+  - ALB_V1
+  - DZA_V1
+  - AND_V1
+  - AGO_V1
+  - AIA_V1
+  - ATG_V1
+  - ARG_V1
+  - ARM_V1
+  - ABW_V1
+- id: INDICATOR
+  position: 2
+  codelist: CL_UNICEF_INDICATOR
+  top_values:
+  - PT_CHLD_CONFLICT
+- id: SEX
+  position: 3
+  codelist: CL_SEX
+  top_values:
+  - _T
+  - F
+  - M
+- id: AGE
+  position: 4
+  codelist: CL_AGE
+  top_values:
+  - Y5T9
+  - Y10T14
+  - Y0T4
+  - _T
+  - Y15T17
+- id: ADMIN_LEVEL
+  position: 5
+  codelist: CL_ADMIN_LEVEL
+  top_values:
+  - '0'
+- id: REF_AREA_PARENT
+  position: 6
+  codelist: CL_GEO_REPO
+  top_values:
+  - AFG_V1
+  - ALB_V1
+  - DZA_V1
+  - AND_V1
+  - AGO_V1
+  - AIA_V1
+  - ATG_V1
+  - ARG_V1
+  - ARM_V1
+  - ABW_V1
+time_dimension: TIME_PERIOD
+primary_measure: null
+attributes:
+- id: OBS_FOOTNOTE
+  codelist: null
+  top_values: []
+- id: UNIT_MULTIPLIER
+  codelist: CL_UNIT_MULT
+  top_values:
+  - '0'
+- id: UNIT_MEASURE
+  codelist: CL_UNIT_MEASURE
+  top_values:
+  - PS
+- id: SERIES_FOOTNOTE
+  codelist: null
+  top_values:
+  - WorldPop constrained age/sex structures not available for the country. Exposed
+    WorldPop population counts computed from raster data. Exposed children 0-17 years
+    (by sex) estimated from UN World Population Prospects.
+- id: OBS_STATUS
+  codelist: CL_OBS_STATUS
+  top_values: []
+- id: DATA_SOURCE
+  codelist: null
+  top_values:
+  - ACLED (https://acleddata.com/) and WorldPop age/sex structures (https://hub.worldpop.org/geodata/listing?id=88).
+  - ACLED (https://acleddata.com/), WorldPop population counts (https://hub.worldpop.org/geodata/listing?id=79)
+    and UN World Population Prospects (https://population.un.org/wpp/).

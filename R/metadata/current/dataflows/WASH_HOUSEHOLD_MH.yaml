@@ -1,0 +1,76 @@
+id: WASH_HOUSEHOLD_MH
+name: WASH Household Menstrual Health
+version: '1.0'
+agency: UNICEF
+synced_at: '2025-12-02T21:31:10Z'
+dimensions:
+- id: REF_AREA
+  position: 1
+  codelist: CL_COUNTRY
+  top_values:
+  - FJI
+  - GUY
+  - MWI
+  - NGA
+  - PAK
+  - PSE
+  - TCA
+  - TUV
+  - UZB
+  - VNM
+- id: INDICATOR
+  position: 2
+  codelist: CL_UNICEF_INDICATOR
+  top_values: WS_PPL_M-NPART_AGE_15_19
+- id: SEX
+  position: 3
+  codelist: CL_SEX
+  top_values: _T
+- id: AGE
+  position: 4
+  codelist: CL_AGE
+  top_values: Y15T19
+- id: RESIDENCE
+  position: 5
+  codelist: CL_RESIDENCE
+  top_values: _T
+- id: EDUCATION_LEVEL
+  position: 6
+  codelist: CL_EDU_LEVEL
+  top_values: _T
+time_dimension: TIME_PERIOD
+primary_measure: OBS_VALUE
+attributes:
+- id: DATA_SOURCE
+  codelist: ~
+  top_values: WHO/UNICEF Joint Monitoring Programme (2023)
+- id: SERIES_FOOTNOTE
+  codelist: ~
+  top_values: Percentage of adolescent girls aged 15-19 years who did not participate
+    in school, work, or social activities during their last menstrual period. It is
+    not a standard JMP/WASH estimator. It is not an annual estimate but estimate from
+    a specific data source. Disaggregated by age.
+- id: OBS_FOOTNOTE
+  codelist: ~
+  top_values: []
+- id: UNIT_MULTIPLIER
+  codelist: CL_UNIT_MULT
+  top_values: []
+- id: UNIT_MEASURE
+  codelist: CL_UNIT_MEASURE
+  top_values: PCNT
+- id: DATA_SOURCE_MAIN
+  codelist: ~
+  top_values: MICS
+- id: SOWC_FLAG_A
+  codelist: CL_OBS_SOWC_NOTES
+  top_values: []
+- id: TIME_PERIOD_METHOD
+  codelist: CL_TIME_PERIOD_METHOD
+  top_values: []
+- id: OBS_STATUS
+  codelist: CL_OBS_STATUS
+  top_values: []
+- id: OBS_CONF
+  codelist: CL_CONF_STATUS
+  top_values: []
