@@ -87,12 +87,27 @@ get_sdmx <- function(
       return(xml2::read_xml(.fetch_sdmx(url, ua=ua, retry=retry)))
     }
 
-    key_str  <- if(!is.null(key)) paste0(".", paste(key, collapse="+")) else ""
-    date_str <- if(!is.null(start_period)||!is.null(end_period))
-      sprintf(".%s/%s", start_period %||% "", end_period   %||% "") else ""
-    rel <- sprintf("data/%s.%s.%s%s%s", agency, fl, ver, key_str, date_str)
-    query <- sprintf("format=%s&labels=%s", if(format=="csv") "csv" else format, labels)
-    url   <- paste0(base, "/", rel, "?", query)
+    # Build the data key - format: .INDICATOR1+INDICATOR2..
+    # Following the UNICEF production pattern from PROD-SDG-REP-2025
+    key_str <- if(!is.null(key)) {
+      paste0(".", paste(key, collapse="+"), "..")
+    } else {
+      ""
+    }
+    
+    # Build the URL: data/AGENCY,FLOW,VERSION/KEY?params
+    rel <- sprintf("data/%s,%s,%s/%s", agency, fl, ver, key_str)
+    
+    # Build query parameters
+    query_parts <- c(
+      sprintf("format=%s", if(format=="csv") "csv" else format),
+      sprintf("labels=%s", labels)
+    )
+    if(!is.null(start_period)) query_parts <- c(query_parts, sprintf("startPeriod=%s", start_period))
+    if(!is.null(end_period))   query_parts <- c(query_parts, sprintf("endPeriod=%s", end_period))
+    query <- paste(query_parts, collapse = "&")
+    
+    url <- paste0(base, "/", rel, "?", query)
 
     if(format=="sdmx-json") {
       j <- jsonlite::fromJSON(.fetch_sdmx(url, ua=ua, retry=retry))
@@ -127,11 +142,14 @@ get_sdmx <- function(
         ) %>%
         dplyr::mutate(period=as.integer(period)) %>%
         dplyr::select(iso3, dplyr::everything())
-      if(country_names) df <- df %>%
-        dplyr::left_join(
-          countrycode::countrycode_df %>% dplyr::select(iso3=iso3c, country=country.name.en),
-          by="iso3"
-        ) %>% dplyr::select(iso3, country, dplyr::everything())
+      if(country_names) {
+        # Use countrycode function instead of deprecated countrycode_df
+        df <- df %>%
+          dplyr::mutate(
+            country = countrycode::countrycode(iso3, "iso3c", "country.name", warn = FALSE)
+          ) %>%
+          dplyr::select(iso3, country, dplyr::everything())
+      }
     }
     df
   }
@@ -139,6 +157,16 @@ get_sdmx <- function(
   executor <- if(cache) memoise::memoise(fetch_flow,
       cache=memoise::cache_filesystem(tools::R_user_dir("get_sdmx","cache"))) else fetch_flow
 
-  out <- purrr::map(flow, executor)
+  # Ensure flow is a proper character vector (not iterating over characters)
+  flow <- as.character(flow)
+  
+  out <- tryCatch(
+    purrr::map(flow, executor),
+    error = function(e) {
+      message("Error in purrr::map: ", e$message)
+      message("flow = ", paste(flow, collapse = ", "))
+      stop(e)
+    }
+  )
   if(length(out)==1L) out[[1]] else setNames(out, flow)
 }
