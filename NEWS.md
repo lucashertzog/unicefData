@@ -1,5 +1,33 @@
 # unicefData Changelog
 
+## 0.2.1 (2025-12-02)
+
+### Metadata Sync & Validation (NEW)
+* **R**: Added `R/metadata.R` with:
+  - `sync_metadata()` - Download and cache API metadata as YAML files
+  - `sync_dataflows()`, `sync_codelists()`, `sync_indicators()` - Sync specific metadata types
+  - `validate_data()` - Validate DataFrames against cached metadata
+  - `load_dataflows()`, `load_indicators()`, `load_codelists()` - Load cached metadata
+  - `create_data_version()` - Create version records for data tracking
+  
+* **Python**: Added `unicef_api/metadata.py` with:
+  - `sync_metadata()` - Download and cache API metadata as YAML files
+  - `MetadataSync` class for full control over sync operations
+  - `validate_indicator_data()` - Validate DataFrames against cached metadata
+  - Data versioning with SHA-256 hashes for triangulation
+
+* **Generated YAML Files** in `metadata/`:
+  - `dataflows.yaml` - 69 UNICEF dataflows with names and versions
+  - `indicators.yaml` - 25+ SDG indicators with dataflow mappings
+  - `codelists.yaml` - Country codes, sex, age groups, etc.
+  - `sync_summary.yaml` - Last sync timestamp and statistics
+
+### Dependencies
+* Python: Added `pyyaml>=6.0` requirement
+* R: Uses existing `yaml` package
+
+---
+
 ## 0.2.0 (2025-01-06)
 
 ### R Package Bug Fixes

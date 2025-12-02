@@ -48,6 +48,12 @@ from unicef_api.utils import (
     clean_dataframe,
 )
 
+from unicef_api.metadata import (
+    MetadataSync,
+    sync_metadata,
+    validate_indicator_data,
+)
+
 __all__ = [
     # Client
     "UNICEFSDMXClient",
@@ -68,4 +74,8 @@ __all__ = [
     "validate_year_range",
     "load_country_codes",
     "clean_dataframe",
+    # Metadata
+    "MetadataSync",
+    "sync_metadata",
+    "validate_indicator_data",
 ]

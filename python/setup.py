@@ -36,6 +36,7 @@ setup(
     install_requires=[
         "requests>=2.28.0",
         "pandas>=1.5.0",
+        "pyyaml>=6.0",
     ],
     extras_require={
         "dev": [

@@ -1,0 +1,617 @@
+# R/metadata.R
+# Metadata synchronization and validation for UNICEF SDMX API
+#
+# This module provides functionality to:
+# 1. Sync dataflow and indicator metadata from the UNICEF SDMX API
+# 2. Cache metadata locally as YAML files for offline use
+# 3. Validate downloaded data against cached metadata
+# 4. Track metadata versions for triangulation and auditing
+#
+# Usage:
+#   source("R/metadata.R")
+#   sync_metadata()  # Downloads and caches all metadata
+#   validate_data(df, "CME_MRY0T4")  # Validate data
+
+# Required packages
+if (!requireNamespace("yaml", quietly = TRUE)) {
+  message("Installing yaml package...")
+  install.packages("yaml", repos = "https://cloud.r-project.org")
+}
+
+# ============================================================================
+# Configuration
+# ============================================================================
+
+.metadata_config <- new.env()
+.metadata_config$BASE_URL <- "https://sdmx.data.unicef.org/ws/public/sdmxapi/rest"
+.metadata_config$AGENCY <- "UNICEF"
+.metadata_config$CACHE_DIR <- NULL
+
+#' Set metadata cache directory
+#' @param path Path to cache directory
+#' @export
+set_metadata_cache <- function(path = NULL) {
+  if (is.null(path)) {
+    path <- file.path(getwd(), "metadata")
+  }
+  if (!dir.exists(path)) {
+    dir.create(path, recursive = TRUE)
+  }
+  .metadata_config$CACHE_DIR <- path
+  invisible(path)
+}
+
+#' Get metadata cache directory
+#' @return Path to cache directory
+#' @export
+get_metadata_cache <- function() {
+  if (is.null(.metadata_config$CACHE_DIR)) {
+    set_metadata_cache()
+  }
+  .metadata_config$CACHE_DIR
+}
+
+# ============================================================================
+# Sync Functions
+# ============================================================================
+
+#' Sync all metadata from UNICEF SDMX API
+#'
+#' Downloads dataflows, codelists, and indicator definitions,
+#' then saves them as YAML files in the cache directory.
+#'
+#' @param cache_dir Path to cache directory (default: ./metadata/)
+#' @param verbose Print progress messages (default: TRUE)
+#' @return List with sync summary including counts and timestamps
+#' @export
+#' @examples
+#' \dontrun{
+#' sync_metadata()
+#' sync_metadata(cache_dir = "./my_cache/")
+#' }
+sync_metadata <- function(cache_dir = NULL, verbose = TRUE) {
+  if (!is.null(cache_dir)) {
+    set_metadata_cache(cache_dir)
+  }
+  cache_dir <- get_metadata_cache()
+  
+  results <- list(
+    synced_at = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
+    dataflows = 0,
+    codelists = 0,
+    indicators = 0,
+    errors = character()
+  )
+  
+  if (verbose) {
+    message(sprintf("Syncing UNICEF SDMX metadata to %s", cache_dir))
+  }
+  
+  # 1. Sync dataflows
+  tryCatch({
+    dataflows <- sync_dataflows(verbose = verbose)
+    results$dataflows <- length(dataflows$dataflows)
+  }, error = function(e) {
+    results$errors <- c(results$errors, paste("Dataflows:", e$message))
+  })
+  
+  # 2. Sync codelists
+  tryCatch({
+    codelists <- sync_codelists(verbose = verbose)
+    results$codelists <- length(codelists$codelists)
+  }, error = function(e) {
+    results$errors <- c(results$errors, paste("Codelists:", e$message))
+  })
+  
+  # 3. Sync indicators
+  tryCatch({
+    indicators <- sync_indicators(verbose = verbose)
+    results$indicators <- length(indicators$indicators)
+  }, error = function(e) {
+    results$errors <- c(results$errors, paste("Indicators:", e$message))
+  })
+  
+  # 4. Save sync summary
+  .save_yaml("sync_summary.yaml", results)
+  
+  if (verbose) {
+    message(sprintf("\n✅ Sync complete: %d dataflows, %d codelists, %d indicators",
+                    results$dataflows, results$codelists, results$indicators))
+    if (length(results$errors) > 0) {
+      message(sprintf("⚠️  Errors: %d", length(results$errors)))
+    }
+  }
+  
+  invisible(results)
+}
+
+#' Sync dataflow definitions from SDMX API
+#'
+#' @param verbose Print progress messages
+#' @return List with dataflow metadata
+#' @export
+sync_dataflows <- function(verbose = TRUE) {
+  if (verbose) message("  Fetching dataflows...")
+  
+  url <- sprintf("%s/dataflow/%s?references=none&detail=full",
+                 .metadata_config$BASE_URL, .metadata_config$AGENCY)
+  
+  response <- .fetch_xml(url)
+  doc <- xml2::read_xml(response)
+  
+  # Parse dataflows
+  ns <- xml2::xml_ns(doc)
+  dfs <- xml2::xml_find_all(doc, ".//str:Dataflow", ns)
+  
+  dataflows <- list()
+  for (df in dfs) {
+    df_id <- xml2::xml_attr(df, "id")
+    agency <- xml2::xml_attr(df, "agencyID")
+    version <- xml2::xml_attr(df, "version")
+    
+    # Get name
+    name_node <- xml2::xml_find_first(df, ".//com:Name", ns)
+    name <- if (!is.na(name_node)) xml2::xml_text(name_node) else df_id
+    
+    # Get description
+    desc_node <- xml2::xml_find_first(df, ".//com:Description", ns)
+    description <- if (!is.na(desc_node)) xml2::xml_text(desc_node) else NA
+    
+    dataflows[[df_id]] <- list(
+      id = df_id,
+      name = name,
+      agency = agency,
+      version = version,
+      description = description,
+      last_updated = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC")
+    )
+  }
+  
+  # Save to YAML
+  result <- list(
+    metadata_version = "1.0",
+    synced_at = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
+    source = url,
+    agency = .metadata_config$AGENCY,
+    dataflows = dataflows
+  )
+  .save_yaml("dataflows.yaml", result)
+  
+  if (verbose) message(sprintf("    Found %d dataflows", length(dataflows)))
+  
+  invisible(result)
+}
+
+#' Sync codelist definitions from SDMX API
+#'
+#' @param codelist_ids Vector of codelist IDs to sync (default: common codelists)
+#' @param verbose Print progress messages
+#' @return List with codelist metadata
+#' @export
+sync_codelists <- function(codelist_ids = NULL, verbose = TRUE) {
+  if (is.null(codelist_ids)) {
+    codelist_ids <- c(
+      "CL_REF_AREA",           # Countries/regions
+      "CL_SEX",                # Sex disaggregation
+      "CL_AGE",                # Age groups
+      "CL_WEALTH_QUINTILE",    # Wealth quintiles
+      "CL_RESIDENCE",          # Urban/rural
+      "CL_UNIT_MEASURE"        # Units of measure
+    )
+  }
+  
+  if (verbose) message("  Fetching codelists...")
+  
+  codelists <- list()
+  for (cl_id in codelist_ids) {
+    tryCatch({
+      cl <- .fetch_codelist(cl_id)
+      if (!is.null(cl)) {
+        codelists[[cl_id]] <- cl
+      }
+    }, error = function(e) {
+      if (verbose) message(sprintf("    ⚠️  Could not fetch %s: %s", cl_id, e$message))
+    })
+  }
+  
+  # Save to YAML
+  result <- list(
+    metadata_version = "1.0",
+    synced_at = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
+    source = sprintf("%s/codelist/%s", .metadata_config$BASE_URL, .metadata_config$AGENCY),
+    agency = .metadata_config$AGENCY,
+    codelists = codelists
+  )
+  .save_yaml("codelists.yaml", result)
+  
+  if (verbose) message(sprintf("    Found %d codelists", length(codelists)))
+  
+  invisible(result)
+}
+
+#' Sync indicator catalog
+#'
+#' Builds indicator catalog from common SDG indicators.
+#'
+#' @param verbose Print progress messages
+#' @return List with indicator metadata
+#' @export
+sync_indicators <- function(verbose = TRUE) {
+  if (verbose) message("  Building indicator catalog...")
+  
+  # Pre-defined SDG indicators
+  indicators <- list(
+    # Child Mortality (SDG 3.2)
+    CME_MRM0 = list(
+      code = "CME_MRM0",
+      name = "Neonatal mortality rate",
+      dataflow = "CME",
+      sdg_target = "3.2.2",
+      unit = "Deaths per 1,000 live births"
+    ),
+    CME_MRY0T4 = list(
+      code = "CME_MRY0T4",
+      name = "Under-five mortality rate",
+      dataflow = "CME",
+      sdg_target = "3.2.1",
+      unit = "Deaths per 1,000 live births"
+    ),
+    
+    # Nutrition (SDG 2.2)
+    NT_ANT_HAZ_NE2_MOD = list(
+      code = "NT_ANT_HAZ_NE2_MOD",
+      name = "Stunting prevalence (moderate and severe)",
+      dataflow = "NUTRITION",
+      sdg_target = "2.2.1",
+      unit = "Percentage"
+    ),
+    NT_ANT_WHZ_NE2 = list(
+      code = "NT_ANT_WHZ_NE2",
+      name = "Wasting prevalence",
+      dataflow = "NUTRITION",
+      sdg_target = "2.2.2",
+      unit = "Percentage"
+    ),
+    NT_ANT_WHZ_PO2_MOD = list(
+      code = "NT_ANT_WHZ_PO2_MOD",
+      name = "Overweight prevalence",
+      dataflow = "NUTRITION",
+      sdg_target = "2.2.2",
+      unit = "Percentage"
+    ),
+    
+    # Immunization (SDG 3.b)
+    IM_DTP3 = list(
+      code = "IM_DTP3",
+      name = "DTP3 immunization coverage",
+      dataflow = "IMMUNISATION",
+      sdg_target = "3.b.1",
+      unit = "Percentage"
+    ),
+    IM_MCV1 = list(
+      code = "IM_MCV1",
+      name = "Measles immunization coverage (MCV1)",
+      dataflow = "IMMUNISATION",
+      sdg_target = "3.b.1",
+      unit = "Percentage"
+    ),
+    
+    # Education (SDG 4.1)
+    ED_CR_L1_UIS_MOD = list(
+      code = "ED_CR_L1_UIS_MOD",
+      name = "Primary completion rate",
+      dataflow = "EDUCATION_UIS_SDG",
+      sdg_target = "4.1.2",
+      unit = "Percentage"
+    ),
+    ED_CR_L2_UIS_MOD = list(
+      code = "ED_CR_L2_UIS_MOD",
+      name = "Lower secondary completion rate",
+      dataflow = "EDUCATION_UIS_SDG",
+      sdg_target = "4.1.2",
+      unit = "Percentage"
+    ),
+    
+    # WASH (SDG 6.1, 6.2)
+    `WS_PPL_W-SM` = list(
+      code = "WS_PPL_W-SM",
+      name = "Safely managed drinking water",
+      dataflow = "WASH_HOUSEHOLDS",
+      sdg_target = "6.1.1",
+      unit = "Percentage"
+    ),
+    `WS_PPL_S-SM` = list(
+      code = "WS_PPL_S-SM",
+      name = "Safely managed sanitation",
+      dataflow = "WASH_HOUSEHOLDS",
+      sdg_target = "6.2.1",
+      unit = "Percentage"
+    ),
+    
+    # Child Protection (SDG 5.3, 16.2, 16.9)
+    PT_CHLD_Y0T4_REG = list(
+      code = "PT_CHLD_Y0T4_REG",
+      name = "Birth registration (under 5)",
+      dataflow = "PT",
+      sdg_target = "16.9.1",
+      unit = "Percentage"
+    ),
+    `PT_F_20-24_MRD_U18_TND` = list(
+      code = "PT_F_20-24_MRD_U18_TND",
+      name = "Child marriage (women 20-24 married before 18)",
+      dataflow = "PT_CM",
+      sdg_target = "5.3.1",
+      unit = "Percentage"
+    )
+  )
+  
+  # Save to YAML
+  result <- list(
+    metadata_version = "1.0",
+    synced_at = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
+    source = "unicefData package + SDMX API",
+    total_indicators = length(indicators),
+    indicators = indicators
+  )
+  .save_yaml("indicators.yaml", result)
+  
+  if (verbose) message(sprintf("    Cataloged %d indicators", length(indicators)))
+  
+  invisible(result)
+}
+
+# ============================================================================
+# Load Functions
+# ============================================================================
+
+#' Load cached dataflow metadata from YAML
+#' @return List with dataflow metadata
+#' @export
+load_dataflows <- function() {
+  .load_yaml("dataflows.yaml")
+}
+
+#' Load cached codelist metadata from YAML
+#' @return List with codelist metadata
+#' @export
+load_codelists <- function() {
+  .load_yaml("codelists.yaml")
+}
+
+#' Load cached indicator metadata from YAML
+#' @return List with indicator metadata
+#' @export
+load_indicators <- function() {
+  .load_yaml("indicators.yaml")
+}
+
+#' Load last sync summary
+#' @return List with sync summary
+#' @export
+load_sync_summary <- function() {
+  .load_yaml("sync_summary.yaml")
+}
+
+#' Get metadata for a specific dataflow
+#' @param dataflow_id Dataflow identifier
+#' @return List with dataflow metadata or NULL
+#' @export
+get_dataflow_meta <- function(dataflow_id) {
+  dataflows <- load_dataflows()
+  dataflows$dataflows[[dataflow_id]]
+}
+
+#' Get metadata for a specific indicator
+#' @param indicator_code Indicator code
+#' @return List with indicator metadata or NULL
+#' @export
+get_indicator_meta <- function(indicator_code) {
+  indicators <- load_indicators()
+  indicators$indicators[[indicator_code]]
+}
+
+#' Get metadata for a specific codelist
+#' @param codelist_id Codelist identifier
+#' @return List with codelist metadata or NULL
+#' @export
+get_codelist_meta <- function(codelist_id) {
+  codelists <- load_codelists()
+  codelists$codelists[[codelist_id]]
+}
+
+# ============================================================================
+# Validation Functions
+# ============================================================================
+
+#' Validate a data frame against cached metadata
+#'
+#' Checks:
+#' - Indicator code exists in catalog
+#' - Required columns are present
+#' - Country codes are valid
+#' - Values are within expected ranges
+#'
+#' @param df Data frame to validate
+#' @param indicator_code Expected indicator code
+#' @param strict If TRUE, fail on any warning
+#' @return List with is_valid (logical) and issues (character vector)
+#' @export
+#' @examples
+#' \dontrun{
+#' result <- validate_data(df, "CME_MRY0T4")
+#' if (result$is_valid) {
+#'   message("Data is valid!")
+#' } else {
+#'   message("Issues found:")
+#'   print(result$issues)
+#' }
+#' }
+validate_data <- function(df, indicator_code, strict = FALSE) {
+  issues <- character()
+  
+  # Check indicator exists
+  indicator <- get_indicator_meta(indicator_code)
+  if (is.null(indicator)) {
+    issues <- c(issues, sprintf("Indicator '%s' not found in catalog", indicator_code))
+  }
+  
+  # Check required columns
+  required_cols <- c("REF_AREA", "TIME_PERIOD", "OBS_VALUE")
+  for (col in required_cols) {
+    if (!col %in% names(df)) {
+      issues <- c(issues, sprintf("Missing required column: %s", col))
+    }
+  }
+  
+  # Validate country codes if codelist available
+  codelists <- load_codelists()
+  ref_area_codes <- names(codelists$codelists$CL_REF_AREA$codes)
+  if (length(ref_area_codes) > 0 && "REF_AREA" %in% names(df)) {
+    invalid_countries <- setdiff(unique(df$REF_AREA), ref_area_codes)
+    if (length(invalid_countries) > 0) {
+      sample_invalid <- head(invalid_countries, 5)
+      issues <- c(issues, sprintf("Invalid country codes: %s...", 
+                                  paste(sample_invalid, collapse = ", ")))
+    }
+  }
+  
+  # Check for empty data
+  if (nrow(df) == 0) {
+    issues <- c(issues, "Data frame is empty")
+  }
+  
+  # Check for null values in key columns
+  if ("OBS_VALUE" %in% names(df)) {
+    null_pct <- sum(is.na(df$OBS_VALUE)) / nrow(df) * 100
+    if (null_pct > 50) {
+      issues <- c(issues, sprintf("High null rate in OBS_VALUE: %.1f%%", null_pct))
+    }
+  }
+  
+  is_valid <- if (strict) {
+    length(issues) == 0
+  } else {
+    !any(grepl("Missing", issues))
+  }
+  
+  list(is_valid = is_valid, issues = issues)
+}
+
+#' Compute hash of data frame for version tracking
+#' @param df Data frame to hash
+#' @return Character hash string (16 characters)
+#' @export
+compute_data_hash <- function(df) {
+  # Sort for consistent hashing
+  df_sorted <- df[order(as.matrix(df)), ]
+  content <- paste(capture.output(write.csv(df_sorted, row.names = FALSE)), collapse = "\n")
+  substr(digest::digest(content, algo = "sha256"), 1, 16)
+}
+
+#' Create version record for a downloaded dataset
+#'
+#' @param df Downloaded data frame
+#' @param indicator_code Indicator code
+#' @param version_id Optional version identifier
+#' @param notes Optional notes about this version
+#' @return List with version metadata
+#' @export
+create_data_version <- function(df, indicator_code, version_id = NULL, notes = NULL) {
+  if (is.null(version_id)) {
+    version_id <- format(Sys.time(), "v%Y%m%d_%H%M%S")
+  }
+  
+  version <- list(
+    version_id = version_id,
+    created_at = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
+    indicator_code = indicator_code,
+    data_hash = compute_data_hash(df),
+    row_count = nrow(df),
+    column_count = ncol(df),
+    columns = names(df),
+    notes = notes
+  )
+  
+  # Add summary statistics
+  if ("REF_AREA" %in% names(df)) {
+    version$unique_countries <- length(unique(df$REF_AREA))
+  }
+  if ("TIME_PERIOD" %in% names(df)) {
+    version$year_range <- c(
+      min(as.integer(df$TIME_PERIOD), na.rm = TRUE),
+      max(as.integer(df$TIME_PERIOD), na.rm = TRUE)
+    )
+  }
+  if ("OBS_VALUE" %in% names(df)) {
+    version$value_range <- c(
+      min(df$OBS_VALUE, na.rm = TRUE),
+      max(df$OBS_VALUE, na.rm = TRUE)
+    )
+  }
+  
+  version
+}
+
+# ============================================================================
+# Private Helpers
+# ============================================================================
+
+.fetch_xml <- function(url, retries = 3L) {
+  ua <- httr::user_agent("unicefData/0.2.0 (+https://github.com/unicef-drp/unicefData)")
+  
+  for (attempt in seq_len(retries)) {
+    tryCatch({
+      response <- httr::GET(url, ua, httr::timeout(30))
+      httr::stop_for_status(response)
+      return(httr::content(response, as = "text", encoding = "UTF-8"))
+    }, error = function(e) {
+      if (attempt == retries) stop(e)
+      Sys.sleep(2^attempt)
+    })
+  }
+}
+
+.fetch_codelist <- function(codelist_id) {
+  url <- sprintf("%s/codelist/%s/%s/latest",
+                 .metadata_config$BASE_URL, .metadata_config$AGENCY, codelist_id)
+  
+  tryCatch({
+    response <- .fetch_xml(url)
+    doc <- xml2::read_xml(response)
+    ns <- xml2::xml_ns(doc)
+    
+    codes <- list()
+    for (code_elem in xml2::xml_find_all(doc, ".//str:Code", ns)) {
+      code_id <- xml2::xml_attr(code_elem, "id")
+      name_elem <- xml2::xml_find_first(code_elem, ".//com:Name", ns)
+      name <- if (!is.na(name_elem)) xml2::xml_text(name_elem) else code_id
+      codes[[code_id]] <- name
+    }
+    
+    list(
+      id = codelist_id,
+      agency = .metadata_config$AGENCY,
+      version = "latest",
+      codes = codes,
+      last_updated = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC")
+    )
+  }, error = function(e) {
+    NULL
+  })
+}
+
+.save_yaml <- function(filename, data) {
+  cache_dir <- get_metadata_cache()
+  filepath <- file.path(cache_dir, filename)
+  yaml::write_yaml(data, filepath)
+  invisible(filepath)
+}
+
+.load_yaml <- function(filename) {
+  cache_dir <- get_metadata_cache()
+  filepath <- file.path(cache_dir, filename)
+  if (!file.exists(filepath)) {
+    return(list())
+  }
+  yaml::read_yaml(filepath)
+}
