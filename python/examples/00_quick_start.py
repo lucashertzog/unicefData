@@ -1,127 +1,110 @@
 """
-Quick Start Guide for unicef_api Python Package
-================================================
+00_quick_start.py - Quick Start Guide
+======================================
 
-This demonstrates the unified get_unicef() API that is consistent
-with the R package, plus the new search_indicators() and list_categories()
-functions for discovering available indicators.
+Demonstrates the basic get_unicef() API with 5 simple examples.
+Matches: R/examples/00_quick_start.R
+
+Examples:
+  1. Single indicator, specific countries
+  2. Multiple indicators
+  3. Nutrition data
+  4. Immunization data  
+  5. All countries (large download)
 """
+import sys
+sys.path.insert(0, '..')
 
-from unicef_api import get_unicef, list_dataflows, search_indicators, list_categories
+from unicef_api import get_unicef
 
-def main():
-    print("=" * 70)
-    print("unicef_api Python Package - Quick Start")
-    print("=" * 70)
-    print()
+print("=" * 70)
+print("00_quick_start.py - UNICEF API Quick Start Guide")
+print("=" * 70)
 
-    # =========================================================================
-    # Example 0: Discover Indicators
-    # =========================================================================
-    print("--- Example 0: Discover Available Indicators ---")
-    print()
-    
-    # List all categories (15 categories, 733 indicators)
-    print("Available categories:\n")
-    list_categories()
-    
-    print()
-    
-    # Search for mortality indicators
-    print("Searching for 'mortality' indicators:\n")
-    search_indicators("mortality", limit=5)
-    
-    print()
-    
-    # Search within a specific category
-    print("Searching in NUTRITION category:\n")
-    search_indicators(category="NUTRITION", limit=5)
+# =============================================================================
+# Example 1: Single Indicator - Under-5 Mortality
+# =============================================================================
+print("\n--- Example 1: Single Indicator (Under-5 Mortality) ---")
+print("Indicator: CME_MRY0T4")
+print("Countries: Albania, USA, Brazil")
+print("Years: 2015-2023\n")
 
-    # =========================================================================
-    # Example 1: Basic Usage - Fetch Under-5 Mortality
-    # =========================================================================
-    print("\n--- Example 1: Basic Usage ---")
-    print("Fetching under-5 mortality for Albania, USA, and Brazil (2015-2023)")
-    print("Note: Dataflow is auto-detected from indicator code!\n")
+df = get_unicef(
+    indicator="CME_MRY0T4",
+    countries=["ALB", "USA", "BRA"],
+    start_year=2015,
+    end_year=2023
+)
 
-    df = get_unicef(
-        indicator="CME_MRY0T4",
-        countries=["ALB", "USA", "BRA"],
-        start_year=2015,
-        end_year=2023
-    )
+print(f"Result: {len(df)} rows, {df['iso3'].nunique()} countries")
+print(df[["iso3", "country", "period", "value"]].head())
 
-    if not df.empty:
-        print(f"✅ Downloaded {len(df)} observations")
-        print("\nSample data:")
-        print(df.head())
-    else:
-        print("⚠️ No data returned")
+# =============================================================================
+# Example 2: Multiple Indicators - Mortality Comparison
+# =============================================================================
+print("\n--- Example 2: Multiple Indicators (Mortality) ---")
+print("Indicators: CME_MRM0 (Neonatal), CME_MRY0T4 (Under-5)")
+print("Years: 2020-2023\n")
 
-    # =========================================================================
-    # Example 2: Multiple Indicators
-    # =========================================================================
-    print("\n--- Example 2: Multiple Indicators ---")
-    print("Fetching neonatal + under-5 mortality for 2020-2023\n")
+df = get_unicef(
+    indicator=["CME_MRM0", "CME_MRY0T4"],
+    countries=["ALB", "USA", "BRA"],
+    start_year=2020,
+    end_year=2023
+)
 
-    df = get_unicef(
-        indicator=["CME_MRM0", "CME_MRY0T4"],
-        start_year=2020,
-        end_year=2023
-    )
+print(f"Result: {len(df)} rows")
+print(f"Indicators: {df['indicator'].unique().tolist()}")
 
-    if not df.empty:
-        print(f"✅ Downloaded {len(df)} observations")
-        if 'INDICATOR' in df.columns:
-            print(f"   Indicators: {df['INDICATOR'].unique().tolist()}")
+# =============================================================================
+# Example 3: Nutrition - Stunting Prevalence
+# =============================================================================
+print("\n--- Example 3: Nutrition (Stunting) ---")
+print("Indicator: NT_ANT_HAZ_NE2_MOD")
+print("Countries: Afghanistan, India, Nigeria")
+print("Years: 2015+\n")
 
-    # =========================================================================
-    # Example 3: List Available Dataflows
-    # =========================================================================
-    print("\n--- Example 3: List Available Dataflows ---")
+df = get_unicef(
+    indicator="NT_ANT_HAZ_NE2_MOD",
+    countries=["AFG", "IND", "NGA"],
+    start_year=2015
+)
 
-    flows = list_dataflows()
-    print(f"✅ Found {len(flows)} dataflows\n")
-    print("Key dataflows for child indicators:")
-    key_flows = ["CME", "NUTRITION", "EDUCATION_UIS_SDG", "IMMUNISATION", "MNCH"]
-    print(flows[flows['id'].isin(key_flows)])
+print(f"Result: {len(df)} rows, {df['iso3'].nunique()} countries")
 
-    # =========================================================================
-    # Example 4: Nutrition Data
-    # =========================================================================
-    print("\n--- Example 4: Nutrition Data ---")
-    print("Fetching stunting prevalence\n")
+# =============================================================================
+# Example 4: Immunization - DTP3 Coverage
+# =============================================================================
+print("\n--- Example 4: Immunization (DTP3) ---")
+print("Indicator: IM_DTP3")
+print("Countries: Albania, USA, Brazil")
+print("Years: 2015-2023\n")
 
-    df = get_unicef(
-        indicator="NT_ANT_HAZ_NE2_MOD",
-        start_year=2015
-    )
+df = get_unicef(
+    indicator="IM_DTP3",
+    countries=["ALB", "USA", "BRA"],
+    start_year=2015,
+    end_year=2023
+)
 
-    if not df.empty:
-        print(f"✅ Downloaded {len(df)} observations")
-        if 'REF_AREA' in df.columns:
-            print(f"   Countries: {df['REF_AREA'].nunique()}")
+print(f"Result: {len(df)} rows")
 
-    # =========================================================================
-    # Example 5: All Countries, All Years
-    # =========================================================================
-    print("\n--- Example 5: All Countries (large download) ---")
-    print("Fetching all DTP3 immunization data...\n")
+# =============================================================================
+# Example 5: All Countries (Large Download)
+# =============================================================================
+print("\n--- Example 5: All Countries ---")
+print("Indicator: CME_MRY0T4 (Under-5 mortality)")
+print("Countries: ALL")
+print("Years: 2020+\n")
 
-    df = get_unicef(indicator="IM_DTP3")
+df = get_unicef(
+    indicator="CME_MRY0T4",
+    start_year=2020
+)
 
-    if not df.empty:
-        print(f"✅ Downloaded {len(df)} observations")
-        if 'REF_AREA' in df.columns:
-            print(f"   Countries: {df['REF_AREA'].nunique()}")
-        if 'TIME_PERIOD' in df.columns:
-            print(f"   Years: {df['TIME_PERIOD'].min()} - {df['TIME_PERIOD'].max()}")
+print(f"Result: {len(df)} rows, {df['iso3'].nunique()} countries")
+print(f"Years: {df['period'].min()} - {df['period'].max()}")
 
-    print()
-    print("=" * 70)
-    print("Quick start complete!")
-    print("=" * 70)
-
-
-if __name__ == "__main__":
-    main()
+print("\n" + "=" * 70)
+print("Quick Start Complete!")
+print("=" * 70)
