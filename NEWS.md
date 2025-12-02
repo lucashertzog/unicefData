@@ -1,5 +1,45 @@
 # unicefData Changelog
 
+## 0.2.2 (2025-12-02)
+
+### Vintage Control (NEW)
+* **R**: Added vintage control functions to `R/metadata.R`:
+  - `list_vintages()` - List all available metadata snapshots
+  - `load_vintage(vintage)` - Load metadata from a specific vintage date
+  - `compare_vintages(v1, v2)` - Compare two vintages to detect additions/removals/changes
+  - `get_vintage_path(vintage)` - Get path to vintage directory
+  - `ensure_metadata(max_age_days)` - Auto-sync if metadata is stale
+  
+* **Python**: Added vintage control to `unicef_api/metadata.py`:
+  - `list_vintages()` - List all available metadata snapshots
+  - `load_vintage(vintage)` - Load metadata from a specific vintage
+  - `compare_vintages(v1, v2)` - Compare vintages for API changes
+  - `ensure_metadata(max_age_days)` - Auto-sync with staleness check
+  - `MetadataSync.sync_all(create_vintage=True)` - Creates versioned snapshot
+
+* **Vintage Directory Structure**:
+  ```
+  metadata/
+    dataflows.yaml       # Current metadata
+    codelists.yaml
+    indicators.yaml
+    sync_summary.yaml
+    sync_history.yaml    # History of all syncs
+    vintages/
+      2025-12-02/        # Historical snapshot
+        dataflows.yaml
+        codelists.yaml
+        indicators.yaml
+        summary.yaml
+  ```
+
+### Auto-sync on First Use
+* Metadata is automatically synced when first accessed
+* Default staleness threshold: 30 days (configurable via `max_age_days`)
+* Use `force=True` to refresh even if metadata is fresh
+
+---
+
 ## 0.2.1 (2025-12-02)
 
 ### Metadata Sync & Validation (NEW)

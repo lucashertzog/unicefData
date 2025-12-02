@@ -20,7 +20,7 @@ Basic usage:
 For more details, see: https://data.unicef.org/sdmx-api-documentation/
 """
 
-__version__ = "0.2.0"
+__version__ = "0.2.2"
 __author__ = "Joao Pedro Azevedo"
 __email__ = "jazevedo@unicef.org"
 
@@ -50,8 +50,14 @@ from unicef_api.utils import (
 
 from unicef_api.metadata import (
     MetadataSync,
+    DataflowMetadata,
+    IndicatorMetadata,
+    CodelistMetadata,
     sync_metadata,
+    ensure_metadata,
     validate_indicator_data,
+    list_vintages,
+    compare_vintages,
 )
 
 __all__ = [
@@ -76,6 +82,12 @@ __all__ = [
     "clean_dataframe",
     # Metadata
     "MetadataSync",
+    "DataflowMetadata",
+    "IndicatorMetadata",
+    "CodelistMetadata",
     "sync_metadata",
+    "ensure_metadata",
     "validate_indicator_data",
+    "list_vintages",
+    "compare_vintages",
 ]

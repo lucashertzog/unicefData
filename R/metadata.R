@@ -111,12 +111,18 @@ sync_metadata <- function(cache_dir = NULL, verbose = TRUE) {
     results$errors <- c(results$errors, paste("Indicators:", e$message))
   })
   
-  # 4. Save sync summary
+  # 4. Create vintage snapshot
+  vintage_date <- format(Sys.Date(), "%Y-%m-%d")
+  results$vintage_date <- vintage_date
+  .create_vintage(vintage_date, results, verbose = verbose)
+  
+  # 5. Save sync summary
   .save_yaml("sync_summary.yaml", results)
   
   if (verbose) {
     message(sprintf("\n✅ Sync complete: %d dataflows, %d codelists, %d indicators",
                     results$dataflows, results$codelists, results$indicators))
+    message(sprintf("   Vintage: %s", vintage_date))
     if (length(results$errors) > 0) {
       message(sprintf("⚠️  Errors: %d", length(results$errors)))
     }
@@ -553,6 +559,205 @@ create_data_version <- function(df, indicator_code, version_id = NULL, notes = N
 }
 
 # ============================================================================
+# Vintage Control Functions
+# ============================================================================
+
+#' List available metadata vintages
+#'
+#' Returns dates of all metadata snapshots stored in the vintages/ directory.
+#' Vintages are sorted newest first.
+#'
+#' @param cache_dir Optional cache directory path
+#' @return Character vector of vintage dates (YYYY-MM-DD format)
+#' @export
+#' @examples
+#' \dontrun{
+#' list_vintages()
+#' # [1] "2025-12-02" "2025-11-15" "2025-10-01"
+#' }
+list_vintages <- function(cache_dir = NULL) {
+  if (!is.null(cache_dir)) {
+    set_metadata_cache(cache_dir)
+  }
+  cache_dir <- get_metadata_cache()
+  
+  vintages_dir <- file.path(cache_dir, "vintages")
+  if (!dir.exists(vintages_dir)) {
+    return(character())
+  }
+  
+  vintages <- list.dirs(vintages_dir, full.names = FALSE, recursive = FALSE)
+  # Sort newest first
+  sort(vintages, decreasing = TRUE)
+}
+
+#' Get path to a specific vintage
+#'
+#' @param vintage Vintage date (YYYY-MM-DD) or NULL for current
+#' @param cache_dir Optional cache directory path
+#' @return Path to vintage directory
+#' @export
+get_vintage_path <- function(vintage = NULL, cache_dir = NULL) {
+  if (!is.null(cache_dir)) {
+    set_metadata_cache(cache_dir)
+  }
+  cache_dir <- get_metadata_cache()
+  
+  if (is.null(vintage)) {
+    return(cache_dir)  # Current metadata
+  }
+  
+  vintage_path <- file.path(cache_dir, "vintages", vintage)
+  if (!dir.exists(vintage_path)) {
+    stop(sprintf("Vintage '%s' not found. Available: %s", 
+                 vintage, paste(list_vintages(), collapse = ", ")))
+  }
+  vintage_path
+}
+
+#' Load metadata from a specific vintage
+#'
+#' @param vintage Vintage date (YYYY-MM-DD) or NULL for current
+#' @param cache_dir Optional cache directory path
+#' @return List with dataflows, codelists, and indicators
+#' @export
+#' @examples
+#' \dontrun{
+#' # Load current metadata
+#' meta <- load_vintage()
+#' 
+#' # Load from specific vintage
+#' meta <- load_vintage("2025-11-15")
+#' }
+load_vintage <- function(vintage = NULL, cache_dir = NULL) {
+  vintage_path <- get_vintage_path(vintage, cache_dir)
+  
+  list(
+    dataflows = .load_yaml_from_path(file.path(vintage_path, "dataflows.yaml")),
+    codelists = .load_yaml_from_path(file.path(vintage_path, "codelists.yaml")),
+    indicators = .load_yaml_from_path(file.path(vintage_path, "indicators.yaml"))
+  )
+}
+
+#' Compare two metadata vintages
+#'
+#' Compares dataflows between two vintages to identify additions,
+#' removals, and modifications.
+#'
+#' @param vintage1 Earlier vintage date (YYYY-MM-DD)
+#' @param vintage2 Later vintage date (YYYY-MM-DD) or NULL for current
+#' @param cache_dir Optional cache directory path
+#' @return List with added, removed, and changed items
+#' @export
+#' @examples
+#' \dontrun{
+#' # Compare historical vintage to current
+#' changes <- compare_vintages("2025-11-15")
+#' 
+#' # Compare two historical vintages
+#' changes <- compare_vintages("2025-10-01", "2025-11-15")
+#' 
+#' if (length(changes$added) > 0) {
+#'   message(sprintf("New dataflows: %s", paste(changes$added, collapse = ", ")))
+#' }
+#' }
+compare_vintages <- function(vintage1, vintage2 = NULL, cache_dir = NULL) {
+  if (!is.null(cache_dir)) {
+    set_metadata_cache(cache_dir)
+  }
+  
+  meta1 <- load_vintage(vintage1)
+  meta2 <- load_vintage(vintage2)
+  
+  # Compare dataflows
+  df_ids1 <- names(meta1$dataflows$dataflows)
+  df_ids2 <- names(meta2$dataflows$dataflows)
+  
+  added <- setdiff(df_ids2, df_ids1)
+  removed <- setdiff(df_ids1, df_ids2)
+  
+  # Check for changes in common dataflows
+  common <- intersect(df_ids1, df_ids2)
+  changed <- character()
+  
+  for (df_id in common) {
+    v1 <- meta1$dataflows$dataflows[[df_id]]$version
+    v2 <- meta2$dataflows$dataflows[[df_id]]$version
+    if (!identical(v1, v2)) {
+      changed <- c(changed, df_id)
+    }
+  }
+  
+  list(
+    vintage1 = vintage1,
+    vintage2 = if (is.null(vintage2)) "current" else vintage2,
+    dataflows = list(
+      added = added,
+      removed = removed,
+      changed = changed
+    ),
+    indicators = list(
+      added = setdiff(names(meta2$indicators$indicators), 
+                      names(meta1$indicators$indicators)),
+      removed = setdiff(names(meta1$indicators$indicators), 
+                        names(meta2$indicators$indicators))
+    )
+  )
+}
+
+#' Ensure metadata is synced and fresh
+#'
+#' Checks if metadata exists and is within max_age_days.
+#' If not, performs a sync automatically.
+#'
+#' @param max_age_days Maximum age in days before re-sync (default: 30)
+#' @param verbose Print messages
+#' @param cache_dir Optional cache directory path
+#' @return Logical indicating if sync was performed
+#' @export
+#' @examples
+#' \dontrun{
+#' # Check every 30 days (default)
+#' ensure_metadata()
+#' 
+#' # Check every 7 days
+#' ensure_metadata(max_age_days = 7)
+#' }
+ensure_metadata <- function(max_age_days = 30, verbose = FALSE, cache_dir = NULL) {
+  if (!is.null(cache_dir)) {
+    set_metadata_cache(cache_dir)
+  }
+  cache_dir <- get_metadata_cache()
+  
+  summary_file <- file.path(cache_dir, "sync_summary.yaml")
+  
+  needs_sync <- TRUE
+  
+  if (file.exists(summary_file)) {
+    summary <- yaml::read_yaml(summary_file)
+    synced_at <- summary$synced_at
+    
+    if (!is.null(synced_at)) {
+      sync_date <- as.Date(substr(synced_at, 1, 10))
+      age_days <- as.numeric(Sys.Date() - sync_date)
+      needs_sync <- age_days > max_age_days
+      
+      if (verbose && !needs_sync) {
+        message(sprintf("Metadata is fresh (synced %d days ago)", age_days))
+      }
+    }
+  }
+  
+  if (needs_sync) {
+    if (verbose) message("Metadata is stale or missing, syncing...")
+    sync_metadata(verbose = verbose)
+    return(TRUE)
+  }
+  
+  invisible(FALSE)
+}
+
+# ============================================================================
 # Private Helpers
 # ============================================================================
 
@@ -614,4 +819,77 @@ create_data_version <- function(df, indicator_code, version_id = NULL, notes = N
     return(list())
   }
   yaml::read_yaml(filepath)
+}
+
+.load_yaml_from_path <- function(filepath) {
+  if (!file.exists(filepath)) {
+    return(list())
+  }
+  yaml::read_yaml(filepath)
+}
+
+.create_vintage <- function(vintage_date, results, verbose = TRUE) {
+  cache_dir <- get_metadata_cache()
+  
+  # Create vintages directory structure
+  vintage_dir <- file.path(cache_dir, "vintages", vintage_date)
+  if (!dir.exists(vintage_dir)) {
+    dir.create(vintage_dir, recursive = TRUE)
+  }
+  
+  # Copy current YAML files to vintage
+  for (filename in c("dataflows.yaml", "codelists.yaml", "indicators.yaml")) {
+    src <- file.path(cache_dir, filename)
+    if (file.exists(src)) {
+      dst <- file.path(vintage_dir, filename)
+      file.copy(src, dst, overwrite = TRUE)
+    }
+  }
+  
+  # Save vintage summary
+  summary <- list(
+    vintage_date = vintage_date,
+    created_at = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
+    dataflows = results$dataflows,
+    codelists = results$codelists,
+    indicators = results$indicators
+  )
+  yaml::write_yaml(summary, file.path(vintage_dir, "summary.yaml"))
+  
+  # Update sync history
+  .update_sync_history(vintage_date, results)
+  
+  invisible(vintage_dir)
+}
+
+.update_sync_history <- function(vintage_date, results) {
+  cache_dir <- get_metadata_cache()
+  history_file <- file.path(cache_dir, "sync_history.yaml")
+  
+  # Load existing history
+  if (file.exists(history_file)) {
+    history <- yaml::read_yaml(history_file)
+  } else {
+    history <- list(vintages = list())
+  }
+  
+  # Add new entry at front
+  entry <- list(
+    vintage_date = vintage_date,
+    synced_at = results$synced_at,
+    dataflows = results$dataflows,
+    codelists = results$codelists,
+    indicators = results$indicators,
+    errors = results$errors
+  )
+  
+  history$vintages <- c(list(entry), history$vintages)
+  
+  # Keep only last 50 entries
+  if (length(history$vintages) > 50) {
+    history$vintages <- history$vintages[1:50]
+  }
+  
+  yaml::write_yaml(history, history_file)
+  invisible(history_file)
 }
