@@ -153,6 +153,7 @@ class UNICEFSDMXClient:
         sex_disaggregation: str = "_T",
         max_retries: int = 3,
         return_raw: bool = False,
+        dropna: bool = True,
     ) -> pd.DataFrame:
         """
         Fetch data for a specific indicator using CSV format
@@ -496,6 +497,7 @@ class UNICEFSDMXClient:
         indicator_code: str,
         countries: Optional[List[str]] = None,
         sex_filter: str = "_T",
+        dropna: bool = True,
     ) -> pd.DataFrame:
         """
         Clean and standardize the CSV dataframe
@@ -505,6 +507,7 @@ class UNICEFSDMXClient:
             indicator_code: Indicator code being fetched
             countries: List of countries to filter to
             sex_filter: Sex disaggregation to filter ('_T', 'F', 'M', or None for all)
+            dropna: If True (default), drop rows with missing year or value
         
         Returns:
             Cleaned DataFrame with standardized columns
@@ -521,6 +524,9 @@ class UNICEFSDMXClient:
                 "Unit of measure": "unit_name",
                 "SEX": "sex",
                 "AGE": "age",
+                "WEALTH_QUINTILE": "wealth_quintile",
+                "RESIDENCE": "residence",
+                "MATERNAL_EDU_LVL": "maternal_edu_lvl",
                 "LOWER_BOUND": "lower_bound",
                 "UPPER_BOUND": "upper_bound",
                 "OBS_STATUS": "obs_status",
@@ -539,31 +545,133 @@ class UNICEFSDMXClient:
             # Convert numeric columns
             if "value" in df.columns:
                 df["value"] = pd.to_numeric(df["value"], errors="coerce")
+            
+            # Convert year column - handle YYYY-MM format by converting to decimal
+            # e.g., "2006-01" -> 2006 + 1/12 = 2006.0833, "2006-11" -> 2006 + 11/12 = 2006.9167
             if "year" in df.columns:
-                df["year"] = pd.to_numeric(df["year"], errors="coerce").astype("Int64")
+                def convert_period_to_decimal(val):
+                    """Convert TIME_PERIOD to decimal year (YYYY-MM -> YYYY + MM/12)"""
+                    if pd.isna(val):
+                        return None
+                    val_str = str(val)
+                    # Check for YYYY-MM format
+                    if '-' in val_str and len(val_str) >= 7:
+                        parts = val_str.split('-')
+                        if len(parts) >= 2:
+                            try:
+                                year = int(parts[0])
+                                month = int(parts[1])
+                                return year + month / 12
+                            except (ValueError, IndexError):
+                                pass
+                    # Try direct numeric conversion for YYYY format
+                    try:
+                        return float(val)
+                    except (ValueError, TypeError):
+                        return None
+                
+                df["year"] = df["year"].apply(convert_period_to_decimal)
+            
             if "lower_bound" in df.columns:
                 df["lower_bound"] = pd.to_numeric(df["lower_bound"], errors="coerce")
             if "upper_bound" in df.columns:
                 df["upper_bound"] = pd.to_numeric(df["upper_bound"], errors="coerce")
             
-            # Remove rows with null year
-            if "year" in df.columns:
+            # =================================================================
+            # Drop rows with missing year or value (data quality requirement)
+            # =================================================================
+            if dropna:
                 initial_rows = len(df)
-                df = df.dropna(subset=["year"])
-                if len(df) < initial_rows:
-                    logger.debug(
-                        f"Removed {initial_rows - len(df)} rows with null year values"
+                
+                # Check for rows with missing year or value
+                missing_year = df["year"].isna() if "year" in df.columns else pd.Series([False] * len(df))
+                missing_value = df["value"].isna() if "value" in df.columns else pd.Series([False] * len(df))
+                
+                # Log cross-tabulation for transparency
+                both_missing = (missing_year & missing_value).sum()
+                year_only_missing = (missing_year & ~missing_value).sum()
+                value_only_missing = (~missing_year & missing_value).sum()
+                
+                # Drop rows with missing year OR missing value
+                df = df[~(missing_year | missing_value)].copy()
+                
+                n_dropped = initial_rows - len(df)
+                if n_dropped > 0:
+                    logger.info(
+                        f"Dropped {n_dropped} rows with missing data: "
+                        f"{both_missing} with both missing, "
+                        f"{year_only_missing} with missing year only, "
+                        f"{value_only_missing} with missing value only. "
+                        f"Use dropna=False to keep these rows."
                     )
             
-            # Filter by sex if specified
-            if sex_filter and "sex" in df.columns:
-                df = df.dropna(subset=["sex"])
-                if sex_filter in df["sex"].values:
+            # =================================================================
+            # Filter to totals by default (sex, age, wealth_quintile)
+            # This provides clean aggregated data; disaggregations available on request
+            # =================================================================
+            
+            # Check what disaggregations are available and log them
+            available_disaggregations = []
+            
+            # Filter by sex (default: total)
+            if "sex" in df.columns:
+                sex_values = df["sex"].dropna().unique().tolist()
+                if len(sex_values) > 1 or (len(sex_values) == 1 and sex_values[0] != "_T"):
+                    available_disaggregations.append(f"sex: {sex_values}")
+                if sex_filter and sex_filter in df["sex"].values:
                     df = df[df["sex"] == sex_filter].copy()
                     logger.debug(f"Filtered to sex={sex_filter}")
             
-            # Select relevant columns (keep all that exist)
-            columns_to_keep = [
+            # Filter by age (default: total "_T" or indicator-specific total like "Y0T4")
+            if "age" in df.columns:
+                age_values = df["age"].dropna().unique().tolist()
+                if len(age_values) > 1:
+                    available_disaggregations.append(f"age: {age_values}")
+                    # Keep only total age groups
+                    total_ages = ["_T", "Y0T4", "Y0T14", "Y0T17", "Y15T49", "ALLAGE"]
+                    age_totals = [a for a in total_ages if a in age_values]
+                    if age_totals:
+                        df = df[df["age"].isin(age_totals)].copy()
+                        logger.debug(f"Filtered to total age groups: {age_totals}")
+            
+            # Filter by wealth quintile (default: total)
+            if "wealth_quintile" in df.columns:
+                wq_values = df["wealth_quintile"].dropna().unique().tolist()
+                if len(wq_values) > 1 or (len(wq_values) == 1 and wq_values[0] != "_T"):
+                    available_disaggregations.append(f"wealth_quintile: {wq_values}")
+                if "_T" in df["wealth_quintile"].values:
+                    df = df[df["wealth_quintile"] == "_T"].copy()
+                    logger.debug("Filtered to wealth_quintile=_T")
+            
+            # Filter by residence (default: total)
+            if "residence" in df.columns:
+                res_values = df["residence"].dropna().unique().tolist()
+                if len(res_values) > 1 or (len(res_values) == 1 and res_values[0] != "_T"):
+                    available_disaggregations.append(f"residence: {res_values}")
+                if "_T" in df["residence"].values:
+                    df = df[df["residence"] == "_T"].copy()
+                    logger.debug("Filtered to residence=_T")
+            
+            # Filter by maternal education level (default: total)
+            if "maternal_edu_lvl" in df.columns:
+                edu_values = df["maternal_edu_lvl"].dropna().unique().tolist()
+                if len(edu_values) > 1 or (len(edu_values) == 1 and edu_values[0] != "_T"):
+                    available_disaggregations.append(f"maternal_edu_lvl: {edu_values}")
+                if "_T" in df["maternal_edu_lvl"].values:
+                    df = df[df["maternal_edu_lvl"] == "_T"].copy()
+                    logger.debug("Filtered to maternal_edu_lvl=_T")
+            
+            # Log available disaggregations
+            if available_disaggregations:
+                logger.info(
+                    f"Note: Disaggregated data available for {indicator_code}: "
+                    f"{', '.join(available_disaggregations)}. "
+                    f"Use raw=True or adjust filters to access."
+                )
+            
+            # Standard output columns - always include all for cross-language consistency
+            # Including all disaggregation columns for transparency
+            standard_columns = [
                 "indicator_code",
                 "country_code",
                 "country_name",
@@ -573,21 +681,22 @@ class UNICEFSDMXClient:
                 "unit_name",
                 "sex",
                 "age",
+                "wealth_quintile",
+                "residence",
+                "maternal_edu_lvl",
                 "lower_bound",
                 "upper_bound",
                 "obs_status",
                 "data_source",
             ]
-            df = df[[col for col in columns_to_keep if col in df.columns]]
             
-            # Remove duplicates
-            subset_cols = ["indicator_code", "country_code", "year"]
-            if "sex" in df.columns:
-                subset_cols.append("sex")
-            if "age" in df.columns:
-                subset_cols.append("age")
+            # Add missing columns with NA
+            for col in standard_columns:
+                if col not in df.columns:
+                    df[col] = None
             
-            df = df.drop_duplicates(subset=subset_cols, keep="first")
+            # Select columns in standard order
+            df = df[standard_columns]
             
             # Sort by country and year
             if "country_code" in df.columns and "year" in df.columns:

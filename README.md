@@ -178,6 +178,43 @@ search_indicators("rate", category = "CME")
 
 The `get_unicef()` function includes powerful post-production options for data transformation and enrichment.
 
+### 📅 Time Period Handling
+
+**Important**: The UNICEF SDMX API returns TIME_PERIOD values in various formats. This library automatically converts them to decimal years for consistent time-series analysis:
+
+| Original Format | Decimal Year | Calculation |
+|----------------|--------------|-------------|
+| `2020` | `2020.0` | Integer year |
+| `2020-01` | `2020.0833` | 2020 + 1/12 (January) |
+| `2020-06` | `2020.5000` | 2020 + 6/12 (June) |
+| `2020-11` | `2020.9167` | 2020 + 11/12 (November) |
+
+**Formula**: `decimal_year = year + month/12`
+
+This conversion:
+- **Preserves temporal precision** for sub-annual survey data
+- **Maintains a consistent numeric format** for all observations  
+- **Enables proper sorting** and time-series analysis
+- **Works identically** in both Python and R packages
+
+```python
+# Python: Data with monthly periods will have decimal years
+df = get_unicef(indicator="NT_ANT_HAZ_NE2", countries=["BGD"])
+print(df[["iso3", "period", "value"]].head())
+#   iso3       period  value
+# 0  BGD  2011.583333   40.0  # July 2011 (2011 + 7/12)
+# 1  BGD  2011.750000   41.3  # September 2011 (2011 + 9/12)
+```
+
+```r
+# R: Same decimal conversion
+df <- get_unicef(indicator = "NT_ANT_HAZ_NE2", countries = "BGD")
+head(df[, c("iso3", "period", "value")])
+#   iso3       period  value
+# 1  BGD  2011.583333   40.0
+# 2  BGD  2011.750000   41.3
+```
+
 ### Output Formats
 
 ```python

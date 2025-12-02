@@ -3,6 +3,23 @@
 #' @importFrom magrittr %>%
 NULL
 
+# Ensure required packages are loaded when sourcing directly
+if (!requireNamespace("magrittr", quietly = TRUE)) {
+  stop("Package 'magrittr' is required. Install with: install.packages('magrittr')")
+}
+if (!requireNamespace("dplyr", quietly = TRUE)) {
+  stop("Package 'dplyr' is required. Install with: install.packages('dplyr')")
+}
+if (!requireNamespace("purrr", quietly = TRUE)) {
+  stop("Package 'purrr' is required. Install with: install.packages('purrr')")
+}
+if (!requireNamespace("httr", quietly = TRUE)) {
+  stop("Package 'httr' is required. Install with: install.packages('httr')")
+}
+
+# Import pipe operator for direct sourcing
+`%>%` <- magrittr::`%>%`
+
 # Internal helper to perform HTTP GET and return text
 fetch_sdmx <- function(url, ua, retry) {
   resp <- httr::RETRY("GET", url, ua, times = retry, pause_base = 1)
@@ -62,6 +79,18 @@ list_unicef_codelist <- memoise::memoise(
 #' 
 #' This function uses unified parameter names consistent with the Python package.
 #'
+#' @section Time Period Handling:
+#' The UNICEF SDMX API returns TIME_PERIOD values in various formats (annual "2020" 
+#' or monthly "2020-03"). This function automatically converts monthly periods to 
+#' decimal years for consistent time-series analysis:
+#' \itemize{
+#'   \item "2020" becomes 2020.0 (integer year)
+#'   \item "2020-01" becomes 2020.0833 (2020 + 1/12, January)
+#'   \item "2020-06" becomes 2020.5000 (2020 + 6/12, June)
+#'   \item "2020-11" becomes 2020.9167 (2020 + 11/12, November)
+#' }
+#' Formula: decimal_year = year + month/12
+#'
 #' @param indicator Character vector of indicator codes (e.g., "CME_MRY0T4").
 #'   Previously called 'key'. Both parameter names are supported.
 #' @param dataflow Character vector of dataflow IDs (e.g., "CME", "NUTRITION").
@@ -90,21 +119,34 @@ list_unicef_codelist <- memoise::memoise(
 #' @param dropna Logical; if TRUE, remove rows with missing values.
 #' @param simplify Logical; if TRUE, keep only essential columns.
 #' @param mrv Integer; keep only the N most recent values per country (Most Recent Values).
+#' @param raw Logical; if TRUE, return raw SDMX data without column standardization.
+#'   Default is FALSE (clean, standardized output matching Python package).
+#' @param ignore_duplicates Logical; if FALSE (default), raises an error when exact
+#'   duplicate rows are found (all column values identical). Set to TRUE to allow 
+#'   automatic removal of duplicates.
 #' @param flow Deprecated. Use 'dataflow' instead.
 #' @param key Deprecated. Use 'indicator' instead.
 #' @param start_period Deprecated. Use 'start_year' instead.
 #' @param end_period Deprecated. Use 'end_year' instead.
 #' @param retry Deprecated. Use 'max_retries' instead.
 #' @return Tibble with indicator data, or xml_document if detail="structure".
+#'   The 'period' column contains decimal years (see Time Period Handling section).
 #' 
 #' @examples
 #' \dontrun{
-#' # Fetch under-5 mortality for specific countries
+#' # Fetch under-5 mortality for specific countries (clean output)
 #' df <- get_unicef(
 #'   indicator = "CME_MRY0T4",
 #'   countries = c("ALB", "USA", "BRA"),
 #'   start_year = 2015,
 #'   end_year = 2023
+#' )
+#' 
+#' # Get raw SDMX data with all original columns
+#' df_raw <- get_unicef(
+#'   indicator = "CME_MRY0T4",
+#'   countries = c("ALB", "USA"),
+#'   raw = TRUE
 #' )
 #' 
 #' # Get latest value per country (cross-sectional)
@@ -153,6 +195,8 @@ get_unicef <- function(
     dropna        = FALSE,
     simplify      = FALSE,
     mrv           = NULL,
+    raw           = FALSE,
+    ignore_duplicates = FALSE,
     # Legacy parameter names (deprecated but supported)
     flow          = NULL,
     key           = NULL,
@@ -189,7 +233,9 @@ get_unicef <- function(
     # Use indicator registry to get dataflow
     # Source the registry if get_dataflow_for_indicator is not available
     if (!exists("get_dataflow_for_indicator", mode = "function")) {
-      registry_path <- file.path(dirname(sys.frame(1)$ofile %||% "."), "indicator_registry.R")
+      script_file <- sys.frame(1)$ofile
+      script_dir <- if (is.null(script_file)) "." else dirname(script_file)
+      registry_path <- file.path(script_dir, "indicator_registry.R")
       if (file.exists(registry_path)) {
         source(registry_path, local = FALSE)
       }
@@ -203,28 +249,63 @@ get_unicef <- function(
       message(sprintf("Auto-detected dataflow '%s' for indicator '%s'", dataflow, first_indicator))
     } else {
       # Fallback: infer from indicator prefix
-      parts <- strsplit(first_indicator, "_")[[1]]
-      prefix <- parts[1]
-      
-      # Common prefix mappings
-      prefix_map <- list(
-        CME = "CME",
-        NT = "NUTRITION",
-        IM = "IMMUNISATION",
-        ED = "EDUCATION",
-        WS = "WASH_HOUSEHOLDS",
-        HVA = "HIV_AIDS",
-        MNCH = "MNCH",
-        PT = "PT",
-        ECD = "ECD"
+      # First check known overrides for problematic indicators
+      indicator_overrides <- list(
+        # Child Marriage - metadata says PT but data is in PT_CM
+        "PT_F_20-24_MRD_U18_TND" = "PT_CM",
+        "PT_F_20-24_MRD_U15" = "PT_CM",
+        # FGM - metadata says PT but data is in PT_FGM
+        "PT_F_15-49_FGM" = "PT_FGM",
+        "PT_F_0-14_FGM" = "PT_FGM",
+        "PT_F_15-19_FGM_TND" = "PT_FGM",
+        "PT_F_15-49_FGM_TND" = "PT_FGM",
+        "PT_F_15-49_FGM_ELIM" = "PT_FGM",
+        # Education UIS SDG indicators
+        "ED_CR_L1_UIS_MOD" = "EDUCATION_UIS_SDG",
+        "ED_CR_L2_UIS_MOD" = "EDUCATION_UIS_SDG",
+        "ED_CR_L3_UIS_MOD" = "EDUCATION_UIS_SDG",
+        "ED_ROFST_L1_UIS_MOD" = "EDUCATION_UIS_SDG",
+        "ED_ROFST_L2_UIS_MOD" = "EDUCATION_UIS_SDG",
+        "ED_ROFST_L3_UIS_MOD" = "EDUCATION_UIS_SDG",
+        "ED_ANAR_L02" = "EDUCATION_UIS_SDG",
+        "ED_MAT_G23" = "EDUCATION_UIS_SDG",
+        "ED_MAT_L1" = "EDUCATION_UIS_SDG",
+        "ED_MAT_L2" = "EDUCATION_UIS_SDG",
+        "ED_READ_G23" = "EDUCATION_UIS_SDG",
+        "ED_READ_L1" = "EDUCATION_UIS_SDG",
+        "ED_READ_L2" = "EDUCATION_UIS_SDG",
+        # Child Poverty
+        "PV_CHLD_DPRV-S-L1-HS" = "CHLD_PVTY"
       )
       
-      if (prefix %in% names(prefix_map)) {
-        dataflow <- prefix_map[[prefix]]
-        message(sprintf("Inferred dataflow '%s' from indicator prefix '%s'", dataflow, prefix))
+      if (first_indicator %in% names(indicator_overrides)) {
+        dataflow <- indicator_overrides[[first_indicator]]
+        message(sprintf("Using known dataflow override '%s' for indicator '%s'", dataflow, first_indicator))
       } else {
-        dataflow <- "GLOBAL_DATAFLOW"
-        message(sprintf("Using GLOBAL_DATAFLOW for indicator '%s'", first_indicator))
+        parts <- strsplit(first_indicator, "_")[[1]]
+        prefix <- parts[1]
+      
+        # Common prefix mappings
+        prefix_map <- list(
+          CME = "CME",
+          NT = "NUTRITION",
+          IM = "IMMUNISATION",
+          ED = "EDUCATION",
+          WS = "WASH_HOUSEHOLDS",
+          HVA = "HIV_AIDS",
+          MNCH = "MNCH",
+          PT = "PT",
+          ECD = "ECD",
+          PV = "CHLD_PVTY"
+        )
+      
+        if (prefix %in% names(prefix_map)) {
+          dataflow <- prefix_map[[prefix]]
+          message(sprintf("Inferred dataflow '%s' from indicator prefix '%s'", dataflow, prefix))
+        } else {
+          dataflow <- "GLOBAL_DATAFLOW"
+          message(sprintf("Using GLOBAL_DATAFLOW for indicator '%s'", first_indicator))
+        }
       }
     }
   }
@@ -308,19 +389,86 @@ get_unicef <- function(
       }
     }
     
-    # Filter by sex if specified (default is "_T" for total)
-    if (!is.null(sex) && nrow(df_all) > 0) {
-      if ("SEX" %in% names(df_all)) {
+    # =========================================================================
+    # Filter to totals by default (sex, age, wealth_quintile)
+    # This provides clean aggregated data; disaggregations available on request
+    # =========================================================================
+    
+    available_disaggregations <- c()
+    
+    # Filter by sex (default is "_T" for total)
+    if (nrow(df_all) > 0 && "SEX" %in% names(df_all)) {
+      sex_values <- unique(na.omit(df_all$SEX))
+      if (length(sex_values) > 1 || (length(sex_values) == 1 && sex_values[1] != "_T")) {
+        available_disaggregations <- c(available_disaggregations, 
+                                       paste0("sex: ", paste(sex_values, collapse = ", ")))
+      }
+      if (!is.null(sex)) {
         df_all <- df_all %>% dplyr::filter(SEX == sex)
       }
     }
     
-    # Filter to total wealth quintile by default (avoid disaggregated rows)
-    if (nrow(df_all) > 0 && "WEALTH_QUINTILE" %in% names(df_all)) {
-      df_all <- df_all %>% dplyr::filter(WEALTH_QUINTILE == "_T")
+    # Filter by age (default: keep only total age groups)
+    if (nrow(df_all) > 0 && "AGE" %in% names(df_all)) {
+      age_values <- unique(na.omit(df_all$AGE))
+      if (length(age_values) > 1) {
+        available_disaggregations <- c(available_disaggregations,
+                                       paste0("age: ", paste(age_values, collapse = ", ")))
+        # Keep only total age groups
+        total_ages <- c("_T", "Y0T4", "Y0T14", "Y0T17", "Y15T49", "ALLAGE")
+        age_totals <- intersect(total_ages, age_values)
+        if (length(age_totals) > 0) {
+          df_all <- df_all %>% dplyr::filter(AGE %in% age_totals)
+        }
+      }
     }
     
-    if (tidy && nrow(df_all) > 0) {
+    # Filter by wealth quintile (default: total)
+    if (nrow(df_all) > 0 && "WEALTH_QUINTILE" %in% names(df_all)) {
+      wq_values <- unique(na.omit(df_all$WEALTH_QUINTILE))
+      if (length(wq_values) > 1 || (length(wq_values) == 1 && wq_values[1] != "_T")) {
+        available_disaggregations <- c(available_disaggregations,
+                                       paste0("wealth_quintile: ", paste(wq_values, collapse = ", ")))
+      }
+      if ("_T" %in% wq_values) {
+        df_all <- df_all %>% dplyr::filter(WEALTH_QUINTILE == "_T")
+      }
+    }
+    
+    # Filter by residence (default: total)
+    if (nrow(df_all) > 0 && "RESIDENCE" %in% names(df_all)) {
+      res_values <- unique(na.omit(df_all$RESIDENCE))
+      if (length(res_values) > 1 || (length(res_values) == 1 && res_values[1] != "_T")) {
+        available_disaggregations <- c(available_disaggregations,
+                                       paste0("residence: ", paste(res_values, collapse = ", ")))
+      }
+      if ("_T" %in% res_values) {
+        df_all <- df_all %>% dplyr::filter(RESIDENCE == "_T")
+      }
+    }
+    
+    # Filter by maternal education level (default: total)
+    if (nrow(df_all) > 0 && "MATERNAL_EDU_LVL" %in% names(df_all)) {
+      edu_values <- unique(na.omit(df_all$MATERNAL_EDU_LVL))
+      if (length(edu_values) > 1 || (length(edu_values) == 1 && edu_values[1] != "_T")) {
+        available_disaggregations <- c(available_disaggregations,
+                                       paste0("maternal_edu_lvl: ", paste(edu_values, collapse = ", ")))
+      }
+      if ("_T" %in% edu_values) {
+        df_all <- df_all %>% dplyr::filter(MATERNAL_EDU_LVL == "_T")
+      }
+    }
+    
+    # Log available disaggregations
+    if (length(available_disaggregations) > 0 && !raw) {
+      message(sprintf("Note: Disaggregated data available for %s: %s. Use raw=TRUE to access.",
+                      if(!is.null(indicator)) indicator[1] else fl,
+                      paste(available_disaggregations, collapse = "; ")))
+    }
+    
+    # If raw=TRUE, return the data with minimal processing (just rename core columns)
+    if (raw && nrow(df_all) > 0) {
+      # Minimal renaming for usability, but keep all original columns
       df_all <- df_all %>%
         dplyr::rename(
           iso3      = REF_AREA,
@@ -328,20 +476,162 @@ get_unicef <- function(
           period    = TIME_PERIOD,
           value     = OBS_VALUE
         ) %>%
-        dplyr::mutate(period = as.integer(period)) %>%
-        dplyr::select(iso3, dplyr::everything())
+        dplyr::mutate(
+          period = as.integer(period),
+          value = as.numeric(value)
+        ) %>%
+        dplyr::select(iso3, indicator, period, value, dplyr::everything())
+      
       if (country_names) {
         df_all <- df_all %>%
           dplyr::left_join(
             countrycode::codelist %>% dplyr::select(iso3 = iso3c, country = country.name.en),
             by = "iso3"
-          ) %>% dplyr::select(iso3, country, dplyr::everything())
+          ) %>% 
+          dplyr::select(iso3, country, dplyr::everything())
       }
+      return(df_all)
+    }
+    
+    if (tidy && nrow(df_all) > 0) {
+      # Standardize column names to match Python output
+      # Columns: indicator, iso3, country, period, value, unit, unit_name, sex, 
+      #          age, wealth_quintile, residence, maternal_edu_lvl,
+      #          lower_bound, upper_bound, obs_status, data_source
+      
+      # Helper function to convert TIME_PERIOD to decimal year
+      # e.g., "2006-01" -> 2006 + 1/12 = 2006.0833, "2006-11" -> 2006 + 11/12 = 2006.9167
+      convert_period_to_decimal <- function(val) {
+        if (is.na(val)) return(NA_real_)
+        val_str <- as.character(val)
+        # Check for YYYY-MM format
+        if (grepl("^\\d{4}-\\d{2}", val_str)) {
+          parts <- strsplit(val_str, "-")[[1]]
+          year <- as.numeric(parts[1])
+          month <- as.numeric(parts[2])
+          return(year + month / 12)
+        }
+        # Try direct numeric conversion for YYYY format
+        return(as.numeric(val_str))
+      }
+      
+      # Build clean output with consistent column names
+      # Including all disaggregation columns for transparency
+      df_clean <- df_all %>%
+        dplyr::transmute(
+          indicator = INDICATOR,
+          iso3 = REF_AREA,
+          period = sapply(TIME_PERIOD, convert_period_to_decimal),
+          value = as.numeric(OBS_VALUE),
+          unit = if ("UNIT_MEASURE" %in% names(.)) UNIT_MEASURE else NA_character_,
+          unit_name = if ("Unit of measure" %in% names(.)) `Unit of measure` else NA_character_,
+          sex = if ("SEX" %in% names(.)) SEX else NA_character_,
+          age = if ("AGE" %in% names(.)) AGE else NA_character_,
+          wealth_quintile = if ("WEALTH_QUINTILE" %in% names(.)) WEALTH_QUINTILE else NA_character_,
+          residence = if ("RESIDENCE" %in% names(.)) RESIDENCE else NA_character_,
+          maternal_edu_lvl = if ("MATERNAL_EDU_LVL" %in% names(.)) MATERNAL_EDU_LVL else NA_character_,
+          lower_bound = if ("LOWER_BOUND" %in% names(.)) as.numeric(LOWER_BOUND) else NA_real_,
+          upper_bound = if ("UPPER_BOUND" %in% names(.)) as.numeric(UPPER_BOUND) else NA_real_,
+          obs_status = if ("OBS_STATUS" %in% names(.)) OBS_STATUS else NA_character_,
+          data_source = if ("DATA_SOURCE" %in% names(.)) DATA_SOURCE else NA_character_
+        )
+      
+      # Add country name if requested
+      if (country_names) {
+        df_clean <- df_clean %>%
+          dplyr::left_join(
+            countrycode::codelist %>% dplyr::select(iso3 = iso3c, country = country.name.en),
+            by = "iso3"
+          ) %>%
+          dplyr::select(indicator, iso3, country, dplyr::everything())
+      }
+      
+      # Check for exact duplicates - rows where ALL column values are identical
+      n_before <- nrow(df_clean)
+      df_clean_deduped <- dplyr::distinct(df_clean)
+      n_duplicates <- n_before - nrow(df_clean_deduped)
+      
+      if (n_duplicates > 0) {
+        if (!ignore_duplicates) {
+          stop(sprintf(
+            "Found %d exact duplicate rows (all values identical). Set ignore_duplicates=TRUE to automatically remove duplicates.",
+            n_duplicates
+          ), call. = FALSE)
+        } else {
+          df_clean <- df_clean_deduped
+          warning(sprintf(
+            "Removed %d exact duplicate rows (all values identical).",
+            n_duplicates
+          ), call. = FALSE)
+        }
+      } else {
+        df_clean <- df_clean_deduped
+      }
+      
+      df_all <- df_clean
     }
     df_all
   }
   
-  executor <- if (cache) memoise::memoise(fetch_flow) else fetch_flow
+  # ===========================================================================
+  # DATAFLOW FALLBACK LOGIC
+  # ===========================================================================
+  # Alternative dataflows to try when auto-detected dataflow fails with 404
+  dataflow_alternatives <- list(
+    ED = c("EDUCATION_UIS_SDG", "EDUCATION", "GLOBAL_DATAFLOW"),
+    PT = c("PT", "PT_CM", "PT_FGM", "PT_CHLD", "GLOBAL_DATAFLOW"),
+    PV = c("CHLD_PVTY", "GLOBAL_DATAFLOW"),
+    NT = c("NUTRITION", "GLOBAL_DATAFLOW")
+  )
+  
+  # Wrapper function that tries alternative dataflows on failure
+  fetch_with_fallback <- function(fl) {
+    # Try the primary dataflow first
+    result <- tryCatch(
+      fetch_flow(fl),
+      error = function(e) {
+        # Check if it's a 404-like error
+        if (grepl("404|not found|Request failed", e$message, ignore.case = TRUE)) {
+          NULL
+        } else {
+          stop(e)  # Re-throw non-404 errors
+        }
+      }
+    )
+    
+    # If result is empty or NULL, try alternatives
+    if (is.null(result) || nrow(result) == 0) {
+      # Get indicator prefix
+      first_ind <- if (!is.null(indicator)) indicator[1] else NULL
+      if (!is.null(first_ind)) {
+        prefix <- strsplit(first_ind, "_")[[1]][1]
+        
+        if (prefix %in% names(dataflow_alternatives)) {
+          alternatives <- dataflow_alternatives[[prefix]]
+          alternatives <- alternatives[alternatives != fl]  # Remove already tried
+          
+          for (alt_flow in alternatives) {
+            message(sprintf("Trying alternative dataflow '%s' for indicator '%s'...", 
+                            alt_flow, first_ind))
+            result <- tryCatch(
+              fetch_flow(alt_flow),
+              error = function(e) NULL
+            )
+            if (!is.null(result) && nrow(result) > 0) {
+              message(sprintf("Success: Found data in dataflow '%s'", alt_flow))
+              return(result)
+            }
+          }
+        }
+      }
+    }
+    
+    # Return whatever we got (may be empty)
+    if (is.null(result)) return(data.frame())
+    return(result)
+  }
+  
+  executor <- if (cache) memoise::memoise(fetch_with_fallback) else fetch_with_fallback
   result <- purrr::map(dataflow, executor)
   
   # Combine results if multiple dataflows
@@ -366,9 +656,17 @@ get_unicef <- function(
     result <- add_indicator_metadata(result, add_metadata)
   }
   
-  # 2. Drop NA values
+  # 2. Drop NA values (period and value must be non-null for valid observations)
   if (dropna && "value" %in% names(result)) {
     result <- result %>% dplyr::filter(!is.na(value))
+  }
+  if ("period" %in% names(result)) {
+    n_before <- nrow(result)
+    result <- result %>% dplyr::filter(!is.na(period))
+    n_removed <- n_before - nrow(result)
+    if (n_removed > 0) {
+      message(sprintf("Removed %d observations with missing time period", n_removed))
+    }
   }
   
   # 3. Most Recent Values (MRV)

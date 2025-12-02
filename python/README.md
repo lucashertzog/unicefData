@@ -29,10 +29,30 @@ The **unicefData** repository provides consistent APIs in both R and Python:
 - **Search capability**: Find indicators using `search_indicators()` and `list_categories()`
 - **Comprehensive coverage**: Access 733 indicators across 15 categories
 - **Automatic data cleaning**: Standardized DataFrames ready for analysis
+- **Decimal year conversion**: Monthly periods (YYYY-MM) converted to decimal years for time-series analysis
 - **Error handling**: Comprehensive error messages and automatic retries
 - **Flexible filtering**: Filter by country, year, sex disaggregation
 - **Multiple dataflows**: Support for specialized dataflows (CME, NUTRITION, EDUCATION, etc.)
 - **Batch downloads**: Fetch multiple indicators efficiently
+
+## 📅 Time Period Handling
+
+**Important**: The UNICEF SDMX API returns TIME_PERIOD values in various formats. This library automatically converts them to decimal years for consistent time-series analysis:
+
+| Original Format | Decimal Year | Calculation |
+|----------------|--------------|-------------|
+| `2020` | `2020.0` | Integer year |
+| `2020-01` | `2020.0833` | 2020 + 1/12 (January) |
+| `2020-06` | `2020.5000` | 2020 + 6/12 (June) |
+| `2020-11` | `2020.9167` | 2020 + 11/12 (November) |
+
+**Formula**: `decimal_year = year + month/12`
+
+This conversion:
+- Preserves temporal precision for sub-annual survey data
+- Maintains a consistent numeric format for all observations
+- Enables proper sorting and time-series analysis
+- Works identically in both Python and R packages
 
 ## 📦 Installation
 
