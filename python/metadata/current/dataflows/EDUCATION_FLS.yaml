@@ -2,12 +2,12 @@ id: EDUCATION_FLS
 name: EDU - Learning and Skills
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-02T21:22:43.615706+00:00'
+synced_at: '2025-12-02T22:38:36.886558+00:00'
 dimensions:
 - id: REF_AREA
   position: 1
   codelist: CL_COUNTRY
-  top_values:
+  values:
   - AZE
   - UNICEF_WCA
   - ARE
@@ -18,32 +18,49 @@ dimensions:
   - BHR
   - CYP
   - DNK
+  is_exhaustive: false
+  total_values_count: 77
 - id: INDICATOR
   position: 2
   codelist: CL_UNICEF_INDICATOR
-  top_values:
+  values:
+  - ED_FLS_NUM
+  - ED_FLS_READ
   - ED_SE_LPV_PRIM
   - ED_SE_LPV_PRIM_LD
   - ED_SE_LPV_PRIM_SD
-  - ED_FLS_NUM
-  - ED_FLS_READ
+  is_exhaustive: true
+  total_values_count: 5
 - id: SEX
   position: 3
   codelist: CL_SEX
-  top_values:
-  - _T
+  values:
   - F
   - M
+  - _T
+  is_exhaustive: true
+  total_values_count: 3
 time_dimension: TIME_PERIOD
 primary_measure: null
 attributes:
 - id: SOWC_FLAG_A
   codelist: CL_OBS_SOWC_NOTES
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: UNIT_MULTIPLIER
   codelist: CL_UNIT_MULT
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: UNIT_MEASURE
   codelist: CL_UNIT_MEASURE
-  top_values:
+  values:
   - PCNT
+  is_exhaustive: true
+  total_values_count: 1
+time_dimension_summary:
+  type: numerical
+  min: 2020.0
+  max: 2023.0
+  total_count: 4

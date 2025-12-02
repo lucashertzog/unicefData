@@ -2,12 +2,12 @@ id: CHLD_PVTY
 name: Child Poverty
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-02T21:21:15.252473+00:00'
+synced_at: '2025-12-02T22:37:32.225279+00:00'
 dimensions:
 - id: REF_AREA
   position: 1
   codelist: CL_COUNTRY
-  top_values:
+  values:
   - AFG
   - ALB
   - ARG
@@ -18,37 +18,60 @@ dimensions:
   - BFA
   - BGD
   - BGR
+  is_exhaustive: false
+  total_values_count: 122
 - id: INDICATOR
   position: 2
   codelist: CL_UNICEF_INDICATOR
-  top_values:
+  values:
   - PV_CHLD_INCM-PL
+  is_exhaustive: true
+  total_values_count: 1
 - id: SEX
   position: 3
   codelist: CL_SEX
-  top_values:
+  values:
   - _T
+  is_exhaustive: true
+  total_values_count: 1
 - id: RESIDENCE
   position: 4
   codelist: CL_RESIDENCE
-  top_values:
+  values:
   - _T
+  is_exhaustive: true
+  total_values_count: 1
 time_dimension: TIME_PERIOD
 primary_measure: null
 attributes:
 - id: OBS_FOOTNOTE
   codelist: null
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: UNIT_MULTIPLIER
   codelist: CL_UNIT_MULT
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: UNIT_MEASURE
   codelist: CL_UNIT_MEASURE
-  top_values:
+  values:
   - PCNT
+  is_exhaustive: true
+  total_values_count: 1
 - id: OBS_STATUS
   codelist: CL_OBS_STATUS
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: DATA_SOURCE
   codelist: null
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
+time_dimension_summary:
+  type: numerical
+  min: 2020.0
+  max: 2020.0
+  total_count: 1

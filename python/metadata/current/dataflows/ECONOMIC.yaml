@@ -2,12 +2,12 @@ id: ECONOMIC
 name: Economic
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-02T21:22:40.386433+00:00'
+synced_at: '2025-12-02T22:38:34.169641+00:00'
 dimensions:
 - id: REF_AREA
   position: 1
   codelist: CL_COUNTRY
-  top_values:
+  values:
   - AFG
   - ALB
   - AGO
@@ -18,56 +18,86 @@ dimensions:
   - BLR
   - BTN
   - BWA
+  is_exhaustive: false
+  total_values_count: 270
 - id: INDICATOR
   position: 2
   codelist: CL_UNICEF_INDICATOR
-  top_values:
-  - ECON_GVT_HLTH_EXP_PTGDP
-  - ECON_GVT_HLTH_EXP_PTEXP
-  - ECON_GVT_EXP_PTGDP
+  values:
   - ECON_GVT_EDU_EXP_PTEXP
-  - ECON_SOC_PRO_EXP_PTEXP
   - ECON_GVT_EDU_EXP_PTGDP
-  - ECON_ODA_INFLOW_USD
-  - ECON_ODA_INFLOW_PTGNI
+  - ECON_GVT_EXP_PTGDP
+  - ECON_GVT_HLTH_EXP_PTEXP
+  - ECON_GVT_HLTH_EXP_PTGDP
   - ECON_GVT_REV_PTGDP
+  - ECON_ODA_INFLOW_PTGNI
+  - ECON_ODA_INFLOW_USD
+  - ECON_ODA_OUTFLOW_PTGNI
+  - ECON_ODA_OUTFLOW_USD
+  - ECON_SOC_PRO_EXP_PTEXP
   - ECON_SOC_PRO_EXP_PTGDP
+  is_exhaustive: true
+  total_values_count: 12
 time_dimension: TIME_PERIOD
 primary_measure: null
 attributes:
 - id: SOWC_FLAG_A
   codelist: CL_OBS_SOWC_NOTES
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: TIME_PERIOD_METHOD
   codelist: CL_TIME_PERIOD_METHOD
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: FREQ_COLL
   codelist: CL_FREQ_COLL
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: SERIES_FOOTNOTE
   codelist: null
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: OBS_FOOTNOTE
   codelist: null
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: UNIT_MULTIPLIER
   codelist: CL_UNIT_MULT
-  top_values:
-  - '6'
+  values_min: 6.0
+  values_max: 6.0
+  total_values_count: 1
 - id: UNIT_MEASURE
   codelist: CL_UNIT_MEASURE
-  top_values:
+  values:
   - PCNT
   - USD
+  is_exhaustive: true
+  total_values_count: 2
 - id: OBS_STATUS
   codelist: CL_OBS_STATUS
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: OBS_CONF
   codelist: CL_CONF_STATUS
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: DATA_SOURCE
   codelist: null
-  top_values:
+  values:
   - World Bank World Developent Indicators
   - UNICEF Aggregates
   - World Bank ASPIRE
+  is_exhaustive: true
+  total_values_count: 3
+time_dimension_summary:
+  type: numerical
+  min: 2024.0
+  max: 2024.0
+  total_count: 1

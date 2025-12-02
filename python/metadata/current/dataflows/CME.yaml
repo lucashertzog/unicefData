@@ -2,12 +2,12 @@ id: CME
 name: Child Mortality
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-02T21:21:16.455907+00:00'
+synced_at: '2025-12-02T22:37:33.440200+00:00'
 dimensions:
 - id: REF_AREA
   position: 1
   codelist: CL_COUNTRY
-  top_values:
+  values:
   - AFG
   - AGO
   - ALB
@@ -18,13 +18,20 @@ dimensions:
   - BEN
   - BFA
   - BGD
+  is_exhaustive: false
+  total_values_count: 31
 - id: INDICATOR
   position: 2
   codelist: CL_UNICEF_INDICATOR
-  top_values:
-  - CME_MRY0T4
-  - CME_TMY0T4
+  values:
+  - CME_ARR_10T19
+  - CME_ARR_SBR
+  - CME_ARR_U5MR
+  - CME_MRM0
+  - CME_MRM1T11
+  - CME_MRM1T59
   - CME_MRY0
+  - CME_MRY0T4
   - CME_MRY10T14
   - CME_MRY10T19
   - CME_MRY15T19
@@ -32,79 +39,104 @@ dimensions:
   - CME_MRY1T4
   - CME_MRY20T24
   - CME_MRY5T14
+  - CME_MRY5T24
+  - CME_MRY5T9
+  - CME_PND
+  - CME_SB
+  - CME_SBR
+  - CME_TMM0
+  - CME_TMM1T11
+  - CME_TMM1T59
+  - CME_TMY0
+  - CME_TMY0T4
+  - CME_TMY10T14
+  - CME_TMY10T19
+  - CME_TMY15T19
+  - CME_TMY15T24
+  - CME_TMY1T4
+  - CME_TMY20T24
+  - CME_TMY5T14
+  - CME_TMY5T24
+  - CME_TMY5T9
+  is_exhaustive: true
+  total_values_count: 34
 - id: SEX
   position: 3
   codelist: CL_SEX
-  top_values:
-  - _T
+  values:
   - F
   - M
+  - _T
+  is_exhaustive: true
+  total_values_count: 3
 - id: WEALTH_QUINTILE
   position: 4
   codelist: CL_WEALTH_QUINTILE
-  top_values:
-  - _T
+  values:
   - Q1
   - Q2
   - Q3
   - Q4
   - Q5
+  - _T
+  is_exhaustive: true
+  total_values_count: 6
 time_dimension: TIME_PERIOD
 primary_measure: null
 attributes:
 - id: DATA_SOURCE
   codelist: null
-  top_values:
+  values:
   - UN_IGME
+  is_exhaustive: true
+  total_values_count: 1
 - id: COUNTRY_NOTES
   codelist: null
-  top_values:
+  values:
   - The UN IGME estimates are not the official statistics of the United Arab Emirates.
+  is_exhaustive: true
+  total_values_count: 1
 - id: REF_PERIOD
   codelist: null
-  top_values:
+  values:
   - 2015-2023
   - 2000-2023
+  is_exhaustive: true
+  total_values_count: 2
 - id: UNIT_MEASURE
   codelist: CL_UNIT_MEASURE
-  top_values:
+  values:
   - D
-  - D_PER_1000_B
-  - D_PER_1000_5
+  - D_PER_1000_1
   - D_PER_1000_10
   - D_PER_1000_15
-  - D_PER_1000_1
-  - D_PER_1000_20
   - D_PER_1000_1M
+  - D_PER_1000_20
+  - D_PER_1000_5
+  - D_PER_1000_B
   - PCNT
+  - SB_PER_1000_B
   - STILLBIRTHS
+  is_exhaustive: true
+  total_values_count: 11
 - id: LOWER_BOUND
   codelist: null
-  top_values:
-  - '0'
-  - '1'
-  - '3'
-  - '2'
-  - '5'
-  - '13'
-  - '4'
-  - '7'
-  - '12'
-  - '16'
+  values_min: -3.1
+  values_max: 101475.0
+  total_values_count: 7032
 - id: UPPER_BOUND
   codelist: null
-  top_values:
-  - '0'
-  - '1'
-  - '3'
-  - '2'
-  - '6'
-  - '4'
-  - '19'
-  - '5'
-  - '8'
-  - '14'
+  values_min: -0.1
+  values_max: 188993.0
+  total_values_count: 7335
 - id: OBS_STATUS
   codelist: CL_OBS_STATUS
-  top_values:
+  values:
   - A
+  is_exhaustive: true
+  total_values_count: 1
+time_dimension_summary:
+  type: numerical
+  min: 2020.0
+  max: 2023.0
+  total_count: 4

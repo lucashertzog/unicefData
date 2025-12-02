@@ -2,12 +2,12 @@ id: CCRI
 name: Children’s Climate and Environment Risk Index
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-02T21:21:12.165597+00:00'
+synced_at: '2025-12-02T22:37:29.501894+00:00'
 dimensions:
 - id: REF_AREA
   position: 1
   codelist: CL_COUNTRY
-  top_values:
+  values:
   - AFG
   - ALB
   - AGO
@@ -18,26 +18,47 @@ dimensions:
   - BGD
   - BLR
   - BEL
+  is_exhaustive: false
+  total_values_count: 163
 - id: INDICATOR
   position: 2
   codelist: CCRI_INDICATORS
-  top_values:
-  - CCRI_WATER_SCARCITY
-  - CCRI_FLOODS_RIVERINE
-  - CCRI_FLOODS_COASTAL
-  - CCRI_TROPICAL_CYCLONES
-  - CCRI_MALARIA
-  - CCRI_ZIKA
-  - CCRI_DENGUE
+  values:
   - CCRI_AEDES
-  - CCRI_VECTOR_BORNE_DISEASE
+  - CCRI_CHLD_CLIMATE_ENV_RISK_INDEX
+  - CCRI_CHLD_HEALTH
+  - CCRI_CHLD_HEALTH_NUTRITION
+  - CCRI_CHLD_NUTRITION
+  - CCRI_CHLD_VULNERABILITY
+  - CCRI_CLIMATE_ENV_SHOCKS
+  - CCRI_COMM_ASSETS
+  - CCRI_DENGUE
+  - CCRI_EDUCATION
+  - CCRI_FLOODS_COASTAL
+  - CCRI_FLOODS_RIVERINE
   - CCRI_HEATWAVES
+  - CCRI_MALARIA
+  - CCRI_MAT_HEALTH
+  - CCRI_POLLUTION_AIR
+  - CCRI_POLLUTION_LEAD
+  - CCRI_POLLUTION_PESTICIDE
+  - CCRI_POLLUTION_SOIL_WATER
+  - CCRI_POV_COMM_ASSETS_SOC_PROT
+  - CCRI_POV_INEQUITY
+  - CCRI_SOC_PROT_ECON_EMPOW
+  - CCRI_TROPICAL_CYCLONES
+  - CCRI_VECTOR_BORNE_DISEASE
+  - CCRI_WASH
+  - CCRI_WATER_SCARCITY
+  - CCRI_ZIKA
+  is_exhaustive: true
+  total_values_count: 27
 time_dimension: TIME_PERIOD
 primary_measure: null
 attributes:
 - id: OBS_FOOTNOTE
   codelist: null
-  top_values:
+  values:
   - 'Value: 0.0'
   - 'Value: 10'
   - 'Value: 7.3'
@@ -48,9 +69,11 @@ attributes:
   - 'Value: 9.4'
   - 'Value: 3.4'
   - 'Value: 8.7'
+  is_exhaustive: false
+  total_values_count: 112
 - id: DATA_SOURCE
   codelist: null
-  top_values:
+  values:
   - World Resources Institute (WRI) Aqueduct 3.0, UNEP/GRID-Europe, CIESIN | Gridded
     Population of the World (UN-Adjusted), UN World Population Prospects - World Resources
     Institute (WRI) Aqueduct 3.0, UNEP, CIESIN | Gridded Population of the World (UN-Adjusted),
@@ -89,13 +112,26 @@ attributes:
     database. - World Bank Group, through the Global SDG Indicators Database. - ILO,
     through the Global SDG Indicators Database. - World Bank ASPIRE (Atlas of Social
     Protection: Indicators of Resilience and Equity) - World Bank Global Findex database'
+  is_exhaustive: false
+  total_values_count: 16
 - id: UNIT_MULTIPLIER
   codelist: CL_UNIT_MULT
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: UNIT_MEASURE
   codelist: CL_UNIT_MEASURE
-  top_values:
+  values:
   - IDX
+  is_exhaustive: true
+  total_values_count: 1
 - id: OBS_STATUS
   codelist: CL_OBS_STATUS
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
+time_dimension_summary:
+  type: numerical
+  min: 2020.0
+  max: 2020.0
+  total_count: 1

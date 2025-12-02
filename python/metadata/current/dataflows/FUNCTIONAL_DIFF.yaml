@@ -2,12 +2,12 @@ id: FUNCTIONAL_DIFF
 name: Functional difficulties
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-02T21:22:47.859495+00:00'
+synced_at: '2025-12-02T22:38:39.921346+00:00'
 dimensions:
 - id: REF_AREA
   position: 1
   codelist: CL_AREAS_SUBNATIONAL_PT_CM
-  top_values:
+  values:
   - XKX
   - AZE
   - COM
@@ -18,73 +18,96 @@ dimensions:
   - SWZ
   - TUN
   - WSM
+  is_exhaustive: false
+  total_values_count: 32
 - id: INDICATOR
   position: 2
   codelist: CL_UNICEF_INDICATOR
-  top_values:
+  values:
   - FD_ANAR
-  - FD_OOS
-  - FD_FUNC_DIFFICULTY
-  - FD_SEVER_PHY_PUNISH
-  - FD_NEVER_ATTENDED
-  - FD_SANITATION_FACILITIES
   - FD_EARLY_CH_EDU
   - FD_EARLY_STIM
-  - FD_SOCIAL_TRANSFERS
   - FD_FOUNDATIONAL_LEARNING
+  - FD_FUNC_DIFFICULTY
+  - FD_NEVER_ATTENDED
+  - FD_OOS
+  - FD_SANITATION_FACILITIES
+  - FD_SEVER_PHY_PUNISH
+  - FD_SOCIAL_TRANSFERS
+  - FD_STUNTING
+  - FD_UNDERWEIGHT
+  is_exhaustive: true
+  total_values_count: 12
 - id: SEX
   position: 3
   codelist: CL_SEX
-  top_values:
+  values:
   - _T
+  is_exhaustive: true
+  total_values_count: 1
 - id: AGE
   position: 4
   codelist: CL_AGE
-  top_values:
-  - Y2T4
-  - Y2T17
-  - PRY_SCHOOL_AGE
+  values:
   - LSRY_SCHOOL_AGE
+  - PRY_SCHOOL_AGE
   - USRY_SCHOOL_AGE
-  - Y3T4
   - Y10T17
   - Y2T14
-  - Y7T14
+  - Y2T17
+  - Y2T4
+  - Y3T14
+  - Y3T17
+  - Y3T4
+  - Y5T14
   - Y5T17
+  - Y7T14
+  is_exhaustive: true
+  total_values_count: 13
 - id: RESIDENCE
   position: 5
   codelist: CL_RESIDENCE
-  top_values:
+  values:
   - _T
+  is_exhaustive: true
+  total_values_count: 1
 - id: WEALTH_QUINTILE
   position: 6
   codelist: CL_WEALTH_QUINTILE
-  top_values:
+  values:
   - _T
+  is_exhaustive: true
+  total_values_count: 1
 - id: ETHNIC_GROUP
   position: 7
   codelist: CL_ETHNIC_GROUP
-  top_values:
+  values:
   - _T
   - ROM
+  is_exhaustive: true
+  total_values_count: 2
 - id: EDUCATION_LEVEL
   position: 8
   codelist: CL_EDU_LEVEL
-  top_values:
+  values:
   - _T
   - ISCED11_1
   - ISCED11_2
   - ISCED11_3
+  is_exhaustive: true
+  total_values_count: 4
 - id: DISABILITY_STATUS
   position: 9
   codelist: CL_DISABILITY
-  top_values:
+  values:
   - PD
   - PWD
+  is_exhaustive: true
+  total_values_count: 2
 - id: DATA_SOURCE
   position: 10
   codelist: null
-  top_values:
+  values:
   - MICS 2019-20
   - MICS 2023
   - MICS 2022
@@ -95,16 +118,18 @@ dimensions:
   - Türkiye Child Survey 2022
   - ENSANUT 2021
   - NHS 2021
+  is_exhaustive: false
+  total_values_count: 11
 - id: ADMIN_LEVEL
   position: 11
   codelist: CL_ADMIN_LEVEL
-  top_values:
-  - '0'
-  - '1'
+  values_min: 0.0
+  values_max: 1.0
+  total_values_count: 2
 - id: REF_AREA_PARENT
   position: 12
   codelist: CL_COUNTRY
-  top_values:
+  values:
   - XKX
   - AZE
   - COM
@@ -115,30 +140,42 @@ dimensions:
   - SWZ
   - TUN
   - WSM
+  is_exhaustive: false
+  total_values_count: 32
 time_dimension: TIME_PERIOD
 primary_measure: null
 attributes:
 - id: SOWC_FLAG_C
   codelist: CL_OBS_SOWC_NOTES
-  top_values:
+  values:
   - p
+  is_exhaustive: true
+  total_values_count: 1
 - id: SOWC_FLAG_B
   codelist: CL_OBS_SOWC_NOTES
-  top_values:
+  values:
   - y
+  is_exhaustive: true
+  total_values_count: 1
 - id: SOWC_FLAG_A
   codelist: CL_OBS_SOWC_NOTES
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: SOURCE_LINK
   codelist: null
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: TIME_PERIOD_METHOD
   codelist: CL_TIME_PERIOD_METHOD
-  top_values:
+  values:
   - EOF
+  is_exhaustive: true
+  total_values_count: 1
 - id: COVERAGE_TIME
   codelist: null
-  top_values:
+  values:
   - 2019-20
   - '2023'
   - '2022'
@@ -146,12 +183,16 @@ attributes:
   - '2021'
   - 2022-23
   - 2020-21
+  is_exhaustive: true
+  total_values_count: 7
 - id: SERIES_FOOTNOTE
   codelist: null
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: OBS_FOOTNOTE
   codelist: null
-  top_values:
+  values:
   - Two clusters could not be visited due to insecurity and evictions during the field
     work period
   - One out of 238 EAs was not visited due to bad weather
@@ -175,20 +216,35 @@ attributes:
     appears that the two concepts have been combined in the overall % in Table 1 and
     CFM only in Table 14. So the numerator of % is derived from Table 14 and the denominator
     is from Table 1
+  is_exhaustive: false
+  total_values_count: 12
 - id: UNIT_MULTIPLIER
   codelist: CL_UNIT_MULT
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: UNIT_MEASURE
   codelist: CL_UNIT_MEASURE
-  top_values:
+  values:
   - PCNT
+  is_exhaustive: true
+  total_values_count: 1
 - id: OBS_STATUS
   codelist: CL_OBS_STATUS
-  top_values:
+  values:
   - RA
   - RP
   - U
+  is_exhaustive: true
+  total_values_count: 3
 - id: OBS_CONF
   codelist: CL_CONF_STATUS
-  top_values:
+  values:
   - F
+  is_exhaustive: true
+  total_values_count: 1
+time_dimension_summary:
+  type: numerical
+  min: 2020.0
+  max: 2023.0
+  total_count: 4

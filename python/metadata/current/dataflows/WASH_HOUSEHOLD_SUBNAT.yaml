@@ -2,12 +2,12 @@ id: WASH_HOUSEHOLD_SUBNAT
 name: WASH Household subnational
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-02T21:23:39.962756+00:00'
+synced_at: '2025-12-02T22:39:11.156866+00:00'
 dimensions:
 - id: REF_AREA
   position: 1
   codelist: CL_AREAS_SUBNATIONAL_WASH
-  top_values:
+  values:
   - GUY001_2020_MICS
   - GUY002_2020_MICS
   - GUY003_2020_MICS
@@ -18,10 +18,15 @@ dimensions:
   - GUY008_2020_MICS
   - GUY009_2020_MICS
   - GUY010_2020_MICS
+  is_exhaustive: false
+  total_values_count: 69
 - id: INDICATOR
   position: 2
   codelist: CL_UNICEF_INDICATOR
-  top_values:
+  values:
+  - WS_PPL_H-B
+  - WS_PPL_H-L
+  - WS_PPL_H-N
   - WS_PPL_S-ALB
   - WS_PPL_S-B
   - WS_PPL_S-I
@@ -32,32 +37,50 @@ dimensions:
   - WS_PPL_S-SEW
   - WS_PPL_S-UI
   - WS_PPL_W-ALB
+  - WS_PPL_W-AVA
+  - WS_PPL_W-B
+  - WS_PPL_W-I
+  - WS_PPL_W-L
+  - WS_PPL_W-P
+  - WS_PPL_W-PRE
+  - WS_PPL_W-QUA
+  - WS_PPL_W-SW
+  - WS_PPL_W-UI
+  is_exhaustive: true
+  total_values_count: 22
 - id: SERVICE_TYPE
   position: 3
   codelist: CL_WASH_SERVICE_TYPE
-  top_values:
+  values:
   - WAT
   - SAN
   - HYG
+  is_exhaustive: true
+  total_values_count: 3
 - id: WEALTH_QUINTILE
   position: 4
   codelist: CL_WEALTH_QUINTILE
-  top_values:
+  values:
   - _T
+  is_exhaustive: true
+  total_values_count: 1
 - id: RESIDENCE
   position: 5
   codelist: CL_RESIDENCE
-  top_values:
+  values:
   - _T
+  is_exhaustive: true
+  total_values_count: 1
 - id: ADMIN_LEVEL
   position: 6
   codelist: CL_ADMIN_LEVEL
-  top_values:
-  - '1'
+  values_min: 1.0
+  values_max: 1.0
+  total_values_count: 1
 - id: REF_AREA_PARENT
   position: 7
   codelist: CL_COUNTRY
-  top_values:
+  values:
   - PSE
   - GUY
   - GMB
@@ -67,25 +90,31 @@ dimensions:
   - LBR
   - RWA
   - WSM
+  is_exhaustive: true
+  total_values_count: 9
 - id: DATA_SOURCE_MAIN
   position: 8
   codelist: CL_WASH_DATA_SOURCES
-  top_values:
+  values:
   - MICS
   - DHS
   - MIS
+  is_exhaustive: true
+  total_values_count: 3
 time_dimension: TIME_PERIOD
 primary_measure: null
 attributes:
 - id: DATASET_FOOTNOTE
   codelist: null
-  top_values:
+  values:
   - Region names are recorded as saved in the data sources, and those do not reflect
     a position by UNICEF on the legal status of any country or territory or the delimitation
     of any frontiers.
+  is_exhaustive: true
+  total_values_count: 1
 - id: JMP_NOTE
   codelist: null
-  top_values:
+  values:
   - It is assumed that short name is used in WFP.
   - 'It is assumed that short name is used in WFP. Guyana is divided into ten administrative
     regions, numbered 1 through 10. These regions are: Barima-Waini (Region 1), Pomeroon-Supenaam
@@ -109,9 +138,11 @@ attributes:
   - Not clear if the city covers administrative borders. It assumed to be the same
     in both.
   - Capital
+  is_exhaustive: true
+  total_values_count: 9
 - id: UCODE
   codelist: null
-  top_values:
+  values:
   - GUY_0001_V1
   - GUY_0002_V1
   - GUY_0003_V1
@@ -122,38 +153,67 @@ attributes:
   - GUY_0008_V1
   - GUY_0009_V1
   - GUY_0010_V1
+  is_exhaustive: false
+  total_values_count: 27
 - id: UNIT_MULTIPLIER
   codelist: CL_UNIT_MULT
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: UNIT_MEASURE
   codelist: CL_UNIT_MEASURE
-  top_values:
+  values:
   - PCNT
+  is_exhaustive: true
+  total_values_count: 1
 - id: SERIES_FOOTNOTE
   codelist: null
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: SOURCE_LINK
   codelist: null
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: OBS_STATUS
   codelist: CL_OBS_STATUS
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: OBS_CONF
   codelist: CL_CONF_STATUS
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: DATA_SOURCE
   codelist: null
-  top_values:
+  values:
   - WHO/UNICEF Joint Monitoring Programme (2021)
+  is_exhaustive: true
+  total_values_count: 1
 - id: TIME_PERIOD_METHOD
   codelist: null
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: COVERAGE_TIME
   codelist: null
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: FREQ_COLL
   codelist: CL_FREQ_COLL
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: OBS_FOOTNOTE
   codelist: null
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
+time_dimension_summary:
+  type: numerical
+  min: 2020.0
+  max: 2020.0
+  total_count: 1

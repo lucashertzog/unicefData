@@ -35,10 +35,11 @@ Example:
 
 import requests
 import pandas as pd
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Dict
 from io import StringIO
 import time
 import logging
+from unicef_api.metadata_manager import MetadataManager
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -136,6 +137,7 @@ class UNICEFSDMXClient:
         self.default_dataflow = default_dataflow
         self.version = version
         self.session = requests.Session()
+        self.metadata_manager = MetadataManager()
         
         # Set default headers
         self.session.headers.update({
@@ -203,6 +205,22 @@ class UNICEFSDMXClient:
         # Use provided dataflow or fall back to default
         current_dataflow = dataflow if dataflow else self.default_dataflow
         
+        # Validate filters against schema
+        # We construct a filter dict from the arguments
+        # Note: 'countries' is handled post-fetch in this implementation, so we don't validate it here as a pre-fetch filter
+        # But 'sex_disaggregation' is used in _clean_dataframe, so we can validate it.
+        # 'indicator_code' is part of the key.
+        
+        filters_to_validate = {
+            'INDICATOR': indicator_code,
+        }
+        if sex_disaggregation:
+            filters_to_validate['SEX'] = sex_disaggregation
+            
+        warnings = self.metadata_manager.validate_filters(filters_to_validate, current_dataflow)
+        for w in warnings:
+            logger.warning(w)
+        
         # Build data query - format: .INDICATOR.
         # Note: Country filtering is done post-fetch for compatibility with all dataflows
         data_key = f".{indicator_code}."
@@ -242,6 +260,9 @@ class UNICEFSDMXClient:
                 # Parse CSV response
                 df = pd.read_csv(StringIO(response.text))
                 
+                # Validate against schema
+                self.metadata_manager.validate_dataframe(df, current_dataflow)
+                
                 if return_raw:
                     logger.info(f"Successfully fetched {len(df)} raw observations")
                     return df
@@ -251,12 +272,14 @@ class UNICEFSDMXClient:
                     df, 
                     indicator_code, 
                     countries, 
-                    sex_disaggregation
+                    sex_disaggregation,
+                    dropna=dropna,
+                    dataflow=current_dataflow
                 )
                 
                 logger.info(
                     f"Successfully fetched and cleaned {len(df)} observations "
-                    f"for {df['country_code'].nunique()} countries"
+                    f"for {df['iso3'].nunique()} countries"
                 )
                 return df
                 
@@ -498,6 +521,7 @@ class UNICEFSDMXClient:
         countries: Optional[List[str]] = None,
         sex_filter: str = "_T",
         dropna: bool = True,
+        dataflow: Optional[str] = None,
     ) -> pd.DataFrame:
         """
         Clean and standardize the CSV dataframe
@@ -508,36 +532,51 @@ class UNICEFSDMXClient:
             countries: List of countries to filter to
             sex_filter: Sex disaggregation to filter ('_T', 'F', 'M', or None for all)
             dropna: If True (default), drop rows with missing year or value
+            dataflow: Dataflow ID for schema-based standardization
         
         Returns:
             Cleaned DataFrame with standardized columns
         """
         try:
             # Rename columns to standard format
+            # Map ALL columns from the API - never drop data
+            # Use consistent naming with R: iso3, indicator, period
             column_mapping = {
-                "REF_AREA": "country_code",
-                "Geographic area": "country_name",
-                "INDICATOR": "indicator_code",
-                "TIME_PERIOD": "year",
+                "REF_AREA": "iso3",
+                "Geographic area": "country",
+                "INDICATOR": "indicator",
+                "Indicator": "indicator_name",
+                "TIME_PERIOD": "period",
                 "OBS_VALUE": "value",
                 "UNIT_MEASURE": "unit",
                 "Unit of measure": "unit_name",
                 "SEX": "sex",
+                "Sex": "sex_name",
                 "AGE": "age",
                 "WEALTH_QUINTILE": "wealth_quintile",
+                "Wealth Quintile": "wealth_quintile_name",
                 "RESIDENCE": "residence",
                 "MATERNAL_EDU_LVL": "maternal_edu_lvl",
                 "LOWER_BOUND": "lower_bound",
                 "UPPER_BOUND": "upper_bound",
                 "OBS_STATUS": "obs_status",
+                "Observation Status": "obs_status_name",
                 "DATA_SOURCE": "data_source",
+                "REF_PERIOD": "ref_period",
+                "COUNTRY_NOTES": "country_notes",
             }
+            
+            # Update with schema-based mapping if available
+            if dataflow:
+                schema_mapping = self.metadata_manager.get_column_mapping(dataflow)
+                # We want schema mapping to take precedence for dimensions
+                column_mapping.update(schema_mapping)
             
             df = df.rename(columns=column_mapping)
             
             # Filter by country if specified
-            if countries and len(countries) > 0 and "country_code" in df.columns:
-                df = df[df["country_code"].isin(countries)]
+            if countries and len(countries) > 0 and "iso3" in df.columns:
+                df = df[df["iso3"].isin(countries)]
                 logger.debug(
                     f"Filtered to {len(df)} observations for {len(countries)} countries"
                 )
@@ -546,9 +585,9 @@ class UNICEFSDMXClient:
             if "value" in df.columns:
                 df["value"] = pd.to_numeric(df["value"], errors="coerce")
             
-            # Convert year column - handle YYYY-MM format by converting to decimal
+            # Convert period column - handle YYYY-MM format by converting to decimal
             # e.g., "2006-01" -> 2006 + 1/12 = 2006.0833, "2006-11" -> 2006 + 11/12 = 2006.9167
-            if "year" in df.columns:
+            if "period" in df.columns:
                 def convert_period_to_decimal(val):
                     """Convert TIME_PERIOD to decimal year (YYYY-MM -> YYYY + MM/12)"""
                     if pd.isna(val):
@@ -570,7 +609,7 @@ class UNICEFSDMXClient:
                     except (ValueError, TypeError):
                         return None
                 
-                df["year"] = df["year"].apply(convert_period_to_decimal)
+                df["period"] = df["period"].apply(convert_period_to_decimal)
             
             if "lower_bound" in df.columns:
                 df["lower_bound"] = pd.to_numeric(df["lower_bound"], errors="coerce")
@@ -578,29 +617,29 @@ class UNICEFSDMXClient:
                 df["upper_bound"] = pd.to_numeric(df["upper_bound"], errors="coerce")
             
             # =================================================================
-            # Drop rows with missing year or value (data quality requirement)
+            # Drop rows with missing period or value (data quality requirement)
             # =================================================================
             if dropna:
                 initial_rows = len(df)
                 
-                # Check for rows with missing year or value
-                missing_year = df["year"].isna() if "year" in df.columns else pd.Series([False] * len(df))
+                # Check for rows with missing period or value
+                missing_period = df["period"].isna() if "period" in df.columns else pd.Series([False] * len(df))
                 missing_value = df["value"].isna() if "value" in df.columns else pd.Series([False] * len(df))
                 
                 # Log cross-tabulation for transparency
-                both_missing = (missing_year & missing_value).sum()
-                year_only_missing = (missing_year & ~missing_value).sum()
-                value_only_missing = (~missing_year & missing_value).sum()
+                both_missing = (missing_period & missing_value).sum()
+                period_only_missing = (missing_period & ~missing_value).sum()
+                value_only_missing = (~missing_period & missing_value).sum()
                 
-                # Drop rows with missing year OR missing value
-                df = df[~(missing_year | missing_value)].copy()
+                # Drop rows with missing period OR missing value
+                df = df[~(missing_period | missing_value)].copy()
                 
                 n_dropped = initial_rows - len(df)
                 if n_dropped > 0:
                     logger.info(
                         f"Dropped {n_dropped} rows with missing data: "
                         f"{both_missing} with both missing, "
-                        f"{year_only_missing} with missing year only, "
+                        f"{period_only_missing} with missing period only, "
                         f"{value_only_missing} with missing value only. "
                         f"Use dropna=False to keep these rows."
                     )
@@ -670,24 +709,31 @@ class UNICEFSDMXClient:
                 )
             
             # Standard output columns - always include all for cross-language consistency
-            # Including all disaggregation columns for transparency
+            # Including all disaggregation columns and names for transparency
+            # PRINCIPLE: Never drop columns - preserve all data from API
             standard_columns = [
-                "indicator_code",
-                "country_code",
-                "country_name",
-                "year",
+                "indicator",
+                "indicator_name",
+                "iso3",
+                "country",
+                "period",
                 "value",
                 "unit",
                 "unit_name",
                 "sex",
+                "sex_name",
                 "age",
                 "wealth_quintile",
+                "wealth_quintile_name",
                 "residence",
                 "maternal_edu_lvl",
                 "lower_bound",
                 "upper_bound",
                 "obs_status",
+                "obs_status_name",
                 "data_source",
+                "ref_period",
+                "country_notes",
             ]
             
             # Add missing columns with NA
@@ -695,12 +741,13 @@ class UNICEFSDMXClient:
                 if col not in df.columns:
                     df[col] = None
             
-            # Select columns in standard order
-            df = df[standard_columns]
+            # Reorder standard columns first, then add any extra columns not in standard list
+            extra_cols = [c for c in df.columns if c not in standard_columns]
+            df = df[standard_columns + extra_cols]
             
-            # Sort by country and year
-            if "country_code" in df.columns and "year" in df.columns:
-                df = df.sort_values(["country_code", "year"]).reset_index(drop=True)
+            # Sort by country and period
+            if "iso3" in df.columns and "period" in df.columns:
+                df = df.sort_values(["iso3", "period"]).reset_index(drop=True)
             
             return df
             

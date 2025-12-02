@@ -2,12 +2,12 @@ id: CME_SUBNAT_KEN
 name: CME Kenya
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-02T21:21:47.025968+00:00'
+synced_at: '2025-12-02T22:37:55.704016+00:00'
 dimensions:
 - id: REF_AREA
   position: 1
   codelist: CL_CME_REF_AREA_SUBNAT
-  top_values:
+  values:
   - KEN-10_1
   - KEN-11_1
   - KEN-12_1
@@ -18,124 +18,162 @@ dimensions:
   - KEN-17_1
   - KEN-18_1
   - KEN-19_1
+  is_exhaustive: false
+  total_values_count: 47
 - id: INDICATOR
   position: 2
   codelist: CL_INDICATOR_CME
-  top_values:
+  values:
   - MRM0
   - MRY0T4
+  is_exhaustive: true
+  total_values_count: 2
 - id: SEX
   position: 3
   codelist: CL_SEX
-  top_values:
+  values:
   - _T
+  is_exhaustive: true
+  total_values_count: 1
 - id: WEALTH_QUINTILE
   position: 4
   codelist: CL_WEALTH_QUINTILE
-  top_values:
+  values:
   - _T
+  is_exhaustive: true
+  total_values_count: 1
 - id: SERIES_NAME
   position: 5
   codelist: CL_SERIES_CME
-  top_values:
+  values:
   - UN_IGME
+  is_exhaustive: true
+  total_values_count: 1
 - id: SERIES_YEAR
   position: 6
   codelist: CL_SERIES_YEAR_CME
-  top_values:
-  - '2021'
+  values_min: 2021.0
+  values_max: 2021.0
+  total_values_count: 1
 time_dimension: TIME_PERIOD
 primary_measure: null
 attributes:
 - id: COUNTRY_NOTES
   codelist: null
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: REGIONAL_GROUP
   codelist: CL_REGIONAL_GROUPS
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: CONNECTION
   codelist: null
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: DEATH_CATEGORY
   codelist: null
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: CATEGORY
   codelist: null
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: OBS_STATUS
   codelist: CL_OBS_STATUS_CME
-  top_values:
+  values:
   - A
+  is_exhaustive: true
+  total_values_count: 1
 - id: UNIT_MEASURE
   codelist: CL_UNIT_MEASURE
-  top_values:
+  values:
   - D_PER_1000_B
+  is_exhaustive: true
+  total_values_count: 1
 - id: SERIES_CATEGORY
   codelist: CL_SERIES_CATEGORY_CME
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: SERIES_TYPE
   codelist: CL_SERIES_TYPE_CME
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: STD_ERR
   codelist: null
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: REF_DATE
   codelist: null
-  top_values:
-  - '2020'
-  - '2021'
+  values_min: 2020.0
+  values_max: 2021.0
+  total_values_count: 2
 - id: AGE_GROUP_OF_WOMEN
   codelist: CL_AGE
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: TIME_SINCE_FIRST_BIRTH
   codelist: CL_TSFB_CME
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: DEFINITION
   codelist: null
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: INTERVAL
   codelist: null
-  top_values:
-  - '1'
+  values_min: 1.0
+  values_max: 1.0
+  total_values_count: 1
 - id: SERIES_METHOD
   codelist: CL_METHOD_CME
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: LOWER_BOUND
   codelist: null
-  top_values:
-  - '11.7589064131144'
-  - '11.4128633640161'
-  - '16.5359596383678'
-  - '15.6231305120222'
-  - '9.71062839673968'
-  - '9.38560103623398'
-  - '22.016027911563'
-  - '20.1227951645946'
-  - '13.6805266094555'
-  - '13.6421766425417'
+  values_min: 3.80057813257468
+  values_max: 44.9953303212607
+  total_values_count: 188
 - id: UPPER_BOUND
   codelist: null
-  top_values:
-  - '24.9127159653805'
-  - '24.6967789486121'
-  - '41.2425460052231'
-  - '39.2183287402649'
-  - '21.7260538376684'
-  - '21.625173421191'
-  - '56.1008545286921'
-  - '55.4416563739673'
-  - '27.4249142808218'
-  - '27.2212217702178'
+  values_min: 14.6194565596738
+  values_max: 125.289280453281
+  total_values_count: 188
 - id: STATUS
   codelist: null
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: YEAR_TO_ACHIEVE
   codelist: null
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: MODEL
   codelist: CL_MODEL
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: ADMIN_LEVEL
   codelist: CL_ADMIN_LEVEL
-  top_values:
-  - '1'
+  values_min: 1.0
+  values_max: 1.0
+  total_values_count: 1
+time_dimension_summary:
+  type: categorical
+  values:
+  - 2020-01
+  - 2021-01
+  total_count: 2
+  is_exhaustive: true

@@ -2,12 +2,12 @@ id: PT
 name: Child Protection
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-02T21:23:17.874194+00:00'
+synced_at: '2025-12-02T22:38:55.955710+00:00'
 dimensions:
 - id: REF_AREA
   position: 1
   codelist: CL_COUNTRY
-  top_values:
+  values:
   - CIV
   - SWZ
   - BFA
@@ -18,122 +18,194 @@ dimensions:
   - NGA
   - THA
   - MWI
+  is_exhaustive: false
+  total_values_count: 294
 - id: INDICATOR
   position: 2
   codelist: CL_UNICEF_INDICATOR
-  top_values:
-  - PT_CHLD_Y0T4_REG
-  - PT_F_15-49_W-BTNG
-  - PT_M_15-49_W-BTNG
-  - PT_CHLD_1-14_PS-PSY-V_CGVR
+  values:
+  - PT_ADLS_10-14_LBR_HC
   - PT_ADLT_PS_NEC
+  - PT_CHLD_1-14_PS-PSY-V_CGVR
   - PT_CHLD_1-14_PS-PSY-V_CGVR_TND
+  - PT_CHLD_5-17_LBR_ECON
+  - PT_CHLD_5-17_LBR_ECON-HC
   - PT_CHLD_DN
   - PT_CHLD_RES-CARE
+  - PT_CHLD_Y0T4_REG
+  - PT_F_15-49_W-BTNG
+  - PT_F_18-29_SX-V_AGE-18
+  - PT_M_15-49_W-BTNG
+  - PT_M_18-29_SX-V_AGE-18
   - PT_ST_13-15_BUL_30-DYS
-  - PT_ADLS_10-14_LBR_HC
+  is_exhaustive: true
+  total_values_count: 14
 - id: SEX
   position: 3
   codelist: CL_SEX
-  top_values:
-  - _T
+  values:
   - F
   - M
+  - _T
+  is_exhaustive: true
+  total_values_count: 3
 - id: AGE
   position: 4
   codelist: CL_AGE
-  top_values:
-  - Y15T49
-  - Y0T4
-  - Y1T14
-  - Y5T17
-  - _T
-  - Y10T14
+  values:
+  - JUVENILE_ADOLESCENT
+  - M0T11
+  - M12T23
+  - M24T35
+  - M36T47
+  - M48T59
+  - Y0T16
   - Y0T17
+  - Y0T18
+  - Y0T24
+  - Y0T4
+  - Y10T14
+  - Y10T17
   - Y13T15
+  - Y13T17
+  - Y15T17
   - Y15T19
+  - Y15T49
+  - Y18T19
+  - Y18T29
+  - Y1T14
+  - Y1T2
+  - Y1T4
   - Y20T24
+  - Y25T29
+  - Y25T34
+  - Y25T39
+  - Y2T14
+  - Y2T4
+  - Y30T34
+  - Y35T39
+  - Y35T49
+  - Y3T4
+  - Y40T44
+  - Y40T59
+  - Y45T49
+  - Y5T17
+  - Y5T9
+  - Y7T17
+  - Y_GE50
+  - Y_GE60
+  - _T
+  is_exhaustive: true
+  total_values_count: 42
 - id: EDUCATION_LEVEL
   position: 5
   codelist: CL_EDU_LEVEL
-  top_values:
+  values:
   - _T
   - AGG_3S_H
   - ISCED11_1
   - ISCED11A_01
   - AGG_0_1
   - NSC
+  is_exhaustive: true
+  total_values_count: 6
 - id: WEALTH_QUINTILE
   position: 6
   codelist: CL_WEALTH_QUINTILE
-  top_values:
-  - _T
+  values:
+  - B40
   - Q1
   - Q2
   - Q3
   - Q4
   - Q5
-  - B40
   - R60
+  - _T
+  is_exhaustive: true
+  total_values_count: 8
 - id: RESIDENCE
   position: 7
   codelist: CL_RESIDENCE
-  top_values:
-  - _T
-  - U
+  values:
   - R
+  - U
+  - _T
+  is_exhaustive: true
+  total_values_count: 3
 - id: NUMBER_CHLD
   position: 8
   codelist: CL_NUMBER_CHLD
-  top_values:
+  values:
   - _T
+  is_exhaustive: true
+  total_values_count: 1
 time_dimension: TIME_PERIOD
 primary_measure: null
 attributes:
 - id: SOWC_FLAG_F
   codelist: CL_OBS_SOWC_NOTES
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: SOWC_FLAG_E
   codelist: CL_OBS_SOWC_NOTES
-  top_values:
+  values:
   - v
+  is_exhaustive: true
+  total_values_count: 1
 - id: SOWC_FLAG_D
   codelist: CL_OBS_SOWC_NOTES
-  top_values:
+  values:
   - i
+  is_exhaustive: true
+  total_values_count: 1
 - id: SOWC_FLAG_C
   codelist: CL_OBS_SOWC_NOTES
-  top_values:
+  values:
   - p
+  is_exhaustive: true
+  total_values_count: 1
 - id: SOWC_FLAG_A
   codelist: CL_OBS_SOWC_NOTES
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: SOWC_FLAG_B
   codelist: CL_OBS_SOWC_NOTES
-  top_values:
+  values:
   - y
+  is_exhaustive: true
+  total_values_count: 1
 - id: UNIT_MULTIPLIER
   codelist: CL_UNIT_MULT
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: UNIT_MEASURE
   codelist: CL_UNIT_MEASURE
-  top_values:
+  values:
   - PCNT
   - RATE_100000
+  is_exhaustive: true
+  total_values_count: 2
 - id: OBS_STATUS
   codelist: CL_OBS_STATUS
-  top_values:
+  values:
   - RP
   - RA
   - E
   - U
+  is_exhaustive: true
+  total_values_count: 4
 - id: OBS_CONF
   codelist: CL_CONF_STATUS
-  top_values:
+  values:
   - F
+  is_exhaustive: true
+  total_values_count: 1
 - id: DATA_SOURCE
   codelist: null
-  top_values:
+  values:
   - MICS 2019-20
   - MICS 2023
   - DHS, MICS and other national surveys
@@ -144,21 +216,31 @@ attributes:
   - DHS 2019-20
   - DHS, MICS, LFS and other national surveys
   - MICS 2021
+  is_exhaustive: false
+  total_values_count: 251
 - id: LOWER_BOUND
   codelist: null
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: UPPER_BOUND
   codelist: null
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: WGTD_SAMPL_SIZE
   codelist: null
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: UNWGTD_SAMPL_SIZE
   codelist: null
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: SOURCE_LINK
   codelist: null
-  top_values:
+  values:
   - '-'
   - https://dataunodc.un.org/dp-prisons-persons-held
   - https://ec.europa.eu/eurostat/databrowser/explore/all/popul?lang=en&subtheme=crim&display=list&sort=category
@@ -169,13 +251,17 @@ attributes:
   - https://www.statbank.dk/STRAF70
   - https://dataunodc.un.org/data/Prison/Persons%20held%20in%20prison
   - https://sdppublik.ditjenpas.go.id/
+  is_exhaustive: false
+  total_values_count: 34
 - id: TIME_PERIOD_METHOD
   codelist: null
-  top_values:
+  values:
   - EOF
+  is_exhaustive: true
+  total_values_count: 1
 - id: COVERAGE_TIME
   codelist: null
-  top_values:
+  values:
   - '2022'
   - '2023'
   - 2019-20
@@ -186,13 +272,16 @@ attributes:
   - 2019-21
   - 2016-24
   - 2011-23
+  is_exhaustive: false
+  total_values_count: 19
 - id: FREQ_COLL
   codelist: CL_FREQ_COLL
-  top_values:
-  - '0'
+  values_min: 0.0
+  values_max: 0.0
+  total_values_count: 1
 - id: SERIES_FOOTNOTE
   codelist: null
-  top_values:
+  values:
   - Work is underway to populate the UNICEF global database with historical country-level
     data.
   - While trend data are available, changes in the indicator definitions, age groups
@@ -201,9 +290,11 @@ attributes:
     sources and require careful review and assessment in order to accurately and reliably
     draw conclusions about trends over time for most countries. For this reason, trend
     data for this indicator are not included in UNICEF global databases.
+  is_exhaustive: true
+  total_values_count: 2
 - id: OBS_FOOTNOTE
   codelist: null
-  top_values:
+  values:
   - Two clusters could not be visited due to insecurity and evictions during the field
     work period
   - The respondent to CD module is any HH member
@@ -220,3 +311,10 @@ attributes:
     safety concerns during the fieldwork period
   - Mandera County could not be visited due to insecurity
   - Births registered
+  is_exhaustive: false
+  total_values_count: 711
+time_dimension_summary:
+  type: numerical
+  min: 2020.0
+  max: 2024.0
+  total_count: 5

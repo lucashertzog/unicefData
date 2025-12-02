@@ -2,12 +2,12 @@ id: WASH_SCHOOLS
 name: WASH Schools
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-02T21:23:41.468793+00:00'
+synced_at: '2025-12-02T22:39:12.524774+00:00'
 dimensions:
 - id: REF_AREA
   position: 1
   codelist: CL_COUNTRY
-  top_values:
+  values:
   - KHM
   - CIV
   - GHA
@@ -18,69 +18,106 @@ dimensions:
   - NPL
   - PER
   - SDGRC_ECA_CA
+  is_exhaustive: false
+  total_values_count: 243
 - id: INDICATOR
   position: 2
   codelist: CL_UNICEF_INDICATOR
-  top_values:
-  - WS_SCH_W-I
+  values:
   - WS_SCH_W-B
+  - WS_SCH_W-I
   - WS_SCH_W-L
   - WS_SCH_W-N
+  is_exhaustive: true
+  total_values_count: 4
 - id: SERVICE_TYPE
   position: 3
   codelist: CL_WASH_SERVICE_TYPE
-  top_values:
+  values:
   - WAT
+  is_exhaustive: true
+  total_values_count: 1
 - id: SCH_TYPE
   position: 4
   codelist: CL_SCHOOL_TYPE
-  top_values:
+  values:
   - _T
   - PRI_SCH
   - SEC_SCH
   - PRE_SCH
+  is_exhaustive: true
+  total_values_count: 4
 - id: RESIDENCE
   position: 5
   codelist: CL_RESIDENCE
-  top_values:
-  - _T
+  values:
   - R
   - U
+  - _T
+  is_exhaustive: true
+  total_values_count: 3
 time_dimension: TIME_PERIOD
 primary_measure: null
 attributes:
 - id: UNIT_MULTIPLIER
   codelist: CL_UNIT_MULT
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: UNIT_MEASURE
   codelist: CL_UNIT_MEASURE
-  top_values:
+  values:
   - PCNT
+  is_exhaustive: true
+  total_values_count: 1
 - id: SERIES_FOOTNOTE
   codelist: null
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: SOURCE_LINK
   codelist: null
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: OBS_STATUS
   codelist: CL_OBS_STATUS
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: OBS_CONF
   codelist: CL_CONF_STATUS
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: DATA_SOURCE
   codelist: null
-  top_values:
+  values:
   - WHO/UNICEF Joint Monitoring Programme ()
+  is_exhaustive: true
+  total_values_count: 1
 - id: TIME_PERIOD_METHOD
   codelist: null
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: COVERAGE_TIME
   codelist: null
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: FREQ_COLL
   codelist: CL_FREQ_COLL
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: OBS_FOOTNOTE
   codelist: null
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
+time_dimension_summary:
+  type: numerical
+  min: 2020.0
+  max: 2023.0
+  total_count: 4

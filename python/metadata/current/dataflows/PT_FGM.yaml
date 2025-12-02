@@ -2,12 +2,12 @@ id: PT_FGM
 name: Child Protection FGM
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-02T21:23:28.204514+00:00'
+synced_at: '2025-12-02T22:39:01.863838+00:00'
 dimensions:
 - id: REF_AREA
   position: 1
   codelist: CL_COUNTRY
-  top_values:
+  values:
   - KEN
   - BFA
   - GMB
@@ -18,83 +18,107 @@ dimensions:
   - LBR
   - SOM
   - AUREC_IGAD
+  is_exhaustive: false
+  total_values_count: 52
 - id: INDICATOR
   position: 2
   codelist: CL_UNICEF_INDICATOR
-  top_values:
-  - PT_F_15-49_FGM
+  values:
   - PT_F_0-14_FGM
+  - PT_F_15-19_FGM_TND
+  - PT_F_15-49_FGM
   - PT_F_15-49_FGM_ELIM
   - PT_M_15-49_FGM_ELIM
-  - PT_F_15-19_FGM_TND
+  is_exhaustive: true
+  total_values_count: 5
 - id: FGM_PRACTITIONER
   position: 3
   codelist: CL_FGM_PRACTITIONER
-  top_values:
+  values:
   - _T
+  is_exhaustive: true
+  total_values_count: 1
 - id: FGM_TYPE
   position: 4
   codelist: CL_TYPE_FGM
-  top_values:
+  values:
   - _T
+  is_exhaustive: true
+  total_values_count: 1
 - id: AGE
   position: 5
   codelist: CL_AGE
-  top_values:
-  - Y15T49
+  values:
   - Y0T14
+  - Y0T4
+  - Y10T14
   - Y15T19
+  - Y15T49
   - Y20T24
   - Y25T29
   - Y30T34
   - Y35T39
   - Y40T44
   - Y45T49
-  - Y0T4
+  - Y5T9
+  is_exhaustive: true
+  total_values_count: 12
 - id: AGE_FGM
   position: 6
   codelist: CL_AGE
-  top_values:
+  values:
   - _T
+  is_exhaustive: true
+  total_values_count: 1
 - id: MTH_FGM_STATUS
   position: 7
   codelist: CL_MTH_FGM_STATUS
-  top_values:
+  values:
   - _T
+  is_exhaustive: true
+  total_values_count: 1
 - id: EDUCATION_LEVEL
   position: 8
   codelist: CL_EDU_LEVEL
-  top_values:
+  values:
   - _T
   - ISCED11A_01
   - ISCED11_1
   - AGG_3S_H
+  is_exhaustive: true
+  total_values_count: 4
 - id: WEALTH_QUINTILE
   position: 9
   codelist: CL_WEALTH_QUINTILE
-  top_values:
-  - _T
-  - Q4
-  - Q3
+  values:
   - Q1
-  - Q5
   - Q2
+  - Q3
+  - Q4
+  - Q5
+  - _T
+  is_exhaustive: true
+  total_values_count: 6
 - id: MARITAL_STATUS
   position: 10
   codelist: CL_MARITAL_STATUS
-  top_values:
+  values:
   - _T
+  is_exhaustive: true
+  total_values_count: 1
 - id: RESIDENCE
   position: 11
   codelist: CL_RESIDENCE
-  top_values:
-  - _T
+  values:
   - R
   - U
+  - _T
+  is_exhaustive: true
+  total_values_count: 3
 - id: RELIGIOUS_GROUP
   position: 12
   codelist: CL_RELIGIOUS_GROUP
-  top_values:
+  values:
   - _T
   - MU
   - RC
@@ -105,49 +129,69 @@ dimensions:
   - AN
   - OR
   - AI
+  is_exhaustive: false
+  total_values_count: 12
 - id: ETHNIC_GROUP
   position: 13
   codelist: CL_ETHNIC_GROUP
-  top_values:
+  values:
   - _T
+  is_exhaustive: true
+  total_values_count: 1
 time_dimension: TIME_PERIOD
 primary_measure: null
 attributes:
 - id: SOWC_FLAG_D
   codelist: CL_OBS_SOWC_NOTES
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: SOWC_FLAG_C
   codelist: CL_OBS_SOWC_NOTES
-  top_values:
+  values:
   - p
+  is_exhaustive: true
+  total_values_count: 1
 - id: SOWC_FLAG_A
   codelist: CL_OBS_SOWC_NOTES
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: SOWC_FLAG_B
   codelist: CL_OBS_SOWC_NOTES
-  top_values:
+  values:
   - y
+  is_exhaustive: true
+  total_values_count: 1
 - id: UNIT_MULTIPLIER
   codelist: CL_UNIT_MULT
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: UNIT_MEASURE
   codelist: CL_UNIT_MEASURE
-  top_values:
+  values:
   - PCNT
+  is_exhaustive: true
+  total_values_count: 1
 - id: OBS_STATUS
   codelist: CL_OBS_STATUS
-  top_values:
+  values:
   - E
   - RP
   - RA
   - U
+  is_exhaustive: true
+  total_values_count: 4
 - id: OBS_CONF
   codelist: CL_CONF_STATUS
-  top_values:
+  values:
   - F
+  is_exhaustive: true
+  total_values_count: 1
 - id: DATA_SOURCE
   codelist: null
-  top_values:
+  values:
   - DHS, MICS and other national surveys
   - DHS 2022
   - DHS 2019-20
@@ -158,28 +202,42 @@ attributes:
   - UNICEF estimates based on DHS, MICS and other national surveys
   - SHDS 2020
   - SPHPN 2021
+  is_exhaustive: false
+  total_values_count: 19
 - id: LOWER_BOUND
   codelist: null
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: UPPER_BOUND
   codelist: null
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: UNWGTD_SAMPL_SIZE
   codelist: null
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: WGTD_SAMPL_SIZE
   codelist: null
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: SOURCE_LINK
   codelist: null
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: TIME_PERIOD_METHOD
   codelist: null
-  top_values:
+  values:
   - EOF
+  is_exhaustive: true
+  total_values_count: 1
 - id: COVERAGE_TIME
   codelist: null
-  top_values:
+  values:
   - 2014-23
   - '2022'
   - '2021'
@@ -187,17 +245,23 @@ attributes:
   - '2023'
   - 2019-21
   - '2020'
+  is_exhaustive: true
+  total_values_count: 7
 - id: FREQ_COLL
   codelist: CL_FREQ_COLL
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: SERIES_FOOTNOTE
   codelist: null
-  top_values:
+  values:
   - Work is underway to populate the UNICEF global database with historical country-level
     data.
+  is_exhaustive: true
+  total_values_count: 1
 - id: OBS_FOOTNOTE
   codelist: null
-  top_values:
+  values:
   - Mandera County could not be visited due to insecurity
   - Some parts of Boucle Du Mouhoun, Cascades, Center North, East, North and Sahel
     could not be visited due to insecurity
@@ -219,3 +283,10 @@ attributes:
     is negligible. Due to security issues, some parts of the country were not sampled.
   - Figure refers to ever-married women; 55 sampling strata in the country, 8 were
     excluded due to security issues.
+  is_exhaustive: false
+  total_values_count: 220
+time_dimension_summary:
+  type: numerical
+  min: 2020.0
+  max: 2023.0
+  total_count: 4

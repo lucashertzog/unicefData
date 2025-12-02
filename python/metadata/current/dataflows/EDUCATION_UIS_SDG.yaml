@@ -2,12 +2,12 @@ id: EDUCATION_UIS_SDG
 name: EDU - SDG Indicators (UIS Database)
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-02T21:22:44.900116+00:00'
+synced_at: '2025-12-02T22:38:38.148542+00:00'
 dimensions:
 - id: REF_AREA
   position: 1
   codelist: CL_COUNTRY
-  top_values:
+  values:
   - DOM
   - CRI
   - JOR
@@ -18,41 +18,55 @@ dimensions:
   - ESP
   - AUS
   - BGR
+  is_exhaustive: false
+  total_values_count: 100
 - id: INDICATOR
   position: 2
   codelist: CL_UNICEF_INDICATOR
-  top_values:
+  values:
+  - ED_ANAR_L01
+  - ED_ANAR_L02
   - ED_CR_L1_UIS_MOD
   - ED_CR_L2_UIS_MOD
   - ED_CR_L3_UIS_MOD
+  - ED_MAT_L1
+  - ED_MAT_L2
+  - ED_PRYA_AG15T24
+  - ED_READ_L1
+  - ED_READ_L2
+  - ED_ROFST_L02
   - ED_ROFST_L1_UIS_MOD
   - ED_ROFST_L2_UIS_MOD
   - ED_ROFST_L3_UIS_MOD
-  - ED_ROFST_L02
-  - ED_ANAR_L01
-  - ED_PRYA_AG15T24
-  - ED_ANAR_L02
+  is_exhaustive: true
+  total_values_count: 14
 - id: SEX
   position: 3
   codelist: CL_SEX
-  top_values:
-  - _T
+  values:
   - F
   - M
+  - _T
+  is_exhaustive: true
+  total_values_count: 3
 - id: RESIDENCE
   position: 4
   codelist: CL_RESIDENCE
-  top_values:
+  values:
   - _T
+  is_exhaustive: true
+  total_values_count: 1
 - id: WEALTH_QUINTILE
   position: 5
   codelist: CL_WEALTH_QUINTILE
-  top_values:
+  values:
   - _T
+  is_exhaustive: true
+  total_values_count: 1
 - id: INDICATOR_UIS
   position: 6
   codelist: UIS_INDICATOR
-  top_values:
+  values:
   - CR_MOD_1
   - CR_MOD_1_F
   - CR_MOD_1_M
@@ -63,19 +77,25 @@ dimensions:
   - CR_MOD_3_F
   - CR_MOD_3_M
   - ROFST_MOD_1
+  is_exhaustive: false
+  total_values_count: 42
 time_dimension: TIME_PERIOD
 primary_measure: null
 attributes:
 - id: UNIT_MULTIPLIER
   codelist: CL_UNIT_MULT
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: UNIT_MEASURE
   codelist: CL_UNIT_MEASURE
-  top_values:
+  values:
   - PCNT
+  is_exhaustive: true
+  total_values_count: 1
 - id: DATA_SOURCE
   codelist: null
-  top_values:
+  values:
   - GEMR modelled data; 17 February 2025
   - https://education-estimates.org/out-of-school/data/; extracted on 7 August 2025
     (GEMR/UIS)
@@ -90,3 +110,10 @@ attributes:
     least low International Benchmark. Grade 4
   - Trends in International Mathematics and Science Study (TIMSS). Students achieving
     at least Intermediate International Benchmark. Grade 4
+  is_exhaustive: false
+  total_values_count: 154
+time_dimension_summary:
+  type: numerical
+  min: 2020.0
+  max: 2025.0
+  total_count: 6

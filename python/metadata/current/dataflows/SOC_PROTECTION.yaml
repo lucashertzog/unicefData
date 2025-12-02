@@ -2,12 +2,12 @@ id: SOC_PROTECTION
 name: Social protection
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-02T21:23:31.347110+00:00'
+synced_at: '2025-12-02T22:39:04.694686+00:00'
 dimensions:
 - id: REF_AREA
   position: 1
   codelist: CL_COUNTRY
-  top_values:
+  values:
   - ARG
   - ARM
   - BGD
@@ -18,76 +18,102 @@ dimensions:
   - BFA
   - CHL
   - CRI
+  is_exhaustive: false
+  total_values_count: 244
 - id: INDICATOR
   position: 2
   codelist: CL_UNICEF_INDICATOR
-  top_values:
+  values:
+  - SPP_CHLD_POV_PROF
+  - SPP_CHLD_SOC_PROT
+  - SPP_DIST_SOC_PROT_BNFT
+  - SPP_GDPPC
+  - SPP_GINI
   - SPP_HSLD_INCOME_SHARE
   - SPP_MOTHERS_CASH_BNF
-  - SPP_GDPPC
-  - SPP_DIST_SOC_PROT_BNFT
-  - SPP_CHLD_SOC_PROT
-  - SPP_GINI
   - SPP_PALMA
-  - SPP_CHLD_POV_PROF
   - SPP_VMI
+  is_exhaustive: true
+  total_values_count: 9
 - id: SEX
   position: 3
   codelist: CL_SEX
-  top_values:
+  values:
   - _T
+  is_exhaustive: true
+  total_values_count: 1
 - id: RESIDENCE
   position: 4
   codelist: CL_RESIDENCE
-  top_values:
+  values:
   - _T
+  is_exhaustive: true
+  total_values_count: 1
 - id: WEALTH_QUINTILE
   position: 5
   codelist: CL_WEALTH_QUINTILE
-  top_values:
-  - _T
+  values:
   - B40
-  - Q5
   - Q1
+  - Q5
+  - _T
+  is_exhaustive: true
+  total_values_count: 4
 - id: POV_THRESHOLD
   position: 6
   codelist: POV_THRESHOLD
-  top_values:
+  values:
   - _T
   - S1
   - S2
   - S3
   - S4_MORE
+  is_exhaustive: true
+  total_values_count: 5
 time_dimension: TIME_PERIOD
 primary_measure: null
 attributes:
 - id: TIME_PERIOD_METHOD
   codelist: CL_TIME_PERIOD_METHOD
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: FREQ_COLL
   codelist: CL_FREQ_COLL
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: OBS_CONF
   codelist: CL_CONF_STATUS
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: OBS_STATUS
   codelist: CL_OBS_STATUS
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: SERIES_FOOTNOTE
   codelist: null
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: UNIT_MULTIPLIER
   codelist: CL_UNIT_MULT
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
 - id: UNIT_MEASURE
   codelist: CL_UNIT_MEASURE
-  top_values:
+  values:
   - PCNT
   - RATIO
   - USD
+  is_exhaustive: true
+  total_values_count: 3
 - id: DATA_SOURCE
   codelist: null
-  top_values:
+  values:
   - World Bank World Developent Indicators
   - UNSD SDG Database
   - World Bank ASPIRE
@@ -100,6 +126,15 @@ attributes:
   - UNICEF estimates based on World Bank Development Indicators database
   - ILO estimates based on country data compled through the ILO Social Security Inquiry
     (SSI). Based on information from federal programmes only.
+  is_exhaustive: true
+  total_values_count: 10
 - id: OBS_FOOTNOTE
   codelist: null
-  top_values: []
+  values: []
+  is_exhaustive: true
+  total_values_count: 0
+time_dimension_summary:
+  type: numerical
+  min: 2020.0
+  max: 2024.0
+  total_count: 3

@@ -20,26 +20,19 @@ def log(msg):
     print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}")
 
 def test_list_dataflows():
-    """Test listing available dataflows via metadata"""
+    """Test listing available dataflows via list_dataflows()"""
     log("Testing list_dataflows()...")
     
-    sync = MetadataSync()
-    sync.ensure_synced(verbose=False)
-    dataflows = sync.load_dataflows()
+    # Use the actual list_dataflows function to ensure consistent output
+    df = list_dataflows()
     
-    flows = dataflows.get('dataflows', {})
-    log(f"  Found {len(flows)} dataflows")
+    log(f"  Found {len(df)} dataflows")
     
-    # Save to CSV
-    import pandas as pd
-    df = pd.DataFrame([
-        {'id': k, 'name': v.get('name', ''), 'version': v.get('version', '')}
-        for k, v in flows.items()
-    ])
+    # Save to CSV - columns should be: id, agency, version, name
     df.to_csv(os.path.join(OUTPUT_DIR, 'test_dataflows.csv'), index=False)
     log(f"  Saved to test_dataflows.csv")
     
-    return len(flows) > 50  # Should have 60+ dataflows
+    return len(df) > 50  # Should have 60+ dataflows
 
 def test_child_mortality():
     """Test fetching child mortality data (CME_MRY0T4)"""
