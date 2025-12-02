@@ -171,9 +171,9 @@ sync_dataflows <- function(verbose = TRUE) {
     name_node <- xml2::xml_find_first(df, ".//com:Name", ns)
     name <- if (!is.na(name_node)) xml2::xml_text(name_node) else df_id
     
-    # Get description
+    # Get description (use NULL for missing values to align with Python's null)
     desc_node <- xml2::xml_find_first(df, ".//com:Description", ns)
-    description <- if (!is.na(desc_node)) xml2::xml_text(desc_node) else NA
+    description <- if (!is.na(desc_node)) xml2::xml_text(desc_node) else NULL
     
     dataflows[[df_id]] <- list(
       id = df_id,
@@ -250,15 +250,72 @@ sync_codelists <- function(codelist_ids = NULL, verbose = TRUE) {
 #' Sync indicator catalog
 #'
 #' Builds indicator catalog from common SDG indicators.
+#' Tries to load from shared config/indicators.yaml first, 
+#' falls back to hardcoded definitions if not found.
 #'
 #' @param verbose Print progress messages
+#' @param use_shared_config Try to load from shared YAML config (default: TRUE)
 #' @return List with indicator metadata
 #' @export
-sync_indicators <- function(verbose = TRUE) {
+sync_indicators <- function(verbose = TRUE, use_shared_config = TRUE) {
   if (verbose) message("  Building indicator catalog...")
   
-  # Pre-defined SDG indicators
-  indicators <- list(
+  # Try to load from shared config first
+  indicators <- NULL
+  if (use_shared_config) {
+    tryCatch({
+      source_file <- file.path(dirname(sys.frame(1)$ofile %||% "."), "config_loader.R")
+      if (file.exists(source_file)) {
+        source(source_file, local = TRUE)
+        indicators <- load_shared_indicators()
+        if (verbose && length(indicators) > 0) {
+          message("    Loaded indicators from shared config")
+        }
+      }
+    }, error = function(e) {
+      if (verbose) message("    Could not load shared config, using fallback")
+    })
+  }
+  
+  # Fallback to hardcoded indicators if shared config not available
+  if (is.null(indicators) || length(indicators) == 0) {
+    indicators <- .get_fallback_indicators()
+  }
+  
+  # Add optional fields for consistency with Python output
+  for (ind_name in names(indicators)) {
+    ind <- indicators[[ind_name]]
+    indicators[[ind_name]] <- list(
+      code = ind$code,
+      name = ind$name,
+      dataflow = ind$dataflow,
+      sdg_target = ind$sdg_target,
+      unit = ind$unit,
+      description = ind$description,  # Will be NULL/~ if not set
+      dimensions = NULL,
+      source = "config"
+    )
+  }
+  
+  # Save to YAML
+  result <- list(
+    metadata_version = "1.0",
+    synced_at = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
+    source = "unicefData package + SDMX API",
+    total_indicators = length(indicators),
+    indicators = indicators
+  )
+  .save_yaml("indicators.yaml", result)
+  
+  if (verbose) message(sprintf("    Cataloged %d indicators", length(indicators)))
+  
+  invisible(result)
+}
+
+#' Get fallback indicator definitions (hardcoded)
+#' @keywords internal
+.get_fallback_indicators <- function() {
+  list(
     # Child Mortality (SDG 3.2)
     CME_MRM0 = list(
       code = "CME_MRM0",
@@ -269,7 +326,7 @@ sync_indicators <- function(verbose = TRUE) {
     ),
     CME_MRY0T4 = list(
       code = "CME_MRY0T4",
-      name = "Under-five mortality rate",
+      name = "Under-5 mortality rate",
       dataflow = "CME",
       sdg_target = "3.2.1",
       unit = "Deaths per 1,000 live births"
@@ -278,7 +335,7 @@ sync_indicators <- function(verbose = TRUE) {
     # Nutrition (SDG 2.2)
     NT_ANT_HAZ_NE2_MOD = list(
       code = "NT_ANT_HAZ_NE2_MOD",
-      name = "Stunting prevalence (moderate and severe)",
+      name = "Stunting prevalence (moderate + severe)",
       dataflow = "NUTRITION",
       sdg_target = "2.2.1",
       unit = "Percentage"
@@ -292,9 +349,46 @@ sync_indicators <- function(verbose = TRUE) {
     ),
     NT_ANT_WHZ_PO2_MOD = list(
       code = "NT_ANT_WHZ_PO2_MOD",
-      name = "Overweight prevalence",
+      name = "Overweight prevalence (moderate + severe)",
       dataflow = "NUTRITION",
       sdg_target = "2.2.2",
+      unit = "Percentage"
+    ),
+    
+    # Education (SDG 4.1)
+    ED_ANAR_L02 = list(
+      code = "ED_ANAR_L02",
+      name = "Adjusted net attendance rate, primary education",
+      dataflow = "EDUCATION_UIS_SDG",
+      sdg_target = "4.1.1",
+      unit = "Percentage"
+    ),
+    ED_CR_L1_UIS_MOD = list(
+      code = "ED_CR_L1_UIS_MOD",
+      name = "Completion rate, primary education",
+      dataflow = "EDUCATION_UIS_SDG",
+      sdg_target = "4.1.1",
+      unit = "Percentage"
+    ),
+    ED_CR_L2_UIS_MOD = list(
+      code = "ED_CR_L2_UIS_MOD",
+      name = "Completion rate, lower secondary education",
+      dataflow = "EDUCATION_UIS_SDG",
+      sdg_target = "4.1.1",
+      unit = "Percentage"
+    ),
+    ED_READ_L2 = list(
+      code = "ED_READ_L2",
+      name = "Reading proficiency, end of lower secondary",
+      dataflow = "EDUCATION_UIS_SDG",
+      sdg_target = "4.1.1",
+      unit = "Percentage"
+    ),
+    ED_MAT_L2 = list(
+      code = "ED_MAT_L2",
+      name = "Mathematics proficiency, end of lower secondary",
+      dataflow = "EDUCATION_UIS_SDG",
+      sdg_target = "4.1.1",
       unit = "Percentage"
     ),
     
@@ -314,68 +408,109 @@ sync_indicators <- function(verbose = TRUE) {
       unit = "Percentage"
     ),
     
-    # Education (SDG 4.1)
-    ED_CR_L1_UIS_MOD = list(
-      code = "ED_CR_L1_UIS_MOD",
-      name = "Primary completion rate",
-      dataflow = "EDUCATION_UIS_SDG",
-      sdg_target = "4.1.2",
-      unit = "Percentage"
-    ),
-    ED_CR_L2_UIS_MOD = list(
-      code = "ED_CR_L2_UIS_MOD",
-      name = "Lower secondary completion rate",
-      dataflow = "EDUCATION_UIS_SDG",
-      sdg_target = "4.1.2",
-      unit = "Percentage"
+    # HIV/AIDS (SDG 3.3)
+    HVA_EPI_INF_RT = list(
+      code = "HVA_EPI_INF_RT",
+      name = "HIV incidence rate",
+      dataflow = "HIV_AIDS",
+      sdg_target = "3.3.1",
+      unit = "Per 1,000 uninfected population"
     ),
     
     # WASH (SDG 6.1, 6.2)
     `WS_PPL_W-SM` = list(
       code = "WS_PPL_W-SM",
-      name = "Safely managed drinking water",
+      name = "Population using safely managed drinking water services",
       dataflow = "WASH_HOUSEHOLDS",
       sdg_target = "6.1.1",
       unit = "Percentage"
     ),
     `WS_PPL_S-SM` = list(
       code = "WS_PPL_S-SM",
-      name = "Safely managed sanitation",
+      name = "Population using safely managed sanitation services",
+      dataflow = "WASH_HOUSEHOLDS",
+      sdg_target = "6.2.1",
+      unit = "Percentage"
+    ),
+    `WS_PPL_H-B` = list(
+      code = "WS_PPL_H-B",
+      name = "Population with basic handwashing facilities",
       dataflow = "WASH_HOUSEHOLDS",
       sdg_target = "6.2.1",
       unit = "Percentage"
     ),
     
+    # Maternal and Child Health (SDG 3.1, 3.7)
+    MNCH_MMR = list(
+      code = "MNCH_MMR",
+      name = "Maternal mortality ratio",
+      dataflow = "MNCH",
+      sdg_target = "3.1.1",
+      unit = "Deaths per 100,000 live births"
+    ),
+    MNCH_SAB = list(
+      code = "MNCH_SAB",
+      name = "Skilled attendance at birth",
+      dataflow = "MNCH",
+      sdg_target = "3.1.2",
+      unit = "Percentage"
+    ),
+    MNCH_ABR = list(
+      code = "MNCH_ABR",
+      name = "Adolescent birth rate",
+      dataflow = "MNCH",
+      sdg_target = "3.7.2",
+      unit = "Births per 1,000 women aged 15-19"
+    ),
+    
     # Child Protection (SDG 5.3, 16.2, 16.9)
     PT_CHLD_Y0T4_REG = list(
       code = "PT_CHLD_Y0T4_REG",
-      name = "Birth registration (under 5)",
+      name = "Birth registration (children under 5)",
       dataflow = "PT",
       sdg_target = "16.9.1",
       unit = "Percentage"
     ),
+    `PT_CHLD_1-14_PS-PSY-V_CGVR` = list(
+      code = "PT_CHLD_1-14_PS-PSY-V_CGVR",
+      name = "Violent discipline (children 1-14)",
+      dataflow = "PT",
+      sdg_target = "16.2.1",
+      unit = "Percentage"
+    ),
     `PT_F_20-24_MRD_U18_TND` = list(
       code = "PT_F_20-24_MRD_U18_TND",
-      name = "Child marriage (women 20-24 married before 18)",
+      name = "Child marriage before age 18 (women 20-24)",
       dataflow = "PT_CM",
       sdg_target = "5.3.1",
       unit = "Percentage"
+    ),
+    `PT_F_15-49_FGM` = list(
+      code = "PT_F_15-49_FGM",
+      name = "Female genital mutilation prevalence (women 15-49)",
+      dataflow = "PT_FGM",
+      sdg_target = "5.3.2",
+      unit = "Percentage"
+    ),
+    
+    # Early Childhood Development (SDG 4.2)
+    ECD_CHLD_LMPSL = list(
+      code = "ECD_CHLD_LMPSL",
+      name = "Children developmentally on track (literacy-numeracy, physical, social-emotional)",
+      dataflow = "ECD",
+      sdg_target = "4.2.1",
+      unit = "Percentage"
+    ),
+    
+    # Child Poverty (SDG 1.2)
+    `PV_CHLD_DPRV-S-L1-HS` = list(
+      code = "PV_CHLD_DPRV-S-L1-HS",
+      name = "Child multidimensional poverty (severe deprivation in at least 1 dimension)",
+      dataflow = "CHLD_PVTY",
+      sdg_target = "1.2.1",
+      unit = "Percentage"
     )
   )
-  
-  # Save to YAML
-  result <- list(
-    metadata_version = "1.0",
-    synced_at = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
-    source = "unicefData package + SDMX API",
-    total_indicators = length(indicators),
-    indicators = indicators
-  )
-  .save_yaml("indicators.yaml", result)
-  
-  if (verbose) message(sprintf("    Cataloged %d indicators", length(indicators)))
-  
-  invisible(result)
 }
 
 # ============================================================================
@@ -911,13 +1046,13 @@ ensure_metadata <- function(max_age_days = 30, verbose = FALSE, cache_dir = NULL
     history <- list(vintages = list())
   }
   
-  # Add new entry at front
+  # Add new entry at front (field order aligned with Python)
   entry <- list(
     vintage_date = vintage_date,
     synced_at = results$synced_at,
     dataflows = results$dataflows,
-    codelists = results$codelists,
     indicators = results$indicators,
+    codelists = results$codelists,
     errors = results$errors
   )
   
