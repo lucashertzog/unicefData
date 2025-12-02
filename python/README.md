@@ -87,6 +87,46 @@ df = get_unicef(
 print(df.head())
 ```
 
+### Post-Production Options
+
+```python
+# Get latest value per country (cross-sectional analysis)
+df = get_unicef(
+    indicator='CME_MRY0T4',
+    latest=True  # Each country has one row with most recent value
+)
+
+# Wide format - years as columns
+df = get_unicef(
+    indicator='CME_MRY0T4',
+    format='wide'  # Result: iso3 | country | y2015 | y2016 | ...
+)
+
+# Multiple indicators with automatic merge
+df = get_unicef(
+    indicator=['CME_MRY0T4', 'NT_ANT_HAZ_NE2_MOD'],
+    format='wide_indicators',  # Result: iso3 | period | CME_MRY0T4 | NT_ANT_HAZ_NE2_MOD
+    latest=True
+)
+
+# Add country metadata (region, income group)
+df = get_unicef(
+    indicator='CME_MRY0T4',
+    add_metadata=['region', 'income_group', 'continent'],
+    latest=True
+)
+
+# Keep only last 3 years per country
+df = get_unicef(indicator='CME_MRY0T4', mrv=3)
+
+# Drop missing values and simplify columns
+df = get_unicef(
+    indicator='CME_MRY0T4',
+    dropna=True,
+    simplify=True
+)
+```
+
 ### Using UNICEFSDMXClient (Advanced)
 
 ```python

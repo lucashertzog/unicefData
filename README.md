@@ -174,6 +174,128 @@ search_indicators("rate", category = "CME")
 
 ---
 
+## Post-Production Features
+
+The `get_unicef()` function includes powerful post-production options for data transformation and enrichment.
+
+### Output Formats
+
+```python
+# Python: Long format (default) - one row per observation
+df = get_unicef(indicator="CME_MRY0T4", format="long")
+
+# Wide format - years as columns
+df = get_unicef(indicator="CME_MRY0T4", format="wide")
+# Result: iso3 | country | y2015 | y2016 | y2017 | ...
+
+# Wide indicators format - indicators as columns (for multiple indicators)
+df = get_unicef(
+    indicator=["CME_MRY0T4", "NT_ANT_HAZ_NE2_MOD"],
+    format="wide_indicators"
+)
+# Result: iso3 | country | period | CME_MRY0T4 | NT_ANT_HAZ_NE2_MOD
+```
+
+```r
+# R: Same options
+df <- get_unicef(indicator = "CME_MRY0T4", format = "wide")
+df <- get_unicef(
+  indicator = c("CME_MRY0T4", "NT_ANT_HAZ_NE2_MOD"),
+  format = "wide_indicators"
+)
+```
+
+### Latest Value Per Country
+
+Get only the most recent non-missing observation per country (useful for cross-sectional analysis):
+
+```python
+# Python
+df = get_unicef(indicator="CME_MRY0T4", latest=True)
+# Each country has one row with its most recent value
+# Note: The year may differ by country based on data availability
+```
+
+```r
+# R
+df <- get_unicef(indicator = "CME_MRY0T4", latest = TRUE)
+```
+
+### Most Recent Values (MRV)
+
+Keep the N most recent years per country:
+
+```python
+# Python: Keep last 3 years per country
+df = get_unicef(indicator="CME_MRY0T4", mrv=3)
+```
+
+```r
+# R
+df <- get_unicef(indicator = "CME_MRY0T4", mrv = 3)
+```
+
+### Add Country/Indicator Metadata
+
+Enrich data with region, income group, and other metadata:
+
+```python
+# Python
+df = get_unicef(
+    indicator="CME_MRY0T4",
+    add_metadata=["region", "income_group", "continent"]
+)
+# Result includes: iso3 | country | region | income_group | continent | ...
+```
+
+```r
+# R
+df <- get_unicef(
+  indicator = "CME_MRY0T4",
+  add_metadata = c("region", "income_group", "continent")
+)
+```
+
+**Available metadata options:**
+
+| Metadata | Description |
+|----------|-------------|
+| `region` | UNICEF/World Bank region (e.g., "Sub-Saharan Africa") |
+| `income_group` | World Bank income classification (e.g., "Low income") |
+| `continent` | Continent name (e.g., "Africa") |
+| `indicator_name` | Full indicator name |
+| `indicator_category` | Indicator category (CME, NUTRITION, etc.) |
+
+### Combining Options
+
+Post-production options can be combined for powerful data transformations:
+
+```python
+# Python: Cross-sectional analysis with metadata
+df = get_unicef(
+    indicator=["CME_MRY0T4", "NT_ANT_HAZ_NE2_MOD"],
+    format="wide_indicators",
+    latest=True,
+    add_metadata=["region", "income_group"],
+    dropna=True
+)
+# Result: One row per country with latest mortality and stunting values,
+#         plus region and income group for analysis
+```
+
+```r
+# R: Same approach
+df <- get_unicef(
+  indicator = c("CME_MRY0T4", "NT_ANT_HAZ_NE2_MOD"),
+  format = "wide_indicators",
+  latest = TRUE,
+  add_metadata = c("region", "income_group"),
+  dropna = TRUE
+)
+```
+
+---
+
 ## Automatic Dataflow Detection
 
 The package automatically downloads the complete UNICEF indicator codelist (733 indicators across 15 categories) on first use and caches it locally. This enables:
@@ -223,6 +345,17 @@ info <- get_cache_info()
 | `tidy` | boolean | TRUE | Return cleaned data with standardized columns |
 | `country_names` | boolean | TRUE | Add country name column |
 | `max_retries` | integer | 3 | Number of retry attempts on failure |
+
+#### Post-Production Options
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `format` | string | `"long"` | Output format: `"long"`, `"wide"`, or `"wide_indicators"` |
+| `latest` | boolean | FALSE | Keep only latest non-missing value per country (year may vary) |
+| `mrv` | integer | NULL | Keep only the N most recent values per country |
+| `add_metadata` | vector/list | NULL | Metadata to add: `"region"`, `"income_group"`, `"continent"`, `"indicator_name"`, `"indicator_category"` |
+| `dropna` | boolean | FALSE | Remove rows with missing values |
+| `simplify` | boolean | FALSE | Keep only essential columns |
 
 ### search_indicators() Parameters
 
@@ -274,6 +407,10 @@ Use `list_categories()` for the complete list.
 | Filter by country, year, sex | ✅ | ✅ |
 | Automatic retries | ✅ | ✅ |
 | 733 indicators supported | ✅ | ✅ |
+| **Post-production: `format`** | ✅ | ✅ |
+| **Post-production: `latest`** | ✅ | ✅ |
+| **Post-production: `mrv`** | ✅ | ✅ |
+| **Post-production: `add_metadata`** | ✅ | ✅ |
 | Metadata versioning | ✅ | ✅ |
 | Disk-based caching | ✅ | No |
 
