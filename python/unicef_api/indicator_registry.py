@@ -141,6 +141,57 @@ def _infer_category(indicator_code: str) -> str:
     Returns:
         Inferred category/dataflow name
     """
+    # =========================================================================
+    # KNOWN DATAFLOW OVERRIDES
+    # =========================================================================
+    # Some indicators exist in dataflows that don't match their prefix or the
+    # metadata reports the wrong dataflow. These are known exceptions that 
+    # require explicit mapping.
+    #
+    # Issue: The UNICEF SDMX API metadata sometimes reports indicators in a
+    # generic dataflow (e.g., "PT", "EDUCATION") but the data only exists in
+    # a more specific dataflow (e.g., "PT_CM", "EDUCATION_UIS_SDG").
+    #
+    # These mappings were discovered by testing against the production script:
+    # PROD-SDG-REP-2025/01_data_prep/012_codes/0121_get_data_api.R
+    # =========================================================================
+    
+    INDICATOR_DATAFLOW_OVERRIDES = {
+        # Child Marriage - metadata says PT but data is in PT_CM
+        'PT_F_20-24_MRD_U18_TND': 'PT_CM',
+        'PT_F_20-24_MRD_U15': 'PT_CM',
+        
+        # FGM - metadata says PT but data is in PT_FGM
+        'PT_F_15-49_FGM': 'PT_FGM',
+        'PT_F_0-14_FGM': 'PT_FGM',
+        'PT_F_15-19_FGM_TND': 'PT_FGM',
+        'PT_F_15-49_FGM_TND': 'PT_FGM',
+        'PT_F_15-49_FGM_ELIM': 'PT_FGM',
+        'PT_M_15-49_FGM_ELIM': 'PT_FGM',
+        
+        # Education UIS SDG indicators - metadata says EDUCATION but data is in EDUCATION_UIS_SDG
+        'ED_CR_L1_UIS_MOD': 'EDUCATION_UIS_SDG',
+        'ED_CR_L2_UIS_MOD': 'EDUCATION_UIS_SDG',
+        'ED_CR_L3_UIS_MOD': 'EDUCATION_UIS_SDG',
+        'ED_ROFST_L1_UIS_MOD': 'EDUCATION_UIS_SDG',
+        'ED_ROFST_L2_UIS_MOD': 'EDUCATION_UIS_SDG',
+        'ED_ROFST_L3_UIS_MOD': 'EDUCATION_UIS_SDG',
+        'ED_ANAR_L02': 'EDUCATION_UIS_SDG',
+        'ED_MAT_G23': 'EDUCATION_UIS_SDG',
+        'ED_MAT_L1': 'EDUCATION_UIS_SDG',
+        'ED_MAT_L2': 'EDUCATION_UIS_SDG',
+        'ED_READ_G23': 'EDUCATION_UIS_SDG',
+        'ED_READ_L1': 'EDUCATION_UIS_SDG',
+        'ED_READ_L2': 'EDUCATION_UIS_SDG',
+        
+        # Child Poverty - confirm correct dataflow
+        'PV_CHLD_DPRV-S-L1-HS': 'CHLD_PVTY',
+    }
+    
+    # Check if indicator has a known override
+    if indicator_code in INDICATOR_DATAFLOW_OVERRIDES:
+        return INDICATOR_DATAFLOW_OVERRIDES[indicator_code]
+    
     # Mapping of prefixes to dataflows
     PREFIX_TO_DATAFLOW = {
         'CME': 'CME',
@@ -161,6 +212,7 @@ def _infer_category(indicator_code: str) -> str:
         'EMPH': 'EMPH',
         'EDUN': 'EDUCATION',
         'SDG4': 'EDUCATION_UIS_SDG',
+        'PV': 'CHLD_PVTY',
     }
     
     # Try to match prefix
@@ -350,6 +402,11 @@ def get_dataflow_for_indicator(indicator_code: str, default: str = "GLOBAL_DATAF
     This function automatically loads the indicator cache on first use,
     fetching from the UNICEF SDMX API if necessary.
     
+    IMPORTANT: Known dataflow overrides are checked FIRST as an optimization.
+    This avoids unnecessary 404 errors for indicators where the API metadata
+    is known to be incorrect. The get_unicef() function also has fallback 
+    logic that will try alternative dataflows if the returned one fails.
+    
     Args:
         indicator_code: UNICEF indicator code (e.g., "CME_MRY0T4")
         default: Default dataflow if indicator not found
@@ -364,15 +421,54 @@ def get_dataflow_for_indicator(indicator_code: str, default: str = "GLOBAL_DATAF
         >>> get_dataflow_for_indicator("NT_ANT_HAZ_NE2_MOD")
         'NUTRITION'
         
+        >>> get_dataflow_for_indicator("ED_CR_L1_UIS_MOD")
+        'EDUCATION_UIS_SDG'  # Uses known override to avoid 404
+        
         >>> get_dataflow_for_indicator("UNKNOWN_IND")
         'GLOBAL_DATAFLOW'
     """
+    # FIRST: Check known overrides (optimization to avoid 404 errors)
+    # These are indicators where the API metadata reports the wrong dataflow.
+    # Even if we remove these, the fallback logic in get_unicef() would still work,
+    # but this saves an unnecessary failed API request.
+    KNOWN_CORRECT_DATAFLOWS = {
+        # Child Marriage - metadata says PT but data is in PT_CM
+        'PT_F_20-24_MRD_U18_TND': 'PT_CM',
+        'PT_F_20-24_MRD_U15': 'PT_CM',
+        # FGM - metadata says PT but data is in PT_FGM
+        'PT_F_15-49_FGM': 'PT_FGM',
+        'PT_F_0-14_FGM': 'PT_FGM',
+        'PT_F_15-19_FGM_TND': 'PT_FGM',
+        'PT_F_15-49_FGM_TND': 'PT_FGM',
+        'PT_F_15-49_FGM_ELIM': 'PT_FGM',
+        'PT_M_15-49_FGM_ELIM': 'PT_FGM',
+        # Education UIS SDG indicators - metadata says EDUCATION but data is in EDUCATION_UIS_SDG
+        'ED_CR_L1_UIS_MOD': 'EDUCATION_UIS_SDG',
+        'ED_CR_L2_UIS_MOD': 'EDUCATION_UIS_SDG',
+        'ED_CR_L3_UIS_MOD': 'EDUCATION_UIS_SDG',
+        'ED_ROFST_L1_UIS_MOD': 'EDUCATION_UIS_SDG',
+        'ED_ROFST_L2_UIS_MOD': 'EDUCATION_UIS_SDG',
+        'ED_ROFST_L3_UIS_MOD': 'EDUCATION_UIS_SDG',
+        'ED_ANAR_L02': 'EDUCATION_UIS_SDG',
+        'ED_MAT_G23': 'EDUCATION_UIS_SDG',
+        'ED_MAT_L1': 'EDUCATION_UIS_SDG',
+        'ED_MAT_L2': 'EDUCATION_UIS_SDG',
+        'ED_READ_G23': 'EDUCATION_UIS_SDG',
+        'ED_READ_L1': 'EDUCATION_UIS_SDG',
+        'ED_READ_L2': 'EDUCATION_UIS_SDG',
+        'PV_CHLD_DPRV-S-L1-HS': 'CHLD_PVTY',
+    }
+    
+    if indicator_code in KNOWN_CORRECT_DATAFLOWS:
+        return KNOWN_CORRECT_DATAFLOWS[indicator_code]
+    
+    # SECOND: Check cache
     indicators = _ensure_cache_loaded()
     
     if indicator_code in indicators:
         return indicators[indicator_code].get('category', default)
     
-    # Fallback: try to infer from code prefix
+    # THIRD: Use prefix-based inference
     inferred = _infer_category(indicator_code)
     if inferred != 'GLOBAL_DATAFLOW':
         return inferred

@@ -97,6 +97,59 @@ CACHE_MAX_AGE_DAYS <- 30
 #' @return Character. The inferred dataflow name
 #' @keywords internal
 .infer_category <- function(indicator_code) {
+  # ===========================================================================
+  # KNOWN DATAFLOW OVERRIDES
+  # ===========================================================================
+  # Some indicators exist in dataflows that don't match their prefix or the
+
+  # metadata reports the wrong dataflow. These are known exceptions that 
+  # require explicit mapping.
+  #
+  # Issue: The UNICEF SDMX API metadata sometimes reports indicators in a
+  # generic dataflow (e.g., "PT", "EDUCATION") but the data only exists in
+  # a more specific dataflow (e.g., "PT_CM", "EDUCATION_UIS_SDG").
+  #
+  # These mappings were discovered by testing against the production script:
+  # PROD-SDG-REP-2025/01_data_prep/012_codes/0121_get_data_api.R
+  # ===========================================================================
+  
+  indicator_overrides <- list(
+    # Child Marriage - metadata says PT but data is in PT_CM
+    "PT_F_20-24_MRD_U18_TND" = "PT_CM",
+    "PT_F_20-24_MRD_U15" = "PT_CM",
+    
+    # FGM - metadata says PT but data is in PT_FGM
+    "PT_F_15-49_FGM" = "PT_FGM",
+    "PT_F_0-14_FGM" = "PT_FGM",
+    "PT_F_15-19_FGM_TND" = "PT_FGM",
+    "PT_F_15-49_FGM_TND" = "PT_FGM",
+    "PT_F_15-49_FGM_ELIM" = "PT_FGM",
+    "PT_M_15-49_FGM_ELIM" = "PT_FGM",
+    
+    # Education UIS SDG indicators - metadata says EDUCATION but data is in EDUCATION_UIS_SDG
+    "ED_CR_L1_UIS_MOD" = "EDUCATION_UIS_SDG",
+    "ED_CR_L2_UIS_MOD" = "EDUCATION_UIS_SDG",
+    "ED_CR_L3_UIS_MOD" = "EDUCATION_UIS_SDG",
+    "ED_ROFST_L1_UIS_MOD" = "EDUCATION_UIS_SDG",
+    "ED_ROFST_L2_UIS_MOD" = "EDUCATION_UIS_SDG",
+    "ED_ROFST_L3_UIS_MOD" = "EDUCATION_UIS_SDG",
+    "ED_ANAR_L02" = "EDUCATION_UIS_SDG",
+    "ED_MAT_G23" = "EDUCATION_UIS_SDG",
+    "ED_MAT_L1" = "EDUCATION_UIS_SDG",
+    "ED_MAT_L2" = "EDUCATION_UIS_SDG",
+    "ED_READ_G23" = "EDUCATION_UIS_SDG",
+    "ED_READ_L1" = "EDUCATION_UIS_SDG",
+    "ED_READ_L2" = "EDUCATION_UIS_SDG",
+    
+    # Child Poverty - confirm correct dataflow
+    "PV_CHLD_DPRV-S-L1-HS" = "CHLD_PVTY"
+  )
+  
+  # Check if indicator has a known override
+  if (indicator_code %in% names(indicator_overrides)) {
+    return(indicator_overrides[[indicator_code]])
+  }
+  
   # Mapping of prefixes to dataflows
   prefix_map <- list(
     CME = "CME",
@@ -116,7 +169,8 @@ CACHE_MAX_AGE_DAYS <- 30
     PP = "POPULATION",
     EMPH = "EMPH",
     EDUN = "EDUCATION",
-    SDG4 = "EDUCATION_UIS_SDG"
+    SDG4 = "EDUCATION_UIS_SDG",
+    PV = "CHLD_PVTY"
   )
   
   # Extract prefix (first part before underscore)
@@ -366,6 +420,10 @@ CACHE_MAX_AGE_DAYS <- 30
 #' automatically loads the indicator cache on first use, fetching from the
 #' UNICEF SDMX API if necessary.
 #'
+#' IMPORTANT: Known dataflow overrides are checked FIRST, before the cache.
+#' This ensures problematic indicators (where the API metadata is wrong)
+#' always get the correct dataflow.
+#'
 #' @param indicator_code Character. UNICEF indicator code (e.g., "CME_MRY0T4")
 #' @param default Character. Default dataflow if indicator not found (default: "GLOBAL_DATAFLOW")
 #'
@@ -378,10 +436,49 @@ CACHE_MAX_AGE_DAYS <- 30
 #'
 #' get_dataflow_for_indicator("NT_ANT_HAZ_NE2_MOD")
 #' # Returns: "NUTRITION"
+#'
+#' get_dataflow_for_indicator("ED_CR_L1_UIS_MOD")
+#' # Returns: "EDUCATION_UIS_SDG" (uses override, not wrong cache value)
 #' }
 #'
 #' @export
 get_dataflow_for_indicator <- function(indicator_code, default = "GLOBAL_DATAFLOW") {
+  # FIRST: Check known overrides (these take priority over cache)
+  # These are indicators where the API metadata reports the wrong dataflow
+  indicator_overrides <- list(
+    # Child Marriage - metadata says PT but data is in PT_CM
+    "PT_F_20-24_MRD_U18_TND" = "PT_CM",
+    "PT_F_20-24_MRD_U15" = "PT_CM",
+    # FGM - metadata says PT but data is in PT_FGM
+    "PT_F_15-49_FGM" = "PT_FGM",
+    "PT_F_0-14_FGM" = "PT_FGM",
+    "PT_F_15-19_FGM_TND" = "PT_FGM",
+    "PT_F_15-49_FGM_TND" = "PT_FGM",
+    "PT_F_15-49_FGM_ELIM" = "PT_FGM",
+    "PT_M_15-49_FGM_ELIM" = "PT_FGM",
+    # Education UIS SDG indicators - metadata says EDUCATION but data is in EDUCATION_UIS_SDG
+    "ED_CR_L1_UIS_MOD" = "EDUCATION_UIS_SDG",
+    "ED_CR_L2_UIS_MOD" = "EDUCATION_UIS_SDG",
+    "ED_CR_L3_UIS_MOD" = "EDUCATION_UIS_SDG",
+    "ED_ROFST_L1_UIS_MOD" = "EDUCATION_UIS_SDG",
+    "ED_ROFST_L2_UIS_MOD" = "EDUCATION_UIS_SDG",
+    "ED_ROFST_L3_UIS_MOD" = "EDUCATION_UIS_SDG",
+    "ED_ANAR_L02" = "EDUCATION_UIS_SDG",
+    "ED_MAT_G23" = "EDUCATION_UIS_SDG",
+    "ED_MAT_L1" = "EDUCATION_UIS_SDG",
+    "ED_MAT_L2" = "EDUCATION_UIS_SDG",
+    "ED_READ_G23" = "EDUCATION_UIS_SDG",
+    "ED_READ_L1" = "EDUCATION_UIS_SDG",
+    "ED_READ_L2" = "EDUCATION_UIS_SDG",
+    # Child Poverty
+    "PV_CHLD_DPRV-S-L1-HS" = "CHLD_PVTY"
+  )
+  
+  if (indicator_code %in% names(indicator_overrides)) {
+    return(indicator_overrides[[indicator_code]])
+  }
+  
+  # SECOND: Check cache
   indicators <- .ensure_cache_loaded()
   
   if (indicator_code %in% names(indicators)) {
@@ -391,7 +488,7 @@ get_dataflow_for_indicator <- function(indicator_code, default = "GLOBAL_DATAFLO
     }
   }
   
-  # Fallback: try to infer from code prefix
+  # THIRD: Fallback to prefix-based inference
   inferred <- .infer_category(indicator_code)
   if (inferred != "GLOBAL_DATAFLOW") {
     return(inferred)
