@@ -36,7 +36,9 @@ SDMX_NS = {
 # Base paths
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PACKAGE_DIR = os.path.dirname(SCRIPT_DIR)
-METADATA_DIR = os.path.join(PACKAGE_DIR, 'metadata', 'current')
+# Shared metadata at repo root (up two levels from package dir: python/unicef_api -> python -> root)
+REPO_ROOT = os.path.dirname(PACKAGE_DIR)
+METADATA_DIR = os.path.join(REPO_ROOT, 'metadata', 'current')
 
 
 def get_dataflow_list(max_retries: int = 3) -> List[Dict[str, str]]:

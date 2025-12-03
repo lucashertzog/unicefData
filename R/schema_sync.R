@@ -307,10 +307,17 @@ sync_dataflow_schemas <- function(output_dir = NULL, verbose = TRUE, dataflows =
                                    include_sample_values = TRUE) {
   
   if (is.null(output_dir)) {
-    # Default to shared metadata directory at repo root
-    # Assumes script is in R/ folder, so we go up one level
-    repo_root <- dirname(get_package_root())
-    output_dir <- file.path(repo_root, "metadata", "current")
+    # Default to R/metadata/current
+    pkg_root <- get_package_root()
+    
+    # Check if pkg_root is the R directory or the project root
+    if (file.exists(file.path(pkg_root, "get_unicef.R"))) {
+      # It is the R directory
+      output_dir <- file.path(pkg_root, "metadata", "current")
+    } else {
+      # It is likely the project root
+      output_dir <- file.path(pkg_root, "R", "metadata", "current")
+    }
   }
   
   if (!dir.exists(output_dir)) {
@@ -480,9 +487,17 @@ sync_dataflow_schemas <- function(output_dir = NULL, verbose = TRUE, dataflows =
 #' @export
 load_dataflow_schema <- function(dataflow_id, metadata_dir = NULL) {
   if (is.null(metadata_dir)) {
-    # Default to shared metadata directory at repo root
-    repo_root <- dirname(get_package_root())
-    metadata_dir <- file.path(repo_root, "metadata", "current")
+    # Default to R/metadata/current
+    pkg_root <- get_package_root()
+    
+    # Check if pkg_root is the R directory or the project root
+    if (file.exists(file.path(pkg_root, "get_unicef.R"))) {
+      # It is the R directory
+      metadata_dir <- file.path(pkg_root, "metadata", "current")
+    } else {
+      # It is likely the project root
+      metadata_dir <- file.path(pkg_root, "R", "metadata", "current")
+    }
   }
   
   # Look for individual dataflow file

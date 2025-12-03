@@ -20,12 +20,12 @@ class MetadataManager:
                          it relative to this file.
         """
         if metadata_dir is None:
-            # Default to python/metadata/current
+            # Default to shared metadata at repo root
             # This file is in python/unicef_api/metadata_manager.py
-            # So we go up two levels to python/
             current_dir = os.path.dirname(os.path.abspath(__file__))
             package_root = os.path.dirname(current_dir) # python/
-            self.metadata_dir = os.path.join(package_root, 'metadata', 'current')
+            repo_root = os.path.dirname(package_root)   # root/
+            self.metadata_dir = os.path.join(repo_root, 'metadata', 'current')
         else:
             self.metadata_dir = metadata_dir
             

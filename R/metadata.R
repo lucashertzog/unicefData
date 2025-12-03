@@ -33,7 +33,19 @@ if (!requireNamespace("yaml", quietly = TRUE)) {
 set_metadata_cache <- function(path = NULL) {
 
   if (is.null(path)) {
-    path <- file.path(getwd(), "metadata")
+    wd <- getwd()
+    # Check if we are in the R directory (heuristic: contains get_unicef.R)
+    if (file.exists(file.path(wd, "get_unicef.R"))) {
+       path <- file.path(wd, "metadata")
+    } else {
+       # Assume we are in root or somewhere else, try to target R/metadata
+       if (dir.exists(file.path(wd, "R"))) {
+         path <- file.path(wd, "R", "metadata")
+       } else {
+         # Fallback to current directory/metadata
+         path <- file.path(wd, "metadata")
+       }
+    }
   }
   if (!dir.exists(path)) {
     dir.create(path, recursive = TRUE)

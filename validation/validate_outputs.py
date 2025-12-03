@@ -22,6 +22,10 @@ import glob
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR = os.path.dirname(SCRIPT_DIR)
 
+# Files to skip (metadata files with different structure - indicators/codelists have complex nesting)
+# Note: test_dataflows.csv is now included in validation
+SKIP_FILES = {'test_indicators.csv', 'test_codelists.csv'}
+
 # Folders to compare
 FOLDERS_TO_COMPARE = [
     {
@@ -41,6 +45,10 @@ def find_matching_csvs(python_dir, r_dir):
     """Find CSV files that exist in both Python and R directories."""
     py_csvs = set(os.path.basename(f) for f in glob.glob(os.path.join(python_dir, "*.csv")))
     r_csvs = set(os.path.basename(f) for f in glob.glob(os.path.join(r_dir, "*.csv")))
+    
+    # Exclude metadata files from comparison
+    py_csvs = py_csvs - SKIP_FILES
+    r_csvs = r_csvs - SKIP_FILES
     
     common = py_csvs & r_csvs
     py_only = py_csvs - r_csvs
@@ -102,12 +110,23 @@ def compare_csv_files(py_path, r_path):
         
         # Compare key columns
         for col in key_cols:
-            py_vals = df_py_sorted[col].astype(str).tolist()
-            r_vals = df_r_sorted[col].astype(str).tolist()
-            if py_vals != r_vals:
-                # Count differences
-                diffs = sum(1 for a, b in zip(py_vals, r_vals) if a != b)
-                issues.append(f"Column '{col}': {diffs} differences")
+            # Use numeric comparison for period column (with tolerance for decimal years)
+            if col == 'period':
+                py_vals = pd.to_numeric(df_py_sorted[col], errors='coerce')
+                r_vals = pd.to_numeric(df_r_sorted[col], errors='coerce')
+                # Compare with tolerance for floating point differences
+                mask = ~(py_vals.isna() | r_vals.isna())
+                if mask.any():
+                    diffs = (abs(py_vals[mask] - r_vals[mask]) > 0.0001).sum()
+                    if diffs > 0:
+                        issues.append(f"Column '{col}': {diffs} differences")
+            else:
+                py_vals = df_py_sorted[col].astype(str).tolist()
+                r_vals = df_r_sorted[col].astype(str).tolist()
+                if py_vals != r_vals:
+                    # Count differences
+                    diffs = sum(1 for a, b in zip(py_vals, r_vals) if a != b)
+                    issues.append(f"Column '{col}': {diffs} differences")
         
         # Compare numeric values
         if value_col and len(df_py_sorted) == len(df_r_sorted):

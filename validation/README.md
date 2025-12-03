@@ -14,12 +14,13 @@ python validate_outputs.py
 1. Scans for matching CSV files in:
    - `python/test_output/*.csv` vs `R/test_output/*.csv`
    - `python/examples/*.csv` vs `R/examples/*.csv`
-2. Compares each matching pair for:
+2. Skips metadata files (`test_dataflows.csv`, `test_indicators.csv`, `test_codelists.csv`)
+3. Compares each matching pair for:
    - Row counts
    - Column names
-   - Key column values (iso3, indicator, year)
+   - Key column values (iso3, indicator, period) with numeric tolerance
    - Numeric values (with 0.001 tolerance)
-3. Generates `validation_results.csv` with summary
+4. Generates `validation_results.csv` with summary
 
 ## Output
 
