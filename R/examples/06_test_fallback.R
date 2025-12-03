@@ -8,7 +8,18 @@
 #
 # Matches: python/examples/06_test_fallback.py
 
-source("../get_unicef.R")
+# Adjust path if running from examples directory
+if (file.exists("get_unicef.R")) {
+  source("get_unicef.R")
+} else if (file.exists("../get_unicef.R")) {
+  source("../get_unicef.R")
+} else if (file.exists("R/get_unicef.R")) {
+  source("R/get_unicef.R")
+} else if (file.exists("unicefData/R/get_unicef.R")) {
+  source("unicefData/R/get_unicef.R")
+} else {
+  stop("Could not find get_unicef.R")
+}
 
 cat("======================================================================\n")
 cat("06_test_fallback.R - Test Dataflow Fallback Mechanism\n")

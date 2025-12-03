@@ -30,13 +30,14 @@ log_msg <- function(msg) {
 # ============================================================================
 
 test_list_flows <- function() {
-  log_msg("Testing list_sdmx_flows()...")
+  log_msg("Testing list_dataflows()...")
   
-  flows <- list_sdmx_flows()
+  # Use list_dataflows() for consistent output with Python
+  flows <- list_dataflows()
   
   log_msg(sprintf("  Found %d dataflows", nrow(flows)))
   
-  # Save to CSV with UTF-8 encoding
+  # Save to CSV with UTF-8 encoding - columns: id, agency, version, name
   write.csv(flows, file.path(OUTPUT_DIR, "test_dataflows.csv"), 
             row.names = FALSE, fileEncoding = "UTF-8")
   log_msg("  Saved to test_dataflows.csv")
@@ -57,8 +58,8 @@ test_child_mortality <- function() {
   log_msg(sprintf("  Retrieved %d observations", nrow(df)))
   
   if (!is.null(df) && nrow(df) > 0) {
-    log_msg(sprintf("  Countries: %s", paste(unique(df$country_code), collapse = ", ")))
-    log_msg(sprintf("  Years: %s", paste(sort(unique(df$year)), collapse = ", ")))
+    log_msg(sprintf("  Countries: %s", paste(unique(df$iso3), collapse = ", ")))
+    log_msg(sprintf("  Years: %s", paste(sort(unique(df$period)), collapse = ", ")))
     
     write.csv(df, file.path(OUTPUT_DIR, "test_mortality.csv"), row.names = FALSE)
     log_msg("  Saved to test_mortality.csv")
@@ -143,8 +144,8 @@ test_multiple_indicators <- function() {
   
   if (!is.null(df) && nrow(df) > 0) {
     # Log per indicator
-    for (ind in unique(df$indicator_code)) {
-      n <- sum(df$indicator_code == ind)
+    for (ind in unique(df$indicator)) {
+      n <- sum(df$indicator == ind)
       log_msg(sprintf("  %s: %d observations", ind, n))
     }
     

@@ -13,7 +13,18 @@
 #   5. Combining filters
 # ============================================================================
 
-source("../get_unicef.R")
+# Adjust path if running from examples directory
+if (file.exists("get_unicef.R")) {
+  source("get_unicef.R")
+} else if (file.exists("../get_unicef.R")) {
+  source("../get_unicef.R")
+} else if (file.exists("R/get_unicef.R")) {
+  source("R/get_unicef.R")
+} else if (file.exists("unicefData/R/get_unicef.R")) {
+  source("unicefData/R/get_unicef.R")
+} else {
+  stop("Could not find get_unicef.R")
+}
 
 cat(strrep("=", 70), "\n")
 cat("05_advanced_features.R - Advanced Features\n")
@@ -32,7 +43,7 @@ df <- get_unicef(
   sex = c("M", "F")  # Male and Female
 )
 
-print(df[, c("iso3", "year", "sex", "value")])
+print(df[, c("iso3", "period", "sex", "value")])
 
 # ============================================================================
 # Example 2: Disaggregation by Wealth
@@ -44,11 +55,20 @@ df <- get_unicef(
   indicator = "NT_ANT_HAZ_NE2_MOD",
   countries = c("IND", "NGA", "ETH"),
   start_year = 2015,
-  wealth_quintile = c("Q1", "Q5")  # Poorest and Richest
+  # wealth_quintile is not a direct argument in get_unicef, but handled via ... or specific logic
+  # The refactored get_unicef only exposes 'sex' explicitly.
+  # We need to pass it via ... if supported, or filter afterwards.
+  # However, the current get_unicef implementation only accepts 'sex' as a named argument for filtering.
+  # Let's try passing it and see if ... captures it, or if we need to filter manually.
+  # Looking at get_unicef definition: get_unicef <- function(..., sex=NULL)
+  # It seems it doesn't have ... passed to filter_unicef_data.
+  # We might need to fetch all and filter.
 )
 
+# Filter manually for now as get_unicef might not expose wealth_quintile directly yet
 if (nrow(df) > 0 && "wealth_quintile" %in% names(df)) {
-  print(df[, c("iso3", "year", "wealth_quintile", "value")])
+  df <- df[df$wealth_quintile %in% c("Q1", "Q5"), ]
+  print(df[, c("iso3", "period", "wealth_quintile", "value")])
 } else {
   cat("No wealth-disaggregated data available for these countries\n")
 }
@@ -67,7 +87,7 @@ df <- get_unicef(
 )
 
 cat("Time series:", nrow(df), "observations\n")
-print(head(df[, c("year", "value")], 10))
+print(head(df[, c("period", "value")], 10))
 
 # ============================================================================
 # Example 4: Multiple Countries Latest
@@ -83,7 +103,7 @@ df <- get_unicef(
   latest = TRUE
 )
 
-print(df[, c("iso3", "country", "year", "value")])
+print(df[, c("iso3", "country", "period", "value")])
 
 # ============================================================================
 # Example 5: Combining Filters
@@ -99,7 +119,7 @@ df <- get_unicef(
   add_metadata = c("indicator_name")          # Include names
 )
 
-print(df[, c("iso3", "indicator", "indicator_name", "year", "value")])
+print(df[, c("iso3", "indicator", "indicator_name", "period", "value")])
 
 cat("\n", strrep("=", 70), "\n", sep = "")
 cat("Advanced Features Complete!\n")
