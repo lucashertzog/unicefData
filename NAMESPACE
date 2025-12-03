@@ -35,11 +35,11 @@ export(get_vintage_path)
 export(ensure_metadata)
 
 # Imports from dependencies
-import(httr)
+importFrom(httr, RETRY, stop_for_status, content, user_agent)
 import(xml2)
 import(tibble)
 import(dplyr)
-import(memoise)
+importFrom(memoise, memoise, cache_filesystem)
 import(countrycode)
 importFrom(yaml, read_yaml, write_yaml)
 importFrom(tools, R_user_dir)

@@ -60,7 +60,7 @@ This conversion:
 You can source the scripts directly from this repository:
 
 ```r
-source("R/unicef_api/get_unicef.R")
+source("R/get_unicef.R")
 ```
 
 Dependencies:
@@ -124,6 +124,5 @@ list_categories()
 
 ## 📂 Directory Structure
 
-- `unicef_api/`: Core R scripts and API implementation
 - `examples/`: Usage examples and tutorials
 - `metadata/`: Cached metadata and schemas

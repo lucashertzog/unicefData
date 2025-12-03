@@ -40,3 +40,6 @@
 # IDE
 ^\.vscode$
 ^\.idea$
+
+^R/README\.md$
+^R/tests/output/\.gitkeep$
