@@ -38,8 +38,7 @@ print(df.head())
 ### R
 
 ```r
-source("indicator_registry.R")
-source("get_unicef.R")
+source("R/unicef_api/get_unicef.R")
 
 # Don't know the indicator code? Search for it!
 search_indicators("mortality")
@@ -98,7 +97,7 @@ search_indicators("immunization")   # Find vaccine coverage indicators
 
 ```r
 # R
-source("indicator_registry.R")
+source("R/unicef_api/get_unicef.R")
 
 search_indicators("mortality")
 search_indicators("stunting")

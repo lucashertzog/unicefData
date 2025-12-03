@@ -33,6 +33,7 @@ The **unicefData** repository provides consistent APIs in both R and Python:
 - **Error handling**: Comprehensive error messages and automatic retries
 - **Flexible filtering**: Filter by country, year, sex disaggregation
 - **Multiple dataflows**: Support for specialized dataflows (CME, NUTRITION, EDUCATION, etc.)
+- **Wide Formats**: Pivot data by year, indicator, sex, wealth, etc.
 - **Batch downloads**: Fetch multiple indicators efficiently
 
 ## 📅 Time Period Handling
@@ -57,7 +58,7 @@ This conversion:
 ## 📦 Installation
 
 ```bash
-cd D:\jazevedo\GitHub\unicefData\python
+cd python
 pip install -e .
 ```
 

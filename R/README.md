@@ -34,6 +34,7 @@ The **unicefData** repository provides consistent APIs in both R and Python:
 - **Flexible filtering**: Filter by country, year, sex, age, wealth, residence, maternal education
 - **Multiple dataflows**: Support for specialized dataflows (CME, NUTRITION, EDUCATION, etc.)
 - **Wide Formats**: Pivot data by year, indicator, sex, wealth, etc.
+- **Batch downloads**: Fetch multiple indicators efficiently
 
 ## 📅 Time Period Handling
 
