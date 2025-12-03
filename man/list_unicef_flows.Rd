@@ -9,6 +9,11 @@ list_unicef_flows(
   retry = 3
 )
 }
+\arguments{
+\item{cache_dir}{Character path to cache directory.}
+
+\item{retry}{Integer, number of retries.}
+}
 \value{
 A tibble with columns \code{id}, \code{agency}, and \code{version}
 }

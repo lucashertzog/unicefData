@@ -14,6 +14,21 @@ filter_unicef_data(
   verbose = TRUE
 )
 }
+\arguments{
+\item{df}{Data frame to filter.}
+
+\item{sex}{Character string for sex filter (e.g. "F", "M", "_T").}
+
+\item{age}{Character string for age filter.}
+
+\item{wealth}{Character string for wealth quintile filter.}
+
+\item{residence}{Character string for residence filter.}
+
+\item{maternal_edu}{Character string for maternal education filter.}
+
+\item{verbose}{Logical, print progress messages.}
+}
 \description{
 Filters data to specific disaggregations or defaults to totals.
 }

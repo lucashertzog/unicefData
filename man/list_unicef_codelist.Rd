@@ -15,6 +15,10 @@ list_unicef_codelist(
 \item{flow}{character flow ID, e.g. "NUTRITION"}
 
 \item{dimension}{character dimension ID within that flow, e.g. "INDICATOR"}
+
+\item{cache_dir}{Character path to cache directory.}
+
+\item{retry}{Integer, number of retries.}
 }
 \value{
 A tibble with columns \code{code} and \code{description}

@@ -27,7 +27,8 @@ Imports:
     magrittr,
     purrr,
     rlang,
-    digest
+    digest,
+    tidyr
 Suggests:
     testthat (>= 3.0.0),
     devtools

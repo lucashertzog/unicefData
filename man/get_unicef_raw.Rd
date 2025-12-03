@@ -16,6 +16,25 @@ get_unicef_raw(
   verbose = TRUE
 )
 }
+\arguments{
+\item{indicator}{Character vector of indicator codes.}
+
+\item{dataflow}{Character string of dataflow ID.}
+
+\item{countries}{Character vector of ISO3 codes.}
+
+\item{start_year}{Numeric or character start year (YYYY).}
+
+\item{end_year}{Numeric or character end year (YYYY).}
+
+\item{max_retries}{Integer, number of retries for failed requests.}
+
+\item{version}{Character string of SDMX version (e.g. "1.0").}
+
+\item{page_size}{Integer, number of rows per page.}
+
+\item{verbose}{Logical, print progress messages.}
+}
 \description{
 Low-level fetcher for UNICEF SDMX API.
 }

@@ -144,11 +144,11 @@ sync_metadata <- function(cache_dir = NULL, verbose = TRUE) {
   # Note: sync_history.yaml is updated by .create_vintage() -> .update_sync_history()
   
   if (verbose) {
-    message(sprintf("\n✅ Sync complete: %d dataflows, %d codelists, %d indicators",
+    message(sprintf("\n[OK] Sync complete: %d dataflows, %d codelists, %d indicators",
                     results$dataflows, results$codelists, results$indicators))
     message(sprintf("   Vintage: %s", vintage_date))
     if (length(results$errors) > 0) {
-      message(sprintf("⚠️  Errors: %d", length(results$errors)))
+      message(sprintf("[WARNING] Errors: %d", length(results$errors)))
     }
   }
   
@@ -243,7 +243,7 @@ sync_codelists <- function(codelist_ids = NULL, verbose = TRUE) {
         codelists[[cl_id]] <- cl
       }
     }, error = function(e) {
-      if (verbose) message(sprintf("    ⚠️  Could not fetch %s: %s", cl_id, e$message))
+      if (verbose) message(sprintf("    [WARNING] Could not fetch %s: %s", cl_id, e$message))
     })
   }
   

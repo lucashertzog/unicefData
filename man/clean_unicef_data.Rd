@@ -6,6 +6,9 @@
 \usage{
 clean_unicef_data(df)
 }
+\arguments{
+\item{df}{Data frame to clean.}
+}
 \description{
 Renames columns and converts types.
 }

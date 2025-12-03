@@ -52,6 +52,8 @@ fetch_sdmx <- function(url, ua, retry) {
 #' @title List available UNICEF SDMX “flows”
 #' @description
 #' Download and cache the SDMX data-flow definitions from UNICEF’s REST endpoint.
+#' @param cache_dir Character path to cache directory.
+#' @param retry Integer, number of retries.
 #' @return A tibble with columns \code{id}, \code{agency}, and \code{version}
 #' @export
 list_unicef_flows <- memoise::memoise(
@@ -75,6 +77,8 @@ list_unicef_flows <- memoise::memoise(
 #' @title List SDMX codelist for a given flow + dimension
 #' @param flow character flow ID, e.g. "NUTRITION"
 #' @param dimension character dimension ID within that flow, e.g. "INDICATOR"
+#' @param cache_dir Character path to cache directory.
+#' @param retry Integer, number of retries.
 #' @return A tibble with columns \code{code} and \code{description}
 #' @export
 list_unicef_codelist <- memoise::memoise(

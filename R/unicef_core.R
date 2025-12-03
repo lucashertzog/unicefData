@@ -81,6 +81,15 @@ detect_dataflow <- function(indicator) {
 
 #' @title Fetch Raw UNICEF Data
 #' @description Low-level fetcher for UNICEF SDMX API.
+#' @param indicator Character vector of indicator codes.
+#' @param dataflow Character string of dataflow ID.
+#' @param countries Character vector of ISO3 codes.
+#' @param start_year Numeric or character start year (YYYY).
+#' @param end_year Numeric or character end year (YYYY).
+#' @param max_retries Integer, number of retries for failed requests.
+#' @param version Character string of SDMX version (e.g. "1.0").
+#' @param page_size Integer, number of rows per page.
+#' @param verbose Logical, print progress messages.
 #' @export
 get_unicef_raw <- function(
     indicator = NULL,
@@ -191,6 +200,7 @@ validate_unicef_schema <- function(df, dataflow) {
 
 #' @title Clean and Standardize UNICEF Data
 #' @description Renames columns and converts types.
+#' @param df Data frame to clean.
 #' @export
 clean_unicef_data <- function(df) {
   if (nrow(df) == 0) return(df)
@@ -267,9 +277,15 @@ clean_unicef_data <- function(df) {
   
   return(df_clean)
 }
-
 #' @title Filter UNICEF Data (Sex, Age, Wealth, etc.)
 #' @description Filters data to specific disaggregations or defaults to totals.
+#' @param df Data frame to filter.
+#' @param sex Character string for sex filter (e.g. "F", "M", "_T").
+#' @param age Character string for age filter.
+#' @param wealth Character string for wealth quintile filter.
+#' @param residence Character string for residence filter.
+#' @param maternal_edu Character string for maternal education filter.
+#' @param verbose Logical, print progress messages.
 #' @export
 filter_unicef_data <- function(df, sex = NULL, age = NULL, wealth = NULL, residence = NULL, maternal_edu = NULL, verbose = TRUE) {
   if (nrow(df) == 0) return(df)

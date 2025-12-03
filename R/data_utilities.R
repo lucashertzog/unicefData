@@ -7,10 +7,10 @@
 #
 # This script provides reusable utility functions for robust data handling:
 #
-# • safe_read_csv():     Read CSV files with error handling and logging
-# • safe_write_csv():    Save data frames to CSVs safely with row check
-# • process_block():     Run code blocks with labeled logging and catch errors
-# • %||%:                Null coalescing operator for default fallbacks
+# * safe_read_csv():     Read CSV files with error handling and logging
+# * safe_write_csv():    Save data frames to CSVs safely with row check
+# * process_block():     Run code blocks with labeled logging and catch errors
+# * %||%:                Null coalescing operator for default fallbacks
 #
 # These utilities help make scripts cleaner, safer, and easier to debug.
 #-------------------------------------------------------------------
@@ -30,12 +30,12 @@
 safe_read_csv <- function(path, label = NULL, show_col_types = FALSE) {
   tryCatch({
     df <- readr::read_csv(path, show_col_types = show_col_types)
-    cat("✅ Loaded:", label %||% basename(path), "-", nrow(df), "rows\n")
+    cat("[OK] Loaded:", label %||% basename(path), "-", nrow(df), "rows\n")
     return(df)
   }, error = function(e) {
-    cat("❌ ERROR loading:", label %||% basename(path),
-        "\n↪ Path:", path,
-        "\n↪ Message:", conditionMessage(e), "\n")
+    cat("[ERROR] loading:", label %||% basename(path),
+        "\n-> Path:", path,
+        "\n-> Message:", conditionMessage(e), "\n")
     return(NULL)
   })
 }
@@ -55,14 +55,14 @@ safe_write_csv <- function(df, path, label = NULL) {
   tryCatch({
     if (!is.null(df) && nrow(df) > 0) {
       readr::write_csv(df, path, na = "")
-      cat("💾 Saved:", label %||% basename(path), "-", nrow(df), "rows\n")
+      cat("[SAVED] Saved:", label %||% basename(path), "-", nrow(df), "rows\n")
     } else {
-      warning("⚠ Skipped saving:", label %||% basename(path), "- Data is empty or NULL")
+      warning("[WARNING] Skipped saving:", label %||% basename(path), "- Data is empty or NULL")
     }
   }, error = function(e) {
-    cat("❌ ERROR writing:", label %||% basename(path),
-        "\n↪ Path:", path,
-        "\n↪ Message:", conditionMessage(e), "\n")
+    cat("[ERROR] writing:", label %||% basename(path),
+        "\n-> Path:", path,
+        "\n-> Message:", conditionMessage(e), "\n")
   })
 }
 
@@ -81,8 +81,8 @@ process_block <- function(label, expr) {
   tryCatch({
     eval(expr)
   }, error = function(e) {
-    cat("❌ ERROR in block:", label,
-        "\n↪ Message:", conditionMessage(e), "\n")
+    cat("[ERROR] in block:", label,
+        "\n-> Message:", conditionMessage(e), "\n")
   })
 }
 
