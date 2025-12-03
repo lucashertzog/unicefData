@@ -22,7 +22,11 @@ Imports:
     memoise,
     countrycode,
     yaml,
-    tools
+    tools,
+    jsonlite,
+    magrittr,
+    purrr,
+    rlang
 Suggests:
     testthat (>= 3.0.0),
     devtools
