@@ -27,7 +27,7 @@ program define unicefdata, rclass
                         NOMETADATA                  ///
                         RAW                         ///
                         VERSION(string)             ///
-                        PAGE_SIZE(integer 100000)   ///
+                        PAGESIZE(integer 100000)    ///
                         RETRIES(integer 3)          ///
                         VERBOSE                     ///
                  ]
@@ -69,7 +69,8 @@ program define unicefdata, rclass
         *-----------------------------------------------------------------------
         
         if ("`dataflow'" == "") & ("`indicator'" != "") {
-            local dataflow = _unicef_detect_dataflow("`indicator'")
+            _unicef_detect_dataflow "`indicator'"
+            local dataflow "`s(dataflow)'"
             if ("`verbose'" != "") {
                 noi di as text "Auto-detected dataflow: " as result "`dataflow'"
             }
@@ -94,7 +95,7 @@ program define unicefdata, rclass
             local query_params "`query_params'&endPeriod=`endyear'"
         }
         
-        local query_params "`query_params'&startIndex=0&count=`page_size'"
+        local query_params "`query_params'&startIndex=0&count=`pagesize'"
         
         * Full URL
         local full_url "`base_url'/`rel_path'?`query_params'"
@@ -107,12 +108,14 @@ program define unicefdata, rclass
         * Download data
         *-----------------------------------------------------------------------
         
+        set checksum off
+        
         tempfile tempdata
         
         * Try to copy the file with retries
         local success 0
         forvalues attempt = 1/`retries' {
-            capture copy "`full_url'" "`tempdata'", replace
+            capture copy "`full_url'" "`tempdata'", replace public
             if (_rc == 0) {
                 local success 1
                 continue, break
@@ -316,10 +319,10 @@ end
 
 
 *******************************************************************************
-* Helper function: Auto-detect dataflow from indicator code
+* Helper program: Auto-detect dataflow from indicator code
 *******************************************************************************
 
-program define _unicef_detect_dataflow, rclass
+program define _unicef_detect_dataflow, sclass
     args indicator
     
     * Extract prefix from indicator (first part before underscore)
@@ -327,38 +330,38 @@ program define _unicef_detect_dataflow, rclass
     
     * Known indicator-to-dataflow mappings
     if ("`prefix'" == "CME") {
-        return local dataflow "CME"
+        sreturn local dataflow "CME"
     }
     else if ("`prefix'" == "NT") {
-        return local dataflow "NUTRITION"
+        sreturn local dataflow "NUTRITION"
     }
     else if ("`prefix'" == "IM") {
-        return local dataflow "IMMUNISATION"
+        sreturn local dataflow "IMMUNISATION"
     }
     else if ("`prefix'" == "ED") {
-        return local dataflow "EDUCATION"
+        sreturn local dataflow "EDUCATION"
     }
     else if ("`prefix'" == "WS") {
-        return local dataflow "WASH_HOUSEHOLDS"
+        sreturn local dataflow "WASH_HOUSEHOLDS"
     }
     else if ("`prefix'" == "HVA") {
-        return local dataflow "HIV_AIDS"
+        sreturn local dataflow "HIV_AIDS"
     }
     else if ("`prefix'" == "MNCH") {
-        return local dataflow "MNCH"
+        sreturn local dataflow "MNCH"
     }
     else if ("`prefix'" == "PT") {
-        return local dataflow "PT"
+        sreturn local dataflow "PT"
     }
     else if ("`prefix'" == "ECD") {
-        return local dataflow "ECD"
+        sreturn local dataflow "ECD"
     }
     else if ("`prefix'" == "PV") {
-        return local dataflow "CHLD_PVTY"
+        sreturn local dataflow "CHLD_PVTY"
     }
     else {
         * Default to GLOBAL_DATAFLOW if unknown
-        return local dataflow "GLOBAL_DATAFLOW"
+        sreturn local dataflow "GLOBAL_DATAFLOW"
     }
     
 end
