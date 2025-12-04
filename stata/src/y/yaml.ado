@@ -1,6 +1,6 @@
 *******************************************************************************
 * yaml
-*! v 1.1.0   03Dec2025               by Joao Pedro Azevedo (UNICEF)
+*! v 1.2.0   03Dec2025               by Joao Pedro Azevedo (UNICEF)
 * Read and write YAML files in Stata
 *******************************************************************************
 
@@ -8,47 +8,50 @@
 DESCRIPTION:
     Main command for YAML file operations in Stata.
     Supports reading, writing, and displaying YAML data.
-    Uses Stata frames (16+) as default storage for YAML data.
+    
+    DEFAULT BEHAVIOR: Uses current dataset.
+    FRAME OPTION: Use frame(name) to work with Stata frames (16+).
     
 SYNTAX:
-    yaml read using "filename.yaml" [, frame(name) data options]
-    yaml write using "filename.yaml" [, frame(name) data options]
-    yaml describe [, frame(name) data]
-    yaml list [keys] [, frame(name) data options]
+    yaml read using "filename.yaml" [, frame(name) options]
+    yaml write using "filename.yaml" [, frame(name) options]
+    yaml describe [, frame(name)]
+    yaml list [keys] [, frame(name) options]
     yaml frames [, detail]
-    yaml clear [framename] [, all data]
+    yaml clear [framename] [, all]
     
 SUBCOMMANDS:
-    read     - Read YAML file into Stata frame (default) or dataset
+    read     - Read YAML file into Stata (dataset by default, or frame)
     write    - Write Stata data to YAML file
     describe - Display structure of loaded YAML data
     list     - List specific keys or all keys
     frames   - List all YAML frames in memory
-    clear    - Clear YAML data from memory (frame or dataset)
+    clear    - Clear YAML data from memory
     
 OPTIONS:
-    frame(name) - Specify which YAML frame to use
-    data        - Use current dataset instead of frames
+    frame(name) - Use specified frame instead of current dataset
     
 EXAMPLES:
-    yaml read using "config.yaml"             // loads to frame yaml_config
-    yaml read using "config.yaml", data       // loads to current dataset
-    yaml frames, detail                       // list all yaml frames
-    yaml describe                             // describes first yaml frame
-    yaml describe, frame(config)              // describes yaml_config frame
+    yaml read using "config.yaml", replace    // loads to current dataset
+    yaml read using "config.yaml", frame(cfg) // loads to yaml_cfg frame
+    yaml describe                             // describes current dataset
+    yaml describe, frame(cfg)                 // describes yaml_cfg frame
     yaml list indicators, values              // list values under indicators
-    yaml clear config                         // clears yaml_config frame
+    yaml frames, detail                       // list all yaml frames
+    yaml clear                                // clears current dataset
+    yaml clear cfg                            // clears yaml_cfg frame
     yaml clear, all                           // clears all yaml frames
     
 SEE ALSO:
     help yaml
     
 REQUIRES:
-    Stata 16.0 or later (for frames support)
+    Stata 14.0 (basic functionality)
+    Stata 16.0 (for frames support with frame() option)
 */
 
 program define yaml
-    version 16.0
+    version 14.0
     
     gettoken subcmd 0 : 0, parse(" ,")
     
@@ -90,9 +93,9 @@ end
 *******************************************************************************
 
 program define yaml_read, rclass
-    version 16.0
+    version 14.0
     
-    syntax using/ [, Locals Scalars DATA FRAME(string) Prefix(string) Replace Verbose]
+    syntax using/ [, Locals Scalars FRAME(string) Prefix(string) Replace Verbose]
     
     * Set default prefix
     if ("`prefix'" == "") {
@@ -102,27 +105,16 @@ program define yaml_read, rclass
     * Check file exists
     confirm file "`using'"
     
-    * Determine frame name if not specified
-    * Default: use filename without path and extension
-    if ("`frame'" == "" & "`data'" == "") {
-        * Extract filename from path
-        local fname "`using'"
-        * Remove path (get everything after last / or \)
-        while (strpos("`fname'", "/") > 0 | strpos("`fname'", "\") > 0) {
-            local pos1 = strpos("`fname'", "/")
-            local pos2 = strpos("`fname'", "\")
-            local pos = max(`pos1', `pos2')
-            local fname = substr("`fname'", `pos' + 1, .)
+    * If frame specified, add yaml_ prefix if not present
+    if ("`frame'" != "") {
+        * Check Stata version for frames support
+        if (`c(stata_version)' < 16) {
+            di as err "frame() option requires Stata 16 or later"
+            exit 198
         }
-        * Remove extension
-        local dotpos = strpos("`fname'", ".")
-        if (`dotpos' > 0) {
-            local fname = substr("`fname'", 1, `dotpos' - 1)
+        if (substr("`frame'", 1, 5) != "yaml_") {
+            local frame "yaml_`frame'"
         }
-        * Clean name for Stata (replace special chars)
-        local frame = subinstr("`fname'", "-", "_", .)
-        local frame = subinstr("`frame'", " ", "_", .)
-        local frame "yaml_`frame'"
     }
     
     * Initialize
@@ -131,7 +123,7 @@ program define yaml_read, rclass
     
     if ("`verbose'" != "") {
         di as text "Reading YAML file: " as result "`using'"
-        if ("`data'" == "") {
+        if ("`frame'" != "") {
             di as text "Loading into frame: " as result "`frame'"
         }
         else {
@@ -140,8 +132,23 @@ program define yaml_read, rclass
     }
     
     * Prepare storage location
-    if ("`data'" != "") {
-        * Load into current dataset
+    if ("`frame'" != "") {
+        * Load into frame (explicit request)
+        capture frame drop `frame'
+        frame create `frame'
+        frame `frame' {
+            quietly {
+                gen str244 key = ""
+                gen str2000 value = ""
+                gen int level = .
+                gen str244 parent = ""
+                gen str32 type = ""
+            }
+        }
+        local use_frame = 1
+    }
+    else {
+        * Load into current dataset (default)
         if ("`replace'" == "") {
             if (_N > 0) {
                 di as err "Data in memory would be lost. Use 'replace' option."
@@ -157,25 +164,6 @@ program define yaml_read, rclass
             gen str32 type = ""
         }
         local use_frame = 0
-    }
-    else {
-        * Load into frame (default)
-        * Check if frame exists
-        capture frame drop `frame'
-        if ("`replace'" == "" & _rc == 0) {
-            * Frame existed and was dropped - that's ok with replace
-        }
-        frame create `frame'
-        frame `frame' {
-            quietly {
-                gen str244 key = ""
-                gen str2000 value = ""
-                gen int level = .
-                gen str244 parent = ""
-                gen str32 type = ""
-            }
-        }
-        local use_frame = 1
     }
     
     * Read file line by line
@@ -330,8 +318,8 @@ program define yaml_read, rclass
                         qui replace type = "`vtype'" in `newobs'
                     }
                 }
-                else if ("`data'" != "") {
-                    * Add row to current dataset
+                else {
+                    * Add row to current dataset (default)
                     local newobs = _N + 1
                     qui set obs `newobs'
                     qui replace key = "`full_key'" in `newobs'
@@ -391,7 +379,8 @@ program define yaml_read, rclass
         
         return local frame "`frame'"
     }
-    else if ("`data'" != "") {
+    else {
+        * Clean up current dataset (default)
         qui drop if key == ""
         qui compress
         
@@ -427,10 +416,21 @@ end
 *******************************************************************************
 
 program define yaml_write
-    version 16.0
+    version 14.0
     
-    syntax using/ [, Locals(string) Scalars(string) DATA FRAME(string) Replace Verbose ///
+    syntax using/ [, Locals(string) Scalars(string) FRAME(string) Replace Verbose ///
                      INDENT(integer 2) HEADER(string)]
+    
+    * If frame specified, add yaml_ prefix if not present
+    if ("`frame'" != "") {
+        if (`c(stata_version)' < 16) {
+            di as err "frame() option requires Stata 16 or later"
+            exit 198
+        }
+        if (substr("`frame'", 1, 5) != "yaml_") {
+            local frame "yaml_`frame'"
+        }
+    }
     
     * Check if file exists and handle replace
     capture confirm file "`using'"
@@ -487,39 +487,28 @@ program define yaml_write
     }
     
     * Write from frame or dataset
-    if ("`frame'" != "" | "`data'" != "") {
-        
-        * Determine source
-        if ("`frame'" != "") {
-            * Check frame exists
-            capture frame `frame': describe, short
-            if (_rc != 0) {
-                di as err "frame `frame' not found"
-                file close `fh'
-                exit 198
-            }
-            local source_frame "`frame'"
+    if ("`frame'" != "") {
+        * Write from specified frame
+        capture frame `frame': describe, short
+        if (_rc != 0) {
+            di as err "frame `frame' not found"
+            file close `fh'
+            exit 198
         }
-        else {
-            local source_frame ""
+        frame `frame' {
+            _yaml_write_data `fh', indent(`indent') verbose(`verbose')
         }
-        
-        * Helper to write from a frame or current data
-        if ("`source_frame'" != "") {
-            frame `source_frame' {
-                _yaml_write_data `fh', indent(`indent') verbose(`verbose')
-            }
-            local n_written = r(n_written)
+        local n_written = r(n_written)
+    }
+    else if ("`locals'" == "" & "`scalars'" == "") {
+        * Write from current dataset (default when no locals/scalars)
+        * Check required variables exist
+        capture confirm variable key value
+        if (_rc != 0) {
+            di as err "dataset must have 'key' and 'value' variables"
+            file close `fh'
+            exit 198
         }
-        else {
-            * Write from current dataset
-            * Check required variables exist
-            capture confirm variable key value
-            if (_rc != 0) {
-                di as err "dataset must have 'key' and 'value' variables"
-                file close `fh'
-                exit 198
-            }
             
             * Check for level variable for indentation
             capture confirm variable level
@@ -584,11 +573,20 @@ end
 *******************************************************************************
 
 program define yaml_describe
-    version 16.0
-    syntax [, LEVEL(integer 99) FRAME(string) DATA]
+    version 14.0
+    syntax [, LEVEL(integer 99) FRAME(string)]
     
     * Determine source - frame or current data
     if ("`frame'" != "") {
+        * Check Stata version for frames
+        if (`c(stata_version)' < 16) {
+            di as err "frame() option requires Stata 16 or later"
+            exit 198
+        }
+        * Add yaml_ prefix if not present
+        if (substr("`frame'", 1, 5) != "yaml_") {
+            local frame "yaml_`frame'"
+        }
         * Check frame exists
         capture frame `frame': describe, short
         if (_rc != 0) {
@@ -599,35 +597,14 @@ program define yaml_describe
             _yaml_describe_impl, level(`level')
         }
     }
-    else if ("`data'" != "") {
-        * Use current dataset
+    else {
+        * Use current dataset (default)
         capture confirm variable key value level
         if (_rc != 0) {
-            di as err "No YAML data in current dataset."
+            di as err "No YAML data in current dataset. Load with 'yaml read using file.yaml, replace'"
             exit 198
         }
         _yaml_describe_impl, level(`level')
-    }
-    else {
-        * Try to find a yaml frame
-        local yaml_frames ""
-        qui frames dir
-        local all_frames "`r(frames)'"
-        foreach f of local all_frames {
-            if (substr("`f'", 1, 5) == "yaml_") {
-                local yaml_frames "`yaml_frames' `f'"
-            }
-        }
-        if ("`yaml_frames'" == "") {
-            di as err "No YAML frames found. Use 'yaml read using file.yaml' first."
-            exit 198
-        }
-        * Use first yaml frame found
-        local first_frame : word 1 of `yaml_frames'
-        di as text "(using frame: `first_frame')"
-        frame `first_frame' {
-            _yaml_describe_impl, level(`level')
-        }
     }
 end
 
@@ -682,11 +659,20 @@ end
 *******************************************************************************
 
 program define yaml_list, rclass
-    version 16.0
-    syntax [anything] [, NOHeader Keys Values SEParator(string) CHILDren STATA FRAME(string) DATA]
+    version 14.0
+    syntax [anything] [, NOHeader Keys Values SEParator(string) CHILDren STATA FRAME(string)]
     
     * Determine source - frame or current data
     if ("`frame'" != "") {
+        * Check Stata version for frames
+        if (`c(stata_version)' < 16) {
+            di as err "frame() option requires Stata 16 or later"
+            exit 198
+        }
+        * Add yaml_ prefix if not present
+        if (substr("`frame'", 1, 5) != "yaml_") {
+            local frame "yaml_`frame'"
+        }
         * Check frame exists
         capture frame `frame': describe, short
         if (_rc != 0) {
@@ -699,36 +685,14 @@ program define yaml_list, rclass
         * Copy return values from frame execution
         return add
     }
-    else if ("`data'" != "") {
-        * Use current dataset
+    else {
+        * Use current dataset (default)
         capture confirm variable key value
         if (_rc != 0) {
-            di as err "No YAML data in current dataset."
+            di as err "No YAML data in current dataset. Load with 'yaml read using file.yaml, replace'"
             exit 198
         }
         _yaml_list_impl `anything', `noheader' `keys' `values' separator(`separator') `children' `stata'
-        return add
-    }
-    else {
-        * Try to find a yaml frame
-        local yaml_frames ""
-        qui frames dir
-        local all_frames "`r(frames)'"
-        foreach f of local all_frames {
-            if (substr("`f'", 1, 5) == "yaml_") {
-                local yaml_frames "`yaml_frames' `f'"
-            }
-        }
-        if ("`yaml_frames'" == "") {
-            di as err "No YAML frames found. Use 'yaml read using file.yaml' first."
-            exit 198
-        }
-        * Use first yaml frame found
-        local first_frame : word 1 of `yaml_frames'
-        di as text "(using frame: `first_frame')"
-        frame `first_frame' {
-            _yaml_list_impl `anything', `noheader' `keys' `values' separator(`separator') `children' `stata'
-        }
         return add
     }
 end
@@ -878,31 +842,21 @@ end
 
 
 *******************************************************************************
-* yaml clear - Clear YAML data from memory (frames or data)
+* yaml clear - Clear YAML data from memory (dataset or frames)
 *******************************************************************************
 
 program define yaml_clear
-    version 16.0
-    syntax [anything] [, ALL DATA]
+    version 14.0
+    syntax [anything] [, ALL]
     
-    * If data option specified, clear current dataset
-    if ("`data'" != "") {
-        capture confirm variable key value level parent type
-        if (_rc == 0) {
-            clear
-            di as text "YAML data cleared from current dataset."
-        }
-        else {
-            di as text "No YAML data in current dataset."
-        }
-        exit
-    }
-    
-    * Otherwise work with frames
     local frame_to_clear = trim("`anything'")
     
     if ("`all'" != "") {
-        * Clear all yaml_* frames
+        * Clear all yaml_* frames (requires Stata 16)
+        if (`c(stata_version)' < 16) {
+            di as err "The 'all' option requires Stata 16 or later for frames"
+            exit 198
+        }
         local cleared = 0
         quietly frames dir
         local all_frames `r(frames)'
@@ -920,7 +874,11 @@ program define yaml_clear
         }
     }
     else if ("`frame_to_clear'" != "") {
-        * Clear specific frame
+        * Clear specific frame (requires Stata 16)
+        if (`c(stata_version)' < 16) {
+            di as err "Clearing frames requires Stata 16 or later"
+            exit 198
+        }
         local target_frame = "`frame_to_clear'"
         if (substr("`target_frame'", 1, 5) != "yaml_") {
             local target_frame "yaml_`target_frame'"
@@ -935,36 +893,32 @@ program define yaml_clear
         }
     }
     else {
-        * List available yaml frames and prompt
-        di as text "Available YAML frames:"
-        quietly frames dir
-        local all_frames `r(frames)'
-        local count = 0
-        foreach fr of local all_frames {
-            if (substr("`fr'", 1, 5) == "yaml_") {
-                di as text "  `fr'"
-                local count = `count' + 1
-            }
-        }
-        if (`count' == 0) {
-            di as text "  (none)"
+        * Clear current dataset (default)
+        capture confirm variable key value level parent type
+        if (_rc == 0) {
+            clear
+            di as text "YAML data cleared from current dataset."
         }
         else {
-            di as text ""
-            di as text "Use {cmd:yaml clear {it:framename}} to clear a specific frame"
-            di as text "Use {cmd:yaml clear, all} to clear all YAML frames"
+            di as text "No YAML data in current dataset."
         }
     }
 end
 
 
 *******************************************************************************
-* yaml frames - List all YAML frames in memory
+* yaml frames - List all YAML frames in memory (requires Stata 16+)
 *******************************************************************************
 
 program define yaml_frames
-    version 16.0
+    version 14.0
     syntax [, DETail]
+    
+    * Check Stata version
+    if (`c(stata_version)' < 16) {
+        di as err "yaml frames requires Stata 16 or later"
+        exit 198
+    }
     
     quietly frames dir
     local all_frames `r(frames)'
