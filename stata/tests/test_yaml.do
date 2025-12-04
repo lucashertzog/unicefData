@@ -56,16 +56,14 @@ scalar list
 
 di as text ""
 di as text "{hline 70}"
-di as text "{bf:TEST 6: Write locals to YAML}"
+di as text "{bf:TEST 6: Write scalars to YAML}"
 di as text "{hline 70}"
 
-* Create some locals to write
-local project "Test Project"
-local version "2.0"
-local author "UNICEF"
-local year 2025
+* Create some scalars to write (locals cannot be passed across programs)
+scalar project = 1
+scalar year = 2025
 
-yaml write using "test_output.yaml", locals(project version author year) replace verbose
+yaml write using "test_output.yaml", scalars(project year) replace verbose
 
 di as text ""
 di as text "File written. Reading back:"
@@ -134,7 +132,58 @@ di as text "Dataflow codes: " as result `"`r(keys)'"'
 
 di as text ""
 di as text "{hline 70}"
-di as text "{bf:TEST 12: Clear dataset}"
+di as text "{bf:TEST 12: Get indicator metadata using colon syntax}"
+di as text "{hline 70}"
+
+* Reload data
+yaml read using "test_config.yaml", replace
+
+* Get all attributes for CME_MRY0T4 using colon syntax
+di as text "Getting metadata for indicators:CME_MRY0T4 (colon syntax):"
+yaml get indicators:CME_MRY0T4
+
+di as text ""
+di as text "Return values:"
+return list
+
+di as text ""
+di as text "{hline 70}"
+di as text "{bf:TEST 13: Get specific attributes with colon syntax}"
+di as text "{hline 70}"
+
+yaml get indicators:CME_MRY0, attributes(label unit)
+
+di as text ""
+di as text "r(key) = `r(key)'"
+di as text "r(parent) = `r(parent)'"
+di as text "r(label) = `r(label)'"
+di as text "r(unit) = `r(unit)'"
+
+di as text ""
+di as text "{hline 70}"
+di as text "{bf:TEST 14: Loop and get metadata using colon syntax}"
+di as text "{hline 70}"
+
+yaml list indicators, keys children
+di as text ""
+di as text "Indicator metadata:"
+foreach ind in `r(keys)' {
+    yaml get indicators:`ind', quiet
+    di as text "  `ind': `r(label)'"
+}
+
+di as text ""
+di as text "{hline 70}"
+di as text "{bf:TEST 15: Get without colon (direct key)}"
+di as text "{hline 70}"
+
+* Direct key search without colon still works
+yaml get indicators_CME_MRY0T4
+di as text "Direct search r(label) = `r(label)'"
+
+di as text ""
+di as text "{hline 70}"
+di as text "{bf:TEST 16: Clear dataset}"
 di as text "{hline 70}"
 
 yaml clear
@@ -145,7 +194,7 @@ if (`c(stata_version)' >= 16) {
     
     di as text ""
     di as text "{hline 70}"
-    di as text "{bf:TEST 13: Read YAML into frame (Stata 16+)}"
+    di as text "{bf:TEST 17: Read YAML into frame (Stata 16+)}"
     di as text "{hline 70}"
     
     * First load some other data so we can show frames don't destroy it
@@ -160,21 +209,21 @@ if (`c(stata_version)' >= 16) {
     
     di as text ""
     di as text "{hline 70}"
-    di as text "{bf:TEST 14: List YAML frames}"
+    di as text "{bf:TEST 18: List YAML frames}"
     di as text "{hline 70}"
     
     yaml frames, detail
     
     di as text ""
     di as text "{hline 70}"
-    di as text "{bf:TEST 15: Describe from frame}"
+    di as text "{bf:TEST 19: Describe from frame}"
     di as text "{hline 70}"
     
     yaml describe, frame(cfg)
     
     di as text ""
     di as text "{hline 70}"
-    di as text "{bf:TEST 16: List from frame}"
+    di as text "{bf:TEST 20: List from frame}"
     di as text "{hline 70}"
     
     yaml list indicators, frame(cfg) keys children
@@ -182,7 +231,23 @@ if (`c(stata_version)' >= 16) {
     
     di as text ""
     di as text "{hline 70}"
-    di as text "{bf:TEST 17: Multiple frames}"
+    di as text "{bf:TEST 21: Get indicator metadata with colon syntax from frame}"
+    di as text "{hline 70}"
+    
+    * Get metadata from frame using colon syntax: parent:key
+    yaml get indicators:CME_MRY0T4, frame(cfg)
+    di as text ""
+    di as text "r(key) = `r(key)'"
+    di as text "r(parent) = `r(parent)'"
+    di as text "r(label) = `r(label)'"
+    di as text "r(unit) = `r(unit)'"
+    di as text "r(dataflow) = `r(dataflow)'"
+    di as text ""
+    di as text "Current dataset still auto with N=" _N
+    
+    di as text ""
+    di as text "{hline 70}"
+    di as text "{bf:TEST 22: Multiple frames}"
     di as text "{hline 70}"
     
     * Create a second test file
@@ -203,7 +268,7 @@ if (`c(stata_version)' >= 16) {
     
     di as text ""
     di as text "{hline 70}"
-    di as text "{bf:TEST 18: Clear specific frame}"
+    di as text "{bf:TEST 23: Clear specific frame}"
     di as text "{hline 70}"
     
     yaml clear cfg2
@@ -214,7 +279,7 @@ if (`c(stata_version)' >= 16) {
     
     di as text ""
     di as text "{hline 70}"
-    di as text "{bf:TEST 19: Clear all frames}"
+    di as text "{bf:TEST 24: Clear all frames}"
     di as text "{hline 70}"
     
     * Reload both

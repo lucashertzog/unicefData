@@ -69,6 +69,9 @@ program define yaml
     else if ("`subcmd'" == "list") {
         yaml_list `0'
     }
+    else if ("`subcmd'" == "get") {
+        yaml_get `0'
+    }
     else if ("`subcmd'" == "frames" | "`subcmd'" == "frame") {
         yaml_frames `0'
     }
@@ -77,12 +80,12 @@ program define yaml
     }
     else if ("`subcmd'" == "") {
         di as err "subcommand required"
-        di as err "syntax: yaml {read|write|describe|list|frames|clear} ..."
+        di as err "syntax: yaml {read|write|describe|list|get|frames|clear} ..."
         exit 198
     }
     else {
         di as err "unknown subcommand: `subcmd'"
-        di as err "valid subcommands: read, write, describe, list, frames, clear"
+        di as err "valid subcommands: read, write, describe, list, get, frames, clear"
         exit 198
     }
 end
@@ -173,7 +176,9 @@ program define yaml_read, rclass
     local linenum = 0
     local current_indent = 0
     local parent_stack ""
-    local indent_stack "0"
+    local n_levels = 1
+    local indent_1 = 0
+    local parent_1 ""
     
     file read `fh' line
     
@@ -196,23 +201,40 @@ program define yaml_read, rclass
         }
         
         * Handle indent changes to track parent hierarchy
+        * We track: indent_N = indent value at level N, parent_N = parent full_key for items at level N
         if (`indent' > `current_indent') {
-            * Going deeper - current key becomes parent
-            local indent_stack "`indent_stack' `indent'"
+            * Going deeper - add new indent level
+            local n_levels = `n_levels' + 1
+            local indent_`n_levels' = `indent'
+            * The parent for this new level is the current parent_stack (set by previous parent key)
+            local parent_`n_levels' "`parent_stack'"
         }
         else if (`indent' < `current_indent') {
-            * Going back up - pop parents
-            _yaml_pop_parents, indent(`indent') parent_stack(`parent_stack') indent_stack(`indent_stack')
-            local parent_stack "`s(parent_stack)'"
-            local indent_stack "`s(indent_stack)'"
+            * Going back up - find the level that matches this indent
+            * We want the level where indent_N == indent (sibling level)
+            * or the highest level where indent_N < indent (new intermediate level)
+            local found_level = 1
+            forvalues lv = `n_levels'(-1)1 {
+                if (`indent_`lv'' == `indent') {
+                    * Exact match - this is a sibling level
+                    local found_level = `lv'
+                    continue, break
+                }
+                else if (`indent_`lv'' < `indent') {
+                    * This indent is between levels - would be a new level
+                    local found_level = `lv'
+                    continue, break
+                }
+            }
+            * Restore parent_stack to the parent at that level
+            local parent_stack "`parent_`found_level''"
+            local n_levels = `found_level'
         }
+        * If indent == current_indent, we're at sibling - parent_stack stays same
         local current_indent = `indent'
         
-        * Parse the line
-        local level = 0
-        foreach i of local indent_stack {
-            if (`i' <= `indent') local level = `level' + 1
-        }
+        * Calculate level for display
+        local level = `n_levels'
         if (`level' > `max_level') local max_level = `level'
         
         * Check if it's a list item (starts with -)
@@ -262,21 +284,25 @@ program define yaml_read, rclass
                 local full_key = subinstr("`full_key'", "-", "_", .)
                 local full_key = subinstr("`full_key'", ".", "_", .)
                 
-                * Truncate to ensure prefix + key <= 32 chars (Stata limit)
+                * Create truncated key for locals/scalars (prefix + key <= 32 chars)
                 local prefixlen = length("`prefix'")
                 local maxkeylen = 32 - `prefixlen'
                 if (length("`full_key'") > `maxkeylen') {
-                    local full_key = substr("`full_key'", 1, `maxkeylen')
+                    local short_key = substr("`full_key'", 1, `maxkeylen')
                     if ("`verbose'" != "") {
-                        di as text "  (key truncated to `maxkeylen' chars)"
+                        di as text "  (key truncated to `maxkeylen' chars for locals)"
                     }
                 }
+                else {
+                    local short_key "`full_key'"
+                }
                 
-                * Determine type
+                * Determine type and save current parent for storage
+                local this_parent "`parent_stack'"
+                
                 if ("`value'" == "") {
                     local vtype "parent"
-                    * This key becomes a parent for nested items
-                    local parent_stack "`full_key'"
+                    * This key becomes a parent for nested items AFTER storing
                     local last_key "`full_key'"
                 }
                 else {
@@ -314,7 +340,7 @@ program define yaml_read, rclass
                         qui replace key = "`full_key'" in `newobs'
                         qui replace value = `"`value'"' in `newobs'
                         qui replace level = `level' in `newobs'
-                        qui replace parent = "`parent_stack'" in `newobs'
+                        qui replace parent = "`this_parent'" in `newobs'
                         qui replace type = "`vtype'" in `newobs'
                     }
                 }
@@ -325,27 +351,32 @@ program define yaml_read, rclass
                     qui replace key = "`full_key'" in `newobs'
                     qui replace value = `"`value'"' in `newobs'
                     qui replace level = `level' in `newobs'
-                    qui replace parent = "`parent_stack'" in `newobs'
+                    qui replace parent = "`this_parent'" in `newobs'
                     qui replace type = "`vtype'" in `newobs'
                 }
                 
+                * Now update parent_stack AFTER storing (for parent types)
+                if ("`vtype'" == "parent") {
+                    local parent_stack "`full_key'"
+                }
+                
                 if ("`locals'" != "") {
-                    * Store as return local
+                    * Store as return local (using truncated key)
                     if ("`value'" != "") {
-                        return local `prefix'`full_key' `"`value'"'
+                        return local `prefix'`short_key' `"`value'"'
                         
                         if ("`verbose'" != "") {
-                            di as text "  `prefix'`full_key' = " as result `"`value'"'
+                            di as text "  `prefix'`short_key' = " as result `"`value'"'
                         }
                     }
                 }
                 
                 if ("`scalars'" != "" & "`vtype'" == "numeric") {
-                    * Store as scalar
-                    scalar `prefix'`full_key' = real("`value'")
+                    * Store as scalar (using truncated key)
+                    scalar `prefix'`short_key' = real("`value'")
                     
                     if ("`verbose'" != "") {
-                        di as text "  scalar `prefix'`full_key' = " as result `value'
+                        di as text "  scalar `prefix'`short_key' = " as result `value'
                     }
                 }
             }
@@ -418,7 +449,7 @@ end
 program define yaml_write
     version 14.0
     
-    syntax using/ [, Locals(string) Scalars(string) FRAME(string) Replace Verbose ///
+    syntax using/ [, Scalars(string) FRAME(string) Replace Verbose ///
                      INDENT(integer 2) HEADER(string)]
     
     * If frame specified, add yaml_ prefix if not present
@@ -455,21 +486,6 @@ program define yaml_write
     
     local n_written = 0
     
-    * Write from locals
-    if ("`locals'" != "") {
-        foreach loc of local locals {
-            local val "``loc''"
-            if ("`val'" != "") {
-                file write `fh' "`loc': `val'" _n
-                local n_written = `n_written' + 1
-                
-                if ("`verbose'" != "") {
-                    di as text "  `loc': " as result "`val'"
-                }
-            }
-        }
-    }
-    
     * Write from scalars
     if ("`scalars'" != "") {
         foreach sc of local scalars {
@@ -500,8 +516,8 @@ program define yaml_write
         }
         local n_written = r(n_written)
     }
-    else if ("`locals'" == "" & "`scalars'" == "") {
-        * Write from current dataset (default when no locals/scalars)
+    else if ("`scalars'" == "") {
+        * Write from current dataset (default when no scalars)
         * Check required variables exist
         capture confirm variable key value
         if (_rc != 0) {
@@ -509,50 +525,49 @@ program define yaml_write
             file close `fh'
             exit 198
         }
+        
+        * Check for level variable for indentation
+        capture confirm variable level
+        local has_level = (_rc == 0)
+        
+        local n = _N
+        local prev_level = 1
+        
+        forvalues i = 1/`n' {
+            local k = key[`i']
+            local v = value[`i']
             
-            * Check for level variable for indentation
-            capture confirm variable level
-            local has_level = (_rc == 0)
-            
-            local n = _N
-            local prev_level = 1
-            
-            forvalues i = 1/`n' {
-                local k = key[`i']
-                local v = value[`i']
-                
-                if (`has_level') {
-                    local lev = level[`i']
-                }
-                else {
-                    local lev = 1
-                }
-                
-                * Create indentation
-                local spaces ""
-                forvalues j = 1/`=(`lev'-1)*`indent'' {
-                    local spaces "`spaces' "
-                }
-                
-                * Get type if available
-                capture confirm variable type
-                if (_rc == 0) {
-                    local t = type[`i']
-                }
-                else {
-                    local t "string"
-                }
-                
-                * Write based on type
-                if ("`t'" == "parent") {
-                    file write `fh' "`spaces'`k':" _n
-                }
-                else if ("`v'" != "") {
-                    file write `fh' "`spaces'`k': `v'" _n
-                }
-                
-                local n_written = `n_written' + 1
+            if (`has_level') {
+                local lev = level[`i']
             }
+            else {
+                local lev = 1
+            }
+            
+            * Create indentation
+            local spaces ""
+            forvalues j = 1/`=(`lev'-1)*`indent'' {
+                local spaces "`spaces' "
+            }
+            
+            * Get type if available
+            capture confirm variable type
+            if (_rc == 0) {
+                local t = type[`i']
+            }
+            else {
+                local t "string"
+            }
+            
+            * Write based on type
+            if ("`t'" == "parent") {
+                file write `fh' "`spaces'`k':" _n
+            }
+            else if ("`v'" != "") {
+                file write `fh' "`spaces'`k': `v'" _n
+            }
+            
+            local n_written = `n_written' + 1
         }
     }
     
@@ -651,6 +666,196 @@ program define _yaml_describe_impl
     di as text "{hline 70}"
     di as text "Total keys: " as result `n'
     di as text "{hline 70}"
+end
+
+
+*******************************************************************************
+* yaml get - Get metadata attributes for a specific key (e.g., indicator code)
+*******************************************************************************
+
+program define yaml_get, rclass
+    version 14.0
+    syntax anything(name=keyname) [, FRAME(string) ATTRibutes(string) Quiet]
+    
+    * Determine source - frame or current data
+    local use_frame = 0
+    if ("`frame'" != "") {
+        * Check Stata version for frames
+        if (`c(stata_version)' < 16) {
+            di as err "frame() option requires Stata 16 or later"
+            exit 198
+        }
+        * Add yaml_ prefix if not present
+        if (substr("`frame'", 1, 5) != "yaml_") {
+            local frame "yaml_`frame'"
+        }
+        * Check frame exists
+        capture frame `frame': describe, short
+        if (_rc != 0) {
+            di as err "frame `frame' not found"
+            exit 198
+        }
+        local use_frame = 1
+    }
+    else {
+        * Use current dataset (default)
+        capture confirm variable key value
+        if (_rc != 0) {
+            di as err "No YAML data in current dataset. Load with 'yaml read using file.yaml, replace'"
+            exit 198
+        }
+    }
+    
+    * Clean up keyname (remove quotes if present)
+    local keyname = subinstr("`keyname'", `"""', "", .)
+    local keyname = strtrim("`keyname'")
+    
+    * Check for colon syntax (parent:key) - e.g., indicators:CME_MRY0T4
+    local colon_pos = strpos("`keyname'", ":")
+    if (`colon_pos' > 0) {
+        local parent = substr("`keyname'", 1, `colon_pos' - 1)
+        local keyname = substr("`keyname'", `colon_pos' + 1, .)
+        local search_prefix "`parent'_`keyname'"
+    }
+    else {
+        local parent ""
+        local search_prefix "`keyname'"
+    }
+    
+    * Search for attributes
+    if (`use_frame' == 1) {
+        frame `frame' {
+            _yaml_get_impl "`search_prefix'", attributes(`attributes') `quiet'
+        }
+        * Return values are set by _yaml_get_impl via return add
+        return add
+    }
+    else {
+        _yaml_get_impl "`search_prefix'", attributes(`attributes') `quiet'
+        return add
+    }
+    
+    * Return the key searched for
+    return local key "`keyname'"
+    if ("`parent'" != "") {
+        return local parent "`parent'"
+    }
+end
+
+program define _yaml_get_impl, rclass
+    syntax anything(name=search_prefix) [, ATTRibutes(string) Quiet]
+    
+    * Clean up search prefix - remove any quotes
+    local search_prefix = subinstr(`"`search_prefix'"', `"""', "", .)
+    local search_prefix = strtrim("`search_prefix'")
+    
+    * Find all keys that are children of this key (using parent variable)
+    * Pattern: parent == search_prefix (e.g., parent == "indicators_CME_MRY0T4")
+    
+    local found = 0
+    local n = _N
+    local n_attrs = 0
+    
+    * Check if parent variable exists
+    capture confirm variable parent
+    local has_parent = (_rc == 0)
+    
+    * If no specific attributes requested, get all
+    if ("`attributes'" == "") {
+        * Find all children of this key using parent variable
+        forvalues i = 1/`n' {
+            local k = key[`i']
+            local v = value[`i']
+            local t = type[`i']
+            
+            if (`has_parent') {
+                local p = parent[`i']
+                
+                * Check if this key's parent matches our search prefix
+                if ("`p'" == "`search_prefix'" & "`t'" != "parent") {
+                    * Extract attribute name (remove parent prefix from key)
+                    local plen = length("`search_prefix'")
+                    if (substr("`k'", 1, `plen') == "`search_prefix'" & substr("`k'", `plen'+1, 1) == "_") {
+                        local attr_name = substr("`k'", `plen' + 2, .)
+                    }
+                    else {
+                        local attr_name "`k'"
+                    }
+                    
+                    local found = 1
+                    local n_attrs = `n_attrs' + 1
+                    return local `attr_name' `"`v'"'
+                    
+                    if ("`quiet'" == "") {
+                        di as text "  `attr_name': " as result `"`v'"'
+                    }
+                }
+            }
+            else {
+                * Fallback: use key prefix matching
+                local prefix_len = length("`search_prefix'")
+                if (substr("`k'", 1, `prefix_len') == "`search_prefix'") {
+                    local remainder = substr("`k'", `prefix_len' + 1, .)
+                    
+                    * If remainder starts with underscore, it's a child attribute
+                    if (substr("`remainder'", 1, 1) == "_") {
+                        local attr_name = substr("`remainder'", 2, .)
+                        
+                        * Only get immediate children (no more underscores)
+                        if (strpos("`attr_name'", "_") == 0 & "`t'" != "parent") {
+                            local found = 1
+                            local n_attrs = `n_attrs' + 1
+                            return local `attr_name' `"`v'"'
+                            
+                            if ("`quiet'" == "") {
+                                di as text "  `attr_name': " as result `"`v'"'
+                            }
+                        }
+                    }
+                    * Exact match - return the value itself
+                    else if ("`remainder'" == "" & "`t'" != "parent") {
+                        local found = 1
+                        local n_attrs = `n_attrs' + 1
+                        return local value `"`v'"'
+                        
+                        if ("`quiet'" == "") {
+                            di as text "  value: " as result `"`v'"'
+                        }
+                    }
+                }
+            }
+        }
+    }
+    else {
+        * Get specific attributes
+        foreach attr of local attributes {
+            local target_key "`search_prefix'_`attr'"
+            
+            forvalues i = 1/`n' {
+                local k = key[`i']
+                local v = value[`i']
+                
+                if ("`k'" == "`target_key'") {
+                    local found = 1
+                    local n_attrs = `n_attrs' + 1
+                    return local `attr' `"`v'"'
+                    
+                    if ("`quiet'" == "") {
+                        di as text "  `attr': " as result `"`v'"'
+                    }
+                }
+            }
+        }
+    }
+    
+    if (`found' == 0) {
+        if ("`quiet'" == "") {
+            di as text "(no attributes found for `search_prefix')"
+        }
+    }
+    
+    return scalar found = `found'
+    return scalar n_attrs = `n_attrs'
 end
 
 
@@ -775,10 +980,18 @@ program define _yaml_list_impl, rclass
         
         * Match keys that start with the pattern (children of that parent)
         if ("`children'" != "") {
-            * Only get immediate children of the parent
-            qui replace `is_child' = 1 if strpos(key, "`pattern'_") == 1
-            * Exclude grandchildren (keys with more than one underscore after pattern)
-            qui replace `is_child' = 0 if regexm(substr(key, length("`pattern'_") + 1, .), "_")
+            * Use parent variable to find immediate children
+            * A key is an immediate child if its parent equals the pattern
+            capture confirm variable parent
+            if (_rc == 0) {
+                qui replace `is_child' = 1 if parent == "`pattern'"
+            }
+            else {
+                * Fallback: use key prefix matching
+                qui replace `is_child' = 1 if strpos(key, "`pattern'_") == 1
+                * Exclude grandchildren (keys with more than one underscore after pattern)
+                qui replace `is_child' = 0 if regexm(substr(key, length("`pattern'_") + 1, .), "_")
+            }
             qui replace `match' = `is_child'
         }
         else {
@@ -796,9 +1009,12 @@ program define _yaml_list_impl, rclass
                     local k = key[`i']
                     local v = value[`i']
                     
-                    * For children option, extract just the child name
+                    * For children option, extract just the child name (remove parent prefix)
                     if ("`children'" != "") {
-                        local k = substr("`k'", length("`pattern'_") + 1, .)
+                        local plen = length("`pattern'")
+                        if (substr("`k'", 1, `plen') == "`pattern'" & substr("`k'", `plen'+1, 1) == "_") {
+                            local k = substr("`k'", `plen' + 2, .)
+                        }
                     }
                     
                     if ("`result_keys'" == "") {

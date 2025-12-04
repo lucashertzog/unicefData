@@ -31,6 +31,7 @@
 {synopt:{opt write}}write Stata data to YAML file{p_end}
 {synopt:{opt describe}}display structure of loaded YAML data{p_end}
 {synopt:{opt list}}list keys and values{p_end}
+{synopt:{opt get}}get metadata attributes for a specific key{p_end}
 {synopt:{opt frames}}list all YAML frames in memory (Stata 16+){p_end}
 {synopt:{opt clear}}clear YAML data from memory{p_end}
 {synoptline}
@@ -93,7 +94,7 @@ The following variables are created:
 {p 8 17 2}
 {cmd:yaml write}
 {cmd:using} {it:filename}
-[{cmd:,} {opt frame(name)} {opt locals(namelist)} {opt scalars(namelist)} 
+[{cmd:,} {opt frame(name)} {opt scalars(namelist)} 
 {opt replace} {opt v:erbose} {opt indent(#)} {opt header(string)}]
 
 {pstd}
@@ -103,13 +104,16 @@ Writes Stata data from the current dataset (default) or a frame to a YAML file.
 {synopthdr:options}
 {synoptline}
 {synopt:{opt frame(name)}}write from frame yaml_{it:name} (Stata 16+){p_end}
-{synopt:{opt locals(namelist)}}write specified local macros{p_end}
 {synopt:{opt scalars(namelist)}}write specified scalars{p_end}
 {synopt:{opt replace}}replace existing file{p_end}
 {synopt:{opt v:erbose}}display progress{p_end}
 {synopt:{opt indent(#)}}spaces per indent level; default is 2{p_end}
 {synopt:{opt header(string)}}custom header comment{p_end}
 {synoptline}
+
+{pstd}
+{bf:Note:} To write scalar values to YAML, create scalars first, then use the {opt scalars()} option.
+Local macros cannot be passed to programs in Stata.
 
 
 {marker describe}{...}
@@ -152,6 +156,41 @@ Lists keys and values from YAML data. Optional {it:parent} filters to keys under
 {synopt:{opt stata}}format output as Stata compound quotes: {cmd:`"item1"' `"item2"'}{p_end}
 {synopt:{opt noh:eader}}suppress column headers in listing{p_end}
 {synoptline}
+
+
+{marker get}{...}
+{title:yaml get}
+
+{p 8 17 2}
+{cmd:yaml get}
+{it:parent}{cmd::}{it:keyname} | {it:keyname}
+[{cmd:,} {opt frame(name)} {opt attr:ibutes(namelist)} {opt q:uiet}]
+
+{pstd}
+Gets metadata attributes for a specific key (e.g., indicator code) and returns them
+as separate r() macros. This is useful for querying indicator metadata by code.
+
+{pstd}
+{bf:Colon syntax:} Use {it:parent}{cmd::}{it:keyname} to specify the parent hierarchy.
+For example, {cmd:indicators:CME_MRY0T4} searches for CME_MRY0T4 under indicators.
+This is equivalent to searching for key {cmd:indicators_CME_MRY0T4_*}.
+
+{synoptset 20 tabbed}{...}
+{synopthdr:options}
+{synoptline}
+{synopt:{opt frame(name)}}get from frame yaml_{it:name} (Stata 16+){p_end}
+{synopt:{opt attr:ibutes(namelist)}}specific attributes to retrieve; default is all{p_end}
+{synopt:{opt q:uiet}}suppress output display{p_end}
+{synoptline}
+
+{pstd}
+{bf:Stored results:}
+{p_end}
+{phang2}{cmd:r(key)} - the key that was searched{p_end}
+{phang2}{cmd:r(parent)} - the parent hierarchy (if colon syntax used){p_end}
+{phang2}{cmd:r(found)} - 1 if attributes found, 0 otherwise{p_end}
+{phang2}{cmd:r(n_attrs)} - number of attributes found{p_end}
+{phang2}{cmd:r({it:attribute})} - value for each attribute found (e.g., r(label), r(unit)){p_end}
 
 
 {marker frames}{...}
@@ -247,17 +286,52 @@ Clears YAML data from memory.
 {phang2}{cmd:. {c )-}}{p_end}
 
 {pstd}
-{bf:Example 6: Write from dataset to YAML}{p_end}
+{bf:Example 6: Get indicator metadata by code (colon syntax)}{p_end}
+
+{phang2}{cmd:. yaml read using "config.yaml", replace}{p_end}
+{phang2}{cmd:. yaml get indicators:CME_MRY0T4}{p_end}
+{phang2}{res:  label: Under-five mortality rate}{p_end}
+{phang2}{res:  unit: Deaths per 1000 live births}{p_end}
+{phang2}{res:  dataflow: CME}{p_end}
+{phang2}{cmd:. return list}{p_end}
+{phang2}{res:r(key) : "CME_MRY0T4"}{p_end}
+{phang2}{res:r(parent) : "indicators"}{p_end}
+{phang2}{res:r(label) : "Under-five mortality rate"}{p_end}
+{phang2}{res:r(unit) : "Deaths per 1000 live births"}{p_end}
+{phang2}{res:r(dataflow) : "CME"}{p_end}
+
+{pstd}
+{bf:Example 7: Get specific attributes only}{p_end}
+
+{phang2}{cmd:. yaml get indicators:CME_MRY0T4, attributes(label unit)}{p_end}
+{phang2}{res:  label: Under-five mortality rate}{p_end}
+{phang2}{res:  unit: Deaths per 1000 live births}{p_end}
+
+{pstd}
+{bf:Example 8: Loop over indicators and get metadata}{p_end}
+
+{phang2}{cmd:. yaml list indicators, keys children}{p_end}
+{phang2}{cmd:. foreach ind in `r(keys)' {c -(}}{p_end}
+{phang2}{cmd:.     yaml get indicators:`ind', quiet}{p_end}
+{phang2}{cmd:.     display "`ind': `r(label)' (`r(unit)')"}{p_end}
+{phang2}{cmd:. {c )-}}{p_end}
+
+{pstd}
+{bf:Example 9: Query from frame}{p_end}
+
+{phang2}{cmd:. yaml read using "config.yaml", frame(cfg)}{p_end}
+{phang2}{cmd:. yaml get indicators:CME_MRY0, frame(cfg)}{p_end}
+{phang2}{res:  label: Infant mortality rate}{p_end}
+{phang2}{res:  unit: Deaths per 1000 live births}{p_end}
+{phang2}{res:  dataflow: CME}{p_end}
+
+{pstd}
+{bf:Example 10: Write from dataset to YAML}{p_end}
 
 {phang2}{cmd:. yaml write using "output.yaml", replace}{p_end}
 
 {pstd}
-{bf:Example 7: Write from frame to YAML}{p_end}
-
-{phang2}{cmd:. yaml write using "output.yaml", frame(config) replace}{p_end}
-
-{pstd}
-{bf:Example 8: Clear YAML data}{p_end}
+{bf:Example 11: Clear YAML data}{p_end}
 
 {phang2}{cmd:. yaml clear}{p_end}
 {phang2}// Clears current dataset{p_end}
