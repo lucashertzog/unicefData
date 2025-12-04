@@ -318,9 +318,14 @@ program define yaml_read, rclass
                 local key = strtrim(substr("`trimmed'", 1, `colon_pos' - 1))
                 local value = strtrim(substr("`trimmed'", `colon_pos' + 1, .))
                 
-                * Remove quotes from value if present
+                * Reset vtype for this new key-value pair
+                local vtype ""
+                
+                * Remove quotes from value if present (and remember it was quoted)
+                local was_quoted = 0
                 if (substr("`value'", 1, 1) == `"""' | substr("`value'", 1, 1) == "'") {
                     local value = substr("`value'", 2, length("`value'") - 2)
+                    local was_quoted = 1
                 }
                 
                 * Build full key name with parent hierarchy
@@ -356,24 +361,29 @@ program define yaml_read, rclass
                     local last_key "`full_key'"
                 }
                 else {
-                    * Check if numeric
-                    capture confirm number `value'
-                    if (_rc == 0) {
-                        local vtype "numeric"
+                    * Check if numeric (but quoted values are always strings)
+                    if (`was_quoted') {
+                        local vtype "string"
                     }
-                    else if (inlist("`value'", "true", "True", "TRUE", "yes", "Yes", "YES")) {
+                    else {
+                        capture confirm number `value'
+                        if (_rc == 0) {
+                            local vtype "numeric"
+                        }
+                    }
+                    if ("`vtype'" == "" & inlist("`value'", "true", "True", "TRUE", "yes", "Yes", "YES")) {
                         local vtype "boolean"
                         local value "1"
                     }
-                    else if (inlist("`value'", "false", "False", "FALSE", "no", "No", "NO")) {
+                    else if ("`vtype'" == "" & inlist("`value'", "false", "False", "FALSE", "no", "No", "NO")) {
                         local vtype "boolean"
                         local value "0"
                     }
-                    else if ("`value'" == "null" | "`value'" == "~") {
+                    else if ("`vtype'" == "" & ("`value'" == "null" | "`value'" == "~")) {
                         local vtype "null"
                         local value ""
                     }
-                    else {
+                    else if ("`vtype'" == "") {
                         local vtype "string"
                     }
                     local last_key "`full_key'"
@@ -1380,6 +1390,18 @@ program define yaml_validate, rclass
             }
         }
         return scalar valid = 0
+        return scalar n_errors = `n_errors'
+        return scalar n_warnings = `n_warnings'
+        return scalar n_checked = `n_checked'
+        return local missing_keys "`missing_keys'"
+        return local type_errors "`type_errors'"
+        
+        if ("`quiet'" == "") {
+            di as text "{hline 60}"
+        }
+        
+        * Exit with error code so callers can detect validation failure
+        exit 9
     }
     
     if ("`quiet'" == "") {
