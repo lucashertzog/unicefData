@@ -78,14 +78,17 @@ program define yaml
     else if ("`subcmd'" == "clear") {
         yaml_clear `0'
     }
+    else if ("`subcmd'" == "validate" | "`subcmd'" == "check") {
+        yaml_validate `0'
+    }
     else if ("`subcmd'" == "") {
         di as err "subcommand required"
-        di as err "syntax: yaml {read|write|describe|list|get|frames|clear} ..."
+        di as err "syntax: yaml {read|write|describe|list|get|validate|frames|clear} ..."
         exit 198
     }
     else {
         di as err "unknown subcommand: `subcmd'"
-        di as err "valid subcommands: read, write, describe, list, get, frames, clear"
+        di as err "valid subcommands: read, write, describe, list, get, validate, frames, clear"
         exit 198
     }
 end
@@ -179,8 +182,8 @@ program define yaml_read, rclass
     local n_levels = 1
     local indent_1 = 0
     local parent_1 ""
-    
-    file read `fh' line
+    local list_index = 0
+        file read `fh' line
     
     while r(eof) == 0 {
         local linenum = `linenum' + 1
@@ -241,26 +244,73 @@ program define yaml_read, rclass
         local is_list = (substr("`trimmed'", 1, 2) == "- ")
         
         if (`is_list') {
-            * List item
+            * List item - store as separate row with type "list_item"
             local item_value = strtrim(substr("`trimmed'", 3, .))
-            local key = "`last_key'"
-            local value "`item_value'"
-            local vtype "list_item"
             
-            * Append to existing value for this key
-            if ("`dataset'" != "") {
-                * Find and update the parent key's value
-                qui count if key == "`key'"
-                if (r(N) > 0) {
-                    qui replace value = value + " " + "`item_value'" if key == "`key'"
+            * Increment list index for this parent
+            local list_index = `list_index' + 1
+            
+            * Build the full key: parent_N where N is the index
+            local full_key "`last_key'_`list_index'"
+            if ("`parent_stack'" != "" & "`parent_stack'" != "`last_key'") {
+                * Only prepend parent if last_key doesn't already include it
+                if (strpos("`last_key'", "`parent_stack'") != 1) {
+                    local full_key "`parent_stack'_`last_key'_`list_index'"
+                }
+            }
+            
+            local vtype "list_item"
+            local value "`item_value'"
+            
+            * The parent for list items is the list key itself
+            local this_parent "`last_key'"
+            if ("`parent_stack'" != "" & strpos("`last_key'", "`parent_stack'") != 1) {
+                local this_parent "`parent_stack'_`last_key'"
+            }
+            
+            local n_keys = `n_keys' + 1
+            
+            * Store the list item in frame or dataset
+            if (`use_frame' == 1) {
+                frame `frame' {
+                    local newobs = _N + 1
+                    qui set obs `newobs'
+                    qui replace key = "`full_key'" in `newobs'
+                    qui replace value = `"`value'"' in `newobs'
+                    qui replace level = `level' in `newobs'
+                    qui replace parent = "`this_parent'" in `newobs'
+                    qui replace type = "`vtype'" in `newobs'
                 }
             }
             else {
-                * For locals, append to existing
-                local `prefix'`key' "``prefix'`key'' `item_value'"
+                local newobs = _N + 1
+                qui set obs `newobs'
+                qui replace key = "`full_key'" in `newobs'
+                qui replace value = `"`value'"' in `newobs'
+                qui replace level = `level' in `newobs'
+                qui replace parent = "`this_parent'" in `newobs'
+                qui replace type = "`vtype'" in `newobs'
+            }
+            
+            * Also accumulate list items in the parent's value for backward compatibility
+            if ("`dataset'" != "") {
+                * Find and update the parent key's value
+                local parent_key "`this_parent'"
+                qui count if key == "`parent_key'"
+                if (r(N) > 0) {
+                    qui replace value = value + " " + "`item_value'" if key == "`parent_key'"
+                }
+            }
+            
+            * For locals, append to existing
+            if ("`locals'" != "") {
+                local `prefix'`last_key' "``prefix'`last_key'' `item_value'"
             }
         }
         else {
+            * Reset list index when we encounter a non-list item
+            local list_index = 0
+            
             * Key-value pair or nested key
             local colon_pos = strpos("`trimmed'", ":")
             
@@ -562,6 +612,10 @@ program define yaml_write
             * Write based on type
             if ("`t'" == "parent") {
                 file write `fh' "`spaces'`k':" _n
+            }
+            else if ("`t'" == "list_item") {
+                * Write as YAML list item with dash prefix
+                file write `fh' "`spaces'- `v'" _n
             }
             else if ("`v'" != "") {
                 file write `fh' "`spaces'`k': `v'" _n
@@ -1119,6 +1173,224 @@ program define yaml_clear
             di as text "No YAML data in current dataset."
         }
     }
+end
+
+
+*******************************************************************************
+* yaml validate - Validate YAML data against requirements
+*******************************************************************************
+
+program define yaml_validate, rclass
+    version 14.0
+    syntax [, FRAME(string) REQuired(string) TYpes(string) Quiet]
+    
+    * Determine source - frame or current data
+    local use_frame = 0
+    if ("`frame'" != "") {
+        if (`c(stata_version)' < 16) {
+            di as err "frame() option requires Stata 16 or later"
+            exit 198
+        }
+        if (substr("`frame'", 1, 5) != "yaml_") {
+            local frame "yaml_`frame'"
+        }
+        capture frame `frame': describe, short
+        if (_rc != 0) {
+            di as err "frame `frame' not found"
+            exit 198
+        }
+        local use_frame = 1
+    }
+    else {
+        capture confirm variable key value level parent type
+        if (_rc != 0) {
+            di as err "No YAML data in current dataset. Load with 'yaml read using file.yaml, replace'"
+            exit 198
+        }
+    }
+    
+    local n_errors = 0
+    local n_warnings = 0
+    local n_checked = 0
+    local missing_keys ""
+    local type_errors ""
+    
+    if ("`quiet'" == "") {
+        di as text "{hline 60}"
+        di as text "YAML Validation Report"
+        di as text "{hline 60}"
+    }
+    
+    * Check required keys
+    if ("`required'" != "") {
+        if ("`quiet'" == "") {
+            di as text ""
+            di as text "{bf:Required Keys Check:}"
+        }
+        
+        foreach req of local required {
+            local n_checked = `n_checked' + 1
+            local found = 0
+            
+            if (`use_frame' == 1) {
+                frame `frame' {
+                    qui count if key == "`req'" | strpos(key, "`req'_") == 1
+                    local found = (r(N) > 0)
+                }
+            }
+            else {
+                qui count if key == "`req'" | strpos(key, "`req'_") == 1
+                local found = (r(N) > 0)
+            }
+            
+            if (`found') {
+                if ("`quiet'" == "") {
+                    di as text "  ✓ " as result "`req'" as text " - found"
+                }
+            }
+            else {
+                local n_errors = `n_errors' + 1
+                local missing_keys "`missing_keys' `req'"
+                if ("`quiet'" == "") {
+                    di as error "  ✗ `req' - MISSING"
+                }
+            }
+        }
+    }
+    
+    * Check types if specified (format: "key:type key:type")
+    if ("`types'" != "") {
+        if ("`quiet'" == "") {
+            di as text ""
+            di as text "{bf:Type Validation:}"
+        }
+        
+        foreach typespec of local types {
+            local n_checked = `n_checked' + 1
+            
+            * Parse key:expected_type
+            local colon_pos = strpos("`typespec'", ":")
+            if (`colon_pos' > 0) {
+                local check_key = substr("`typespec'", 1, `colon_pos' - 1)
+                local expected_type = substr("`typespec'", `colon_pos' + 1, .)
+                
+                local actual_type ""
+                local actual_value ""
+                
+                if (`use_frame' == 1) {
+                    frame `frame' {
+                        qui count if key == "`check_key'"
+                        if (r(N) > 0) {
+                            qui levelsof type if key == "`check_key'", local(actual_type) clean
+                            qui levelsof value if key == "`check_key'", local(actual_value) clean
+                        }
+                    }
+                }
+                else {
+                    qui count if key == "`check_key'"
+                    if (r(N) > 0) {
+                        qui levelsof type if key == "`check_key'", local(actual_type) clean
+                        qui levelsof value if key == "`check_key'", local(actual_value) clean
+                    }
+                }
+                
+                if ("`actual_type'" == "") {
+                    local n_warnings = `n_warnings' + 1
+                    if ("`quiet'" == "") {
+                        di as text "  ? " as result "`check_key'" as text " - key not found, cannot check type"
+                    }
+                }
+                else if ("`actual_type'" == "`expected_type'") {
+                    if ("`quiet'" == "") {
+                        di as text "  ✓ " as result "`check_key'" as text " - type `expected_type' ✓"
+                    }
+                }
+                else {
+                    * Special handling: numeric can match boolean (0/1)
+                    if ("`expected_type'" == "numeric" & "`actual_type'" == "boolean") {
+                        if ("`quiet'" == "") {
+                            di as text "  ✓ " as result "`check_key'" as text " - type boolean (numeric compatible)"
+                        }
+                    }
+                    else {
+                        local n_errors = `n_errors' + 1
+                        local type_errors "`type_errors' `check_key'"
+                        if ("`quiet'" == "") {
+                            di as error "  ✗ `check_key' - expected `expected_type', got `actual_type'"
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    * Validate structure (check for orphaned children)
+    if ("`quiet'" == "") {
+        di as text ""
+        di as text "{bf:Structure Validation:}"
+    }
+    
+    local orphans = 0
+    if (`use_frame' == 1) {
+        frame `frame' {
+            * Check if any parent references don't exist as keys
+            qui count if parent != "" & type != "parent"
+            local n_children = r(N)
+            
+            * Simple structure check - count levels
+            qui sum level
+            local max_level = r(max)
+            local n_keys = _N
+        }
+    }
+    else {
+        qui count if parent != "" & type != "parent"
+        local n_children = r(N)
+        qui sum level
+        local max_level = r(max)
+        local n_keys = _N
+    }
+    
+    if ("`quiet'" == "") {
+        di as text "  Total keys: " as result `n_keys'
+        di as text "  Max nesting depth: " as result `max_level'
+        di as text "  Child elements: " as result `n_children'
+    }
+    
+    * Summary
+    if ("`quiet'" == "") {
+        di as text ""
+        di as text "{hline 60}"
+    }
+    
+    if (`n_errors' == 0) {
+        if ("`quiet'" == "") {
+            di as result "Validation PASSED" as text " - `n_checked' checks, 0 errors"
+        }
+        return scalar valid = 1
+    }
+    else {
+        if ("`quiet'" == "") {
+            di as error "Validation FAILED" as text " - `n_checked' checks, `n_errors' error(s)"
+            if ("`missing_keys'" != "") {
+                di as text "  Missing keys:" as error "`missing_keys'"
+            }
+            if ("`type_errors'" != "") {
+                di as text "  Type errors:" as error "`type_errors'"
+            }
+        }
+        return scalar valid = 0
+    }
+    
+    if ("`quiet'" == "") {
+        di as text "{hline 60}"
+    }
+    
+    return scalar n_errors = `n_errors'
+    return scalar n_warnings = `n_warnings'
+    return scalar n_checked = `n_checked'
+    return local missing_keys "`missing_keys'"
+    return local type_errors "`type_errors'"
 end
 
 

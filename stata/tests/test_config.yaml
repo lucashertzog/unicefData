@@ -62,3 +62,17 @@ regions:
     label: Latin America and Caribbean
   SA:
     label: South Asia
+
+# Test list/sequence support
+countries:
+  - BRA
+  - ARG
+  - CHL
+  - COL
+  - PER
+
+# Nested list example
+priority_indicators:
+  - CME_MRY0T4
+  - CME_MRY0
+  - NT_ANT_HAZ_NE2
