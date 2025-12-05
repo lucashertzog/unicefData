@@ -66,6 +66,7 @@ class CodelistMetadata:
     version: str
     codes: Dict[str, str]  # code -> description mapping
     last_updated: Optional[str] = None
+    name: Optional[str] = None  # Codelist's descriptive name (e.g., "Statistical Reference Areas")
 
 
 class MetadataSync:
@@ -159,7 +160,8 @@ class MetadataSync:
         content_type: str,
         source_url: str,
         content: Dict[str, Any],
-        counts: Dict[str, Any]
+        counts: Dict[str, Any],
+        extra_metadata: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """Create a dictionary with standardized watermark header.
         
@@ -170,27 +172,32 @@ class MetadataSync:
         - source: API endpoint URL
         - agency: SDMX agency identifier
         - counts: Item counts for quick reference
+        - extra_metadata: Optional additional metadata (e.g., codelist_name)
         
         Args:
             content_type: Type of content (dataflows, indicators, etc.)
             source_url: URL(s) used to fetch this data
             content: The actual content dictionary
             counts: Count statistics for the watermark
+            extra_metadata: Optional additional metadata fields
             
         Returns:
             Dictionary with _metadata watermark and content
         """
-        watermark = {
-            '_metadata': {
-                'platform': 'python',
-                'version': self.METADATA_VERSION,
-                'synced_at': datetime.utcnow().isoformat() + 'Z',
-                'source': source_url,
-                'agency': self.agency,
-                'content_type': content_type,
-                **counts
-            }
+        metadata_dict = {
+            'platform': 'python',
+            'version': self.METADATA_VERSION,
+            'synced_at': datetime.utcnow().isoformat() + 'Z',
+            'source': source_url,
+            'agency': self.agency,
+            'content_type': content_type,
+            **counts
         }
+        # Add extra metadata fields if provided
+        if extra_metadata:
+            metadata_dict.update(extra_metadata)
+            
+        watermark = {'_metadata': metadata_dict}
         # Merge watermark with content
         return {**watermark, **content}
     
@@ -432,8 +439,8 @@ class MetadataSync:
         """Sync codelist definitions from SDMX API (excluding countries/regions)."""
         if codelist_ids is None:
             # Codelists excluding CL_REF_AREA (countries/regions handled separately)
+            # Note: CL_SEX does not exist on UNICEF SDMX API
             codelist_ids = [
-                'CL_SEX',
                 'CL_AGE',
                 'CL_WEALTH_QUINTILE',
                 'CL_RESIDENCE',
@@ -479,15 +486,18 @@ class MetadataSync:
         cl = self._fetch_codelist('CL_COUNTRY')
         
         countries = {}
+        codelist_name = None
         if cl:
             countries = cl.codes
+            codelist_name = cl.name
         
-        # Save countries with watermark
+        # Save countries with watermark (codelist_name stored in metadata)
         countries_dict = self._create_watermarked_dict(
             content_type='countries',
             source_url=f"{self.base_url}/codelist/{self.agency}/CL_COUNTRY/latest",
             content={'countries': countries},
-            counts={'total_countries': len(countries)}
+            counts={'total_countries': len(countries)},
+            extra_metadata={'codelist_id': 'CL_COUNTRY', 'codelist_name': codelist_name}
         )
         self._save_yaml(self.FILE_COUNTRIES, countries_dict)
         
@@ -504,15 +514,18 @@ class MetadataSync:
         cl = self._fetch_codelist('CL_WORLD_REGIONS')
         
         regions = {}
+        codelist_name = None
         if cl:
             regions = cl.codes
+            codelist_name = cl.name
         
-        # Save regions with watermark
+        # Save regions with watermark (codelist_name stored in metadata)
         regions_dict = self._create_watermarked_dict(
             content_type='regions',
             source_url=f"{self.base_url}/codelist/{self.agency}/CL_WORLD_REGIONS/latest",
             content={'regions': regions},
-            counts={'total_regions': len(regions)}
+            counts={'total_regions': len(regions)},
+            extra_metadata={'codelist_id': 'CL_WORLD_REGIONS', 'codelist_name': codelist_name}
         )
         self._save_yaml(self.FILE_REGIONS, regions_dict)
         
@@ -906,6 +919,14 @@ class MetadataSync:
             response = self._fetch_xml(url)
             doc = ET.fromstring(response)
             
+            # Extract codelist's own name (from Codelist element, not Code elements)
+            codelist_name = None
+            codelist_elem = doc.find('.//str:Codelist', self.NAMESPACES)
+            if codelist_elem is not None:
+                name_elem = codelist_elem.find('com:Name', self.NAMESPACES)
+                if name_elem is not None:
+                    codelist_name = name_elem.text
+            
             codes = {}
             for code_elem in doc.findall('.//str:Code', self.NAMESPACES):
                 code_id = code_elem.get('id')
@@ -918,7 +939,8 @@ class MetadataSync:
                 agency=self.agency,
                 version='latest',
                 codes=codes,
-                last_updated=datetime.utcnow().isoformat() + 'Z'
+                last_updated=datetime.utcnow().isoformat() + 'Z',
+                name=codelist_name  # Codelist's own descriptive name
             )
         except Exception:
             return None
