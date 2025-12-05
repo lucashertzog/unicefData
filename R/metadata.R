@@ -7,6 +7,9 @@
 # 3. Validate downloaded data against cached metadata
 # 4. Track metadata versions for triangulation and auditing
 #
+# File naming convention: _unicefdata_<name>.yaml
+# All files include standardized watermark with platform, version, timestamp
+#
 # Usage:
 #   source("R/unicef_api/metadata.R")
 #   sync_metadata()  # Downloads and caches all metadata
@@ -26,6 +29,15 @@ if (!requireNamespace("yaml", quietly = TRUE)) {
 .metadata_config$BASE_URL <- "https://sdmx.data.unicef.org/ws/public/sdmxapi/rest"
 .metadata_config$AGENCY <- "UNICEF"
 .metadata_config$CACHE_DIR <- NULL
+.metadata_config$METADATA_VERSION <- "2.0.0"
+
+# Standard file names with _unicefdata_ prefix (matches Python)
+.metadata_config$FILE_DATAFLOWS <- "_unicefdata_dataflows.yaml"
+.metadata_config$FILE_INDICATORS <- "_unicefdata_indicators.yaml"
+.metadata_config$FILE_CODELISTS <- "_unicefdata_codelists.yaml"
+.metadata_config$FILE_COUNTRIES <- "_unicefdata_countries.yaml"
+.metadata_config$FILE_REGIONS <- "_unicefdata_regions.yaml"
+.metadata_config$FILE_SYNC_HISTORY <- "_unicefdata_sync_history.yaml"
 
 #' Set metadata cache directory
 #' @param path Path to cache directory
@@ -82,8 +94,8 @@ get_current_dir <- function() {
 
 #' Sync all metadata from UNICEF SDMX API
 #'
-#' Downloads dataflows, codelists, and indicator definitions,
-#' then saves them as YAML files in the cache directory.
+#' Downloads dataflows, codelists, countries, regions, and indicator definitions,
+#' then saves them as YAML files in the cache directory with standardized watermarks.
 #'
 #' @param cache_dir Path to cache directory (default: ./metadata/)
 #' @param verbose Print progress messages (default: TRUE)
@@ -99,57 +111,151 @@ sync_metadata <- function(cache_dir = NULL, verbose = TRUE) {
     set_metadata_cache(cache_dir)
   }
   cache_dir <- get_metadata_cache()
+  current_dir <- get_current_dir()
   
   results <- list(
     synced_at = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
+    vintage_date = format(Sys.Date(), "%Y-%m-%d"),
     dataflows = 0,
     codelists = 0,
+    countries = 0,
+    regions = 0,
     indicators = 0,
+    files_created = character(),
     errors = character()
   )
   
   if (verbose) {
-    message(sprintf("Syncing UNICEF SDMX metadata to %s", cache_dir))
+    message(strrep("=", 80))
+    message("UNICEF Metadata Sync")
+    message(strrep("=", 80))
+    message(sprintf("Output location: %s", current_dir))
+    message(sprintf("Timestamp: %s", results$synced_at))
+    message(strrep("-", 80))
   }
   
   # 1. Sync dataflows
   tryCatch({
-    dataflows <- sync_dataflows(verbose = verbose)
+    if (verbose) message("  \U0001F4C1 Fetching dataflows...")
+    dataflows <- sync_dataflows(verbose = FALSE)
     results$dataflows <- length(dataflows$dataflows)
-  }, error = function(e) {
-    results$errors <- c(results$errors, paste("Dataflows:", e$message))
-  })
-  
-  # 2. Sync codelists
-  tryCatch({
-    codelists <- sync_codelists(verbose = verbose)
-    results$codelists <- length(codelists$codelists)
-  }, error = function(e) {
-    results$errors <- c(results$errors, paste("Codelists:", e$message))
-  })
-  
-  # 3. Sync indicators
-  tryCatch({
-    indicators <- sync_indicators(verbose = verbose)
-    results$indicators <- length(indicators$indicators)
-  }, error = function(e) {
-    results$errors <- c(results$errors, paste("Indicators:", e$message))
-  })
-  
-  # 4. Create vintage snapshot
-  vintage_date <- format(Sys.Date(), "%Y-%m-%d")
-  results$vintage_date <- vintage_date
-  .create_vintage(vintage_date, results, verbose = verbose)
-  
-  # Note: sync_history.yaml is updated by .create_vintage() -> .update_sync_history()
-  
-  if (verbose) {
-    message(sprintf("\n[OK] Sync complete: %d dataflows, %d codelists, %d indicators",
-                    results$dataflows, results$codelists, results$indicators))
-    message(sprintf("   Vintage: %s", vintage_date))
-    if (length(results$errors) > 0) {
-      message(sprintf("[WARNING] Errors: %d", length(results$errors)))
+    results$files_created <- c(results$files_created, .metadata_config$FILE_DATAFLOWS)
+    if (verbose) {
+      message(sprintf("     \u2713 %s - %d dataflows", 
+                      .metadata_config$FILE_DATAFLOWS, results$dataflows))
     }
+  }, error = function(e) {
+    results$errors <<- c(results$errors, paste("Dataflows:", e$message))
+    if (verbose) message(sprintf("     \u2717 Dataflows error: %s", e$message))
+  })
+  
+  # 2. Sync codelists (excluding CL_COUNTRY and CL_WORLD_REGIONS)
+  tryCatch({
+    if (verbose) message("  \U0001F4C1 Fetching codelists...")
+    codelists <- sync_codelists(verbose = FALSE)
+    results$codelists <- length(codelists$codelists)
+    results$files_created <- c(results$files_created, .metadata_config$FILE_CODELISTS)
+    if (verbose) {
+      codes_summary <- sapply(codelists$codelists, function(cl) length(cl$codes))
+      summary_text <- paste(names(codes_summary)[1:min(3, length(codes_summary))], 
+                           codes_summary[1:min(3, length(codes_summary))], 
+                           sep = ": ", collapse = ", ")
+      message(sprintf("     \u2713 %s - %d codelists", 
+                      .metadata_config$FILE_CODELISTS, results$codelists))
+      message(sprintf("       \u2022 %s...", summary_text))
+    }
+  }, error = function(e) {
+    results$errors <<- c(results$errors, paste("Codelists:", e$message))
+    if (verbose) message(sprintf("     \u2717 Codelists error: %s", e$message))
+  })
+  
+  # 3. Sync countries
+  tryCatch({
+    if (verbose) message("  \U0001F4C1 Fetching country codes...")
+    countries <- sync_countries(verbose = FALSE)
+    results$countries <- length(countries$countries)
+    results$files_created <- c(results$files_created, .metadata_config$FILE_COUNTRIES)
+    if (verbose) {
+      message(sprintf("     \u2713 %s - %d country codes", 
+                      .metadata_config$FILE_COUNTRIES, results$countries))
+    }
+  }, error = function(e) {
+    results$errors <<- c(results$errors, paste("Countries:", e$message))
+    if (verbose) message(sprintf("     \u2717 Countries error: %s", e$message))
+  })
+  
+  # 4. Sync regions
+  tryCatch({
+    if (verbose) message("  \U0001F4C1 Fetching regional codes...")
+    regions <- sync_regions(verbose = FALSE)
+    results$regions <- length(regions$regions)
+    results$files_created <- c(results$files_created, .metadata_config$FILE_REGIONS)
+    if (verbose) {
+      message(sprintf("     \u2713 %s - %d regional codes", 
+                      .metadata_config$FILE_REGIONS, results$regions))
+    }
+  }, error = function(e) {
+    results$errors <<- c(results$errors, paste("Regions:", e$message))
+    if (verbose) message(sprintf("     \u2717 Regions error: %s", e$message))
+  })
+  
+  # 5. Sync indicators
+  tryCatch({
+    if (verbose) message("  \U0001F4C1 Building indicator catalog...")
+    indicators <- sync_indicators(verbose = FALSE)
+    results$indicators <- length(indicators$indicators)
+    results$files_created <- c(results$files_created, .metadata_config$FILE_INDICATORS)
+    if (verbose) {
+      # Group by dataflow for summary
+      by_dataflow <- list()
+      for (ind in indicators$indicators) {
+        df <- ind$dataflow
+        if (is.null(by_dataflow[[df]])) by_dataflow[[df]] <- character()
+        by_dataflow[[df]] <- c(by_dataflow[[df]], ind$code)
+      }
+      message(sprintf("     \u2713 %s - %d indicators", 
+                      .metadata_config$FILE_INDICATORS, results$indicators))
+      shown <- 0
+      for (df_name in names(by_dataflow)[1:min(5, length(by_dataflow))]) {
+        codes <- by_dataflow[[df_name]]
+        message(sprintf("       \u2022 %s: %s indicators", df_name, 
+                       paste(codes[1:min(3, length(codes))], collapse = ", ")))
+        shown <- shown + 1
+      }
+      if (length(by_dataflow) > 5) {
+        message(sprintf("       \u2022 ... and %d more dataflows", length(by_dataflow) - 5))
+      }
+    }
+  }, error = function(e) {
+    results$errors <<- c(results$errors, paste("Indicators:", e$message))
+    if (verbose) message(sprintf("     \u2717 Indicators error: %s", e$message))
+  })
+  
+  # 6. Create vintage snapshot
+  .create_vintage(results$vintage_date, results, verbose = FALSE)
+  
+  # 7. Update sync history
+  .update_sync_history(results$vintage_date, results)
+  results$files_created <- c(results$files_created, .metadata_config$FILE_SYNC_HISTORY)
+  
+  # Summary
+  if (verbose) {
+    message(strrep("-", 80))
+    message("Summary:")
+    message(sprintf("  Total files created: %d", length(results$files_created)))
+    message(sprintf("  - Dataflows:   %d", results$dataflows))
+    message(sprintf("  - Indicators:  %d", results$indicators))
+    message(sprintf("  - Codelists:   %d", results$codelists))
+    message(sprintf("  - Countries:   %d", results$countries))
+    message(sprintf("  - Regions:     %d", results$regions))
+    if (length(results$errors) > 0) {
+      message(sprintf("  \u26A0\uFE0F  Errors: %d", length(results$errors)))
+      for (err in results$errors) {
+        message(sprintf("     - %s", err))
+      }
+    }
+    message(sprintf("  Vintage: %s", results$vintage_date))
+    message(strrep("=", 80))
   }
   
   invisible(results)
@@ -200,36 +306,36 @@ sync_dataflows <- function(verbose = TRUE) {
     )
   }
   
-  # Save to YAML
-  result <- list(
-    metadata_version = "1.0",
-    synced_at = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
-    source = url,
-    agency = .metadata_config$AGENCY,
-    dataflows = dataflows
+  # Save with watermark (matches Python format)
+  result <- .create_watermarked_list(
+    content_type = "dataflows",
+    source_url = url,
+    content = list(dataflows = dataflows),
+    counts = list(total_dataflows = length(dataflows))
   )
-  .save_yaml("dataflows.yaml", result)
+  .save_yaml(.metadata_config$FILE_DATAFLOWS, result)
   
   if (verbose) message(sprintf("    Found %d dataflows", length(dataflows)))
   
   invisible(result)
 }
 
-#' Sync codelist definitions from SDMX API
+#' Sync codelist definitions from SDMX API (excluding countries/regions)
 #'
-#' @param codelist_ids Vector of codelist IDs to sync (default: common codelists)
+#' @param codelist_ids Vector of codelist IDs to sync (default: common codelists, excluding CL_COUNTRY/CL_WORLD_REGIONS)
 #' @param verbose Print progress messages
 #' @return List with codelist metadata
 #' @export
 sync_codelists <- function(codelist_ids = NULL, verbose = TRUE) {
   if (is.null(codelist_ids)) {
+    # Codelists excluding CL_COUNTRY and CL_WORLD_REGIONS (handled separately)
     codelist_ids <- c(
-      "CL_REF_AREA",           # Countries/regions
       "CL_SEX",                # Sex disaggregation
       "CL_AGE",                # Age groups
       "CL_WEALTH_QUINTILE",    # Wealth quintiles
       "CL_RESIDENCE",          # Urban/rural
-      "CL_UNIT_MEASURE"        # Units of measure
+      "CL_UNIT_MEASURE",       # Units of measure
+      "CL_OBS_STATUS"          # Observation status
     )
   }
   
@@ -247,17 +353,82 @@ sync_codelists <- function(codelist_ids = NULL, verbose = TRUE) {
     })
   }
   
-  # Save to YAML
-  result <- list(
-    metadata_version = "1.0",
-    synced_at = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
-    source = sprintf("%s/codelist/%s", .metadata_config$BASE_URL, .metadata_config$AGENCY),
-    agency = .metadata_config$AGENCY,
-    codelists = codelists
+  # Build codes_per_list for watermark
+  codes_per_list <- lapply(codelists, function(cl) length(cl$codes))
+  
+  # Save with watermark (matches Python format)
+  result <- .create_watermarked_list(
+    content_type = "codelists",
+    source_url = sprintf("%s/codelist/%s", .metadata_config$BASE_URL, .metadata_config$AGENCY),
+    content = list(codelists = codelists),
+    counts = list(
+      total_codelists = length(codelists),
+      codes_per_list = codes_per_list
+    )
   )
-  .save_yaml("codelists.yaml", result)
+  .save_yaml(.metadata_config$FILE_CODELISTS, result)
   
   if (verbose) message(sprintf("    Found %d codelists", length(codelists)))
+  
+  invisible(result)
+}
+
+#' Sync country codes from CL_COUNTRY
+#'
+#' @param verbose Print progress messages
+#' @return List with country codes
+#' @export
+sync_countries <- function(verbose = TRUE) {
+  if (verbose) message("  Fetching country codes...")
+  
+  cl <- .fetch_codelist("CL_COUNTRY")
+  
+  countries <- list()
+  if (!is.null(cl)) {
+    countries <- cl$codes
+  }
+  
+  # Save with watermark
+  result <- .create_watermarked_list(
+    content_type = "countries",
+    source_url = sprintf("%s/codelist/%s/CL_COUNTRY/latest", 
+                         .metadata_config$BASE_URL, .metadata_config$AGENCY),
+    content = list(countries = countries),
+    counts = list(total_countries = length(countries))
+  )
+  .save_yaml(.metadata_config$FILE_COUNTRIES, result)
+  
+  if (verbose) message(sprintf("    Found %d country codes", length(countries)))
+  
+  invisible(result)
+}
+
+#' Sync regional/aggregate codes from CL_WORLD_REGIONS
+#'
+#' @param verbose Print progress messages
+#' @return List with regional codes
+#' @export
+sync_regions <- function(verbose = TRUE) {
+  if (verbose) message("  Fetching regional codes...")
+  
+  cl <- .fetch_codelist("CL_WORLD_REGIONS")
+  
+  regions <- list()
+  if (!is.null(cl)) {
+    regions <- cl$codes
+  }
+  
+  # Save with watermark
+  result <- .create_watermarked_list(
+    content_type = "regions",
+    source_url = sprintf("%s/codelist/%s/CL_WORLD_REGIONS/latest", 
+                         .metadata_config$BASE_URL, .metadata_config$AGENCY),
+    content = list(regions = regions),
+    counts = list(total_regions = length(regions))
+  )
+  .save_yaml(.metadata_config$FILE_REGIONS, result)
+  
+  if (verbose) message(sprintf("    Found %d regional codes", length(regions)))
   
   invisible(result)
 }
@@ -312,15 +483,27 @@ sync_indicators <- function(verbose = TRUE, use_shared_config = TRUE) {
     )
   }
   
-  # Save to YAML
-  result <- list(
-    metadata_version = "1.0",
-    synced_at = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
-    source = "unicefData package + SDMX API",
-    total_indicators = length(indicators),
-    indicators = indicators
+  # Group by dataflow for counts
+  indicators_by_dataflow <- list()
+  for (ind in indicators) {
+    df <- ind$dataflow
+    if (is.null(indicators_by_dataflow[[df]])) indicators_by_dataflow[[df]] <- character()
+    indicators_by_dataflow[[df]] <- c(indicators_by_dataflow[[df]], ind$code)
+  }
+  indicators_per_dataflow <- lapply(indicators_by_dataflow, length)
+  
+  # Save with watermark (matches Python format)
+  result <- .create_watermarked_list(
+    content_type = "indicators",
+    source_url = "unicef_api.config + SDMX API",
+    content = list(indicators = indicators),
+    counts = list(
+      total_indicators = length(indicators),
+      dataflows_covered = length(indicators_by_dataflow),
+      indicators_per_dataflow = indicators_per_dataflow
+    )
   )
-  .save_yaml("indicators.yaml", result)
+  .save_yaml(.metadata_config$FILE_INDICATORS, result)
   
   if (verbose) message(sprintf("    Cataloged %d indicators", length(indicators)))
   
@@ -907,8 +1090,8 @@ ensure_metadata <- function(max_age_days = 30, verbose = FALSE, cache_dir = NULL
   }
   cache_dir <- get_metadata_cache()
   
-  # Use sync_history.yaml to check freshness (matches Python structure)
-  history_file <- file.path(cache_dir, "sync_history.yaml")
+  # Use _unicefdata_sync_history.yaml to check freshness (matches Python structure)
+  history_file <- file.path(cache_dir, .metadata_config$FILE_SYNC_HISTORY)
   
   needs_sync <- TRUE
   
@@ -989,6 +1172,26 @@ ensure_metadata <- function(max_age_days = 30, verbose = FALSE, cache_dir = NULL
   })
 }
 
+#' Create a list with standardized watermark header (matches Python format)
+#' @keywords internal
+.create_watermarked_list <- function(content_type, source_url, content, counts) {
+  watermark <- list(
+    `_metadata` = c(
+      list(
+        platform = "R",
+        version = .metadata_config$METADATA_VERSION,
+        synced_at = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
+        source = source_url,
+        agency = .metadata_config$AGENCY,
+        content_type = content_type
+      ),
+      counts
+    )
+  )
+  # Merge watermark with content
+  c(watermark, content)
+}
+
 .save_yaml <- function(filename, data) {
   current_dir <- get_current_dir()
   if (!dir.exists(current_dir)) {
@@ -1021,12 +1224,23 @@ ensure_metadata <- function(max_age_days = 30, verbose = FALSE, cache_dir = NULL
   
   # Create vintages directory structure
   vintage_dir <- file.path(cache_dir, "vintages", vintage_date)
-  if (!dir.exists(vintage_dir)) {
-    dir.create(vintage_dir, recursive = TRUE)
+  
+  # Skip if vintage already exists (don't overwrite)
+  if (dir.exists(vintage_dir)) {
+    return(invisible(vintage_dir))
   }
   
-  # Copy current YAML files to vintage (from current/ subdirectory)
-  for (filename in c("dataflows.yaml", "codelists.yaml", "indicators.yaml")) {
+  dir.create(vintage_dir, recursive = TRUE)
+  
+  # Copy current YAML files to vintage (using new naming convention)
+  vintage_files <- c(
+    .metadata_config$FILE_DATAFLOWS,
+    .metadata_config$FILE_INDICATORS,
+    .metadata_config$FILE_CODELISTS,
+    .metadata_config$FILE_COUNTRIES,
+    .metadata_config$FILE_REGIONS
+  )
+  for (filename in vintage_files) {
     src <- file.path(current_dir, filename)
     if (file.exists(src)) {
       dst <- file.path(vintage_dir, filename)
@@ -1040,19 +1254,18 @@ ensure_metadata <- function(max_age_days = 30, verbose = FALSE, cache_dir = NULL
     created_at = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
     dataflows = results$dataflows,
     codelists = results$codelists,
-    indicators = results$indicators
+    indicators = results$indicators,
+    countries = results$countries,
+    regions = results$regions
   )
   yaml::write_yaml(summary, file.path(vintage_dir, "summary.yaml"))
-  
-  # Update sync history
-  .update_sync_history(vintage_date, results)
   
   invisible(vintage_dir)
 }
 
 .update_sync_history <- function(vintage_date, results) {
   cache_dir <- get_metadata_cache()
-  history_file <- file.path(cache_dir, "sync_history.yaml")
+  history_file <- file.path(cache_dir, .metadata_config$FILE_SYNC_HISTORY)
   
   # Load existing history
   if (file.exists(history_file)) {
@@ -1068,6 +1281,8 @@ ensure_metadata <- function(max_age_days = 30, verbose = FALSE, cache_dir = NULL
     dataflows = results$dataflows,
     indicators = results$indicators,
     codelists = results$codelists,
+    countries = results$countries,
+    regions = results$regions,
     errors = results$errors
   )
   
