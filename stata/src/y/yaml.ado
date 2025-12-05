@@ -1,6 +1,6 @@
 *******************************************************************************
 * yaml
-*! v 1.2.0   03Dec2025               by Joao Pedro Azevedo (UNICEF)
+*! v 1.3.0   04Dec2025               by Joao Pedro Azevedo (UNICEF)
 * Read and write YAML files in Stata
 *******************************************************************************
 
@@ -17,6 +17,7 @@ SYNTAX:
     yaml write using "filename.yaml" [, frame(name) options]
     yaml describe [, frame(name)]
     yaml list [keys] [, frame(name) options]
+    yaml dir [, detail]
     yaml frames [, detail]
     yaml clear [framename] [, all]
     
@@ -25,7 +26,8 @@ SUBCOMMANDS:
     write    - Write Stata data to YAML file
     describe - Display structure of loaded YAML data
     list     - List specific keys or all keys
-    frames   - List all YAML frames in memory
+    dir      - List all YAML data in memory (dataset and frames)
+    frames   - List only YAML frames in memory (Stata 16+)
     clear    - Clear YAML data from memory
     
 OPTIONS:
@@ -37,7 +39,8 @@ EXAMPLES:
     yaml describe                             // describes current dataset
     yaml describe, frame(cfg)                 // describes yaml_cfg frame
     yaml list indicators, values              // list values under indicators
-    yaml frames, detail                       // list all yaml frames
+    yaml dir, detail                          // list all yaml data in memory
+    yaml frames, detail                       // list only yaml frames
     yaml clear                                // clears current dataset
     yaml clear cfg                            // clears yaml_cfg frame
     yaml clear, all                           // clears all yaml frames
@@ -72,6 +75,9 @@ program define yaml
     else if ("`subcmd'" == "get") {
         yaml_get `0'
     }
+    else if ("`subcmd'" == "dir") {
+        yaml_dir `0'
+    }
     else if ("`subcmd'" == "frames" | "`subcmd'" == "frame") {
         yaml_frames `0'
     }
@@ -83,12 +89,12 @@ program define yaml
     }
     else if ("`subcmd'" == "") {
         di as err "subcommand required"
-        di as err "syntax: yaml {read|write|describe|list|get|validate|frames|clear} ..."
+        di as err "syntax: yaml {read|write|describe|list|get|validate|dir|frames|clear} ..."
         exit 198
     }
     else {
         di as err "unknown subcommand: `subcmd'"
-        di as err "valid subcommands: read, write, describe, list, get, validate, frames, clear"
+        di as err "valid subcommands: read, write, describe, list, get, validate, dir, frames, clear"
         exit 198
     }
 end
@@ -150,6 +156,8 @@ program define yaml_read, rclass
                 gen str244 parent = ""
                 gen str32 type = ""
             }
+            * Set characteristic to track YAML source
+            char _dta[yaml_source] "`using'"
         }
         local use_frame = 1
     }
@@ -169,6 +177,8 @@ program define yaml_read, rclass
             gen str244 parent = ""
             gen str32 type = ""
         }
+        * Set characteristic to track YAML source
+        char _dta[yaml_source] "`using'"
         local use_frame = 0
     }
     
@@ -1417,54 +1427,194 @@ end
 
 
 *******************************************************************************
-* yaml frames - List all YAML frames in memory (requires Stata 16+)
+* yaml dir - List all YAML data in memory (dataset and frames)
 *******************************************************************************
 
-program define yaml_frames
+program define yaml_dir, rclass
     version 14.0
     syntax [, DETail]
     
-    * Check Stata version
+    local total_count = 0
+    local frame_count = 0
+    local dataset_loaded = 0
+    
+    di as text ""
+    di as text "{hline 60}"
+    di as text "YAML Data in Memory"
+    di as text "{hline 60}"
+    
+    * -------------------------------------------------------------------------
+    * Check current dataset for YAML data
+    * -------------------------------------------------------------------------
+    * YAML data is identified by having the standard variables: key, value, level, parent, type
+    * and the characteristic _dta[yaml_source] set by yaml read
+    
+    local has_yaml_vars = 0
+    capture confirm variable key value level parent type
+    if (_rc == 0) {
+        local has_yaml_vars = 1
+    }
+    
+    local yaml_source : char _dta[yaml_source]
+    
+    if (`has_yaml_vars' == 1) {
+        local dataset_loaded = 1
+        local total_count = `total_count' + 1
+        
+        if ("`yaml_source'" != "") {
+            * YAML was loaded via yaml read
+            if ("`detail'" != "") {
+                quietly count
+                local nobs = r(N)
+                di as text "  Current dataset: {result:YAML loaded} ({result:`nobs'} entries)"
+                di as text "                   Source: `yaml_source'"
+            }
+            else {
+                di as text "  Current dataset: {result:YAML loaded} - `yaml_source'"
+            }
+        }
+        else {
+            * Has YAML structure but no source characteristic
+            if ("`detail'" != "") {
+                quietly count
+                local nobs = r(N)
+                di as text "  Current dataset: {result:YAML structure detected} ({result:`nobs'} entries)"
+                di as text "                   (source unknown - not loaded via yaml read)"
+            }
+            else {
+                di as text "  Current dataset: {result:YAML structure detected}"
+            }
+        }
+    }
+    else {
+        di as text "  Current dataset: (no YAML data)"
+    }
+    
+    * -------------------------------------------------------------------------
+    * Check frames for YAML data (Stata 16+)
+    * -------------------------------------------------------------------------
+    
+    if (`c(stata_version)' >= 16) {
+        di as text ""
+        di as text "  YAML Frames (yaml_* prefix):"
+        
+        quietly frames dir
+        local all_frames `r(frames)'
+        
+        foreach fr of local all_frames {
+            if (substr("`fr'", 1, 5) == "yaml_") {
+                local frame_count = `frame_count' + 1
+                local total_count = `total_count' + 1
+                local yaml_name = substr("`fr'", 6, .)
+                
+                if ("`detail'" != "") {
+                    * Get observation count and source
+                    frame `fr' {
+                        quietly count
+                        local nobs = r(N)
+                        local fr_source : char _dta[yaml_source]
+                    }
+                    if ("`fr_source'" != "") {
+                        di as text "    `frame_count'. {cmd:`yaml_name'} ({result:`nobs'} entries)"
+                        di as text "       Source: `fr_source'"
+                    }
+                    else {
+                        di as text "    `frame_count'. {cmd:`yaml_name'} ({result:`nobs'} entries)"
+                    }
+                }
+                else {
+                    di as text "    `frame_count'. {cmd:`yaml_name'}"
+                }
+            }
+        }
+        
+        if (`frame_count' == 0) {
+            di as text "    (no YAML frames loaded)"
+        }
+    }
+    else {
+        di as text ""
+        di as text "  YAML Frames: (requires Stata 16+)"
+    }
+    
+    di as text "{hline 60}"
+    if (`c(stata_version)' >= 16) {
+        di as text "Total: `total_count' YAML source(s) in memory"
+        di as text "       (`dataset_loaded' in dataset, `frame_count' in frames)"
+    }
+    else {
+        di as text "Total: `dataset_loaded' YAML source(s) in current dataset"
+    }
+    di as text ""
+    
+    * Return results
+    return scalar n_total = `total_count'
+    return scalar n_frames = `frame_count'
+    return scalar n_dataset = `dataset_loaded'
+end
+
+
+*******************************************************************************
+* yaml frames - List only YAML frames in memory (requires Stata 16+)
+*******************************************************************************
+
+program define yaml_frames, rclass
+    version 14.0
+    syntax [, DETail]
+    
+    * Check Stata version - frames require Stata 16+
     if (`c(stata_version)' < 16) {
         di as err "yaml frames requires Stata 16 or later"
+        di as err "Use {cmd:yaml dir} to check YAML data in current dataset"
         exit 198
     }
     
-    quietly frames dir
-    local all_frames `r(frames)'
-    local count = 0
+    local frame_count = 0
     
     di as text ""
     di as text "{hline 60}"
     di as text "YAML Frames in Memory"
     di as text "{hline 60}"
     
+    quietly frames dir
+    local all_frames `r(frames)'
+    
     foreach fr of local all_frames {
         if (substr("`fr'", 1, 5) == "yaml_") {
-            local count = `count' + 1
+            local frame_count = `frame_count' + 1
             local yaml_name = substr("`fr'", 6, .)
             
             if ("`detail'" != "") {
-                * Get observation count
+                * Get observation count and source
                 frame `fr' {
                     quietly count
                     local nobs = r(N)
+                    local fr_source : char _dta[yaml_source]
                 }
-                di as text "  `count'. {cmd:`yaml_name'} ({result:`nobs'} entries) - frame: `fr'"
+                if ("`fr_source'" != "") {
+                    di as text "  `frame_count'. {cmd:`yaml_name'} ({result:`nobs'} entries)"
+                    di as text "     Source: `fr_source'"
+                }
+                else {
+                    di as text "  `frame_count'. {cmd:`yaml_name'} ({result:`nobs'} entries)"
+                }
             }
             else {
-                di as text "  `count'. {cmd:`yaml_name'}"
+                di as text "  `frame_count'. {cmd:`yaml_name'}"
             }
         }
     }
     
-    if (`count' == 0) {
+    if (`frame_count' == 0) {
         di as text "  (no YAML frames loaded)"
     }
     
     di as text "{hline 60}"
-    di as text "Total: `count' YAML frame(s)"
+    di as text "Total: `frame_count' YAML frame(s)"
     di as text ""
+    
+    * Return results
+    return scalar n_frames = `frame_count'
 end
 
 

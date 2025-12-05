@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.2.0  03Dec2025}{...}
+{* *! version 1.3.0  04Dec2025}{...}
 {viewerjumpto "Syntax" "yaml##syntax"}{...}
 {viewerjumpto "Description" "yaml##description"}{...}
 {viewerjumpto "Subcommands" "yaml##subcommands"}{...}
@@ -32,7 +32,9 @@
 {synopt:{opt describe}}display structure of loaded YAML data{p_end}
 {synopt:{opt list}}list keys and values{p_end}
 {synopt:{opt get}}get metadata attributes for a specific key{p_end}
-{synopt:{opt frames}}list all YAML frames in memory (Stata 16+){p_end}
+{synopt:{opt validate}}validate YAML data against requirements{p_end}
+{synopt:{opt dir}}list all YAML data in memory (dataset and frames){p_end}
+{synopt:{opt frames}}list only YAML frames in memory (Stata 16+){p_end}
 {synopt:{opt clear}}clear YAML data from memory{p_end}
 {synoptline}
 {p2colreset}{...}
@@ -193,6 +195,38 @@ This is equivalent to searching for key {cmd:indicators_CME_MRY0T4_*}.
 {phang2}{cmd:r({it:attribute})} - value for each attribute found (e.g., r(label), r(unit)){p_end}
 
 
+{marker dir}{...}
+{title:yaml dir}
+
+{p 8 17 2}
+{cmd:yaml dir}
+[{cmd:,} {opt det:ail}]
+
+{pstd}
+Lists all YAML data currently loaded in memory. This includes both the current 
+dataset (if it contains YAML data) and any YAML frames (Stata 16+).
+
+{pstd}
+YAML data is identified by:
+{p_end}
+{phang2}1. Presence of standard YAML variables: {cmd:key}, {cmd:value}, {cmd:level}, {cmd:parent}, {cmd:type}{p_end}
+{phang2}2. The {cmd:_dta[yaml_source]} characteristic set by {cmd:yaml read}{p_end}
+{phang2}3. Frame names with {cmd:yaml_} prefix (for frames){p_end}
+
+{synoptset 20 tabbed}{...}
+{synopthdr:options}
+{synoptline}
+{synopt:{opt det:ail}}show number of entries and source file for each{p_end}
+{synoptline}
+
+{pstd}
+{bf:Stored results:}
+{p_end}
+{phang2}{cmd:r(n_total)} - total number of YAML sources in memory{p_end}
+{phang2}{cmd:r(n_dataset)} - 1 if YAML data in current dataset, 0 otherwise{p_end}
+{phang2}{cmd:r(n_frames)} - number of YAML frames loaded{p_end}
+
+
 {marker frames}{...}
 {title:yaml frames}
 
@@ -201,13 +235,22 @@ This is equivalent to searching for key {cmd:indicators_CME_MRY0T4_*}.
 [{cmd:,} {opt det:ail}]
 
 {pstd}
-Lists all YAML frames currently loaded in memory. Requires Stata 16+.
+Lists only YAML frames currently loaded in memory. Requires Stata 16+.
+Use {cmd:yaml dir} to see both the current dataset and frames.
+
+{pstd}
+YAML frames are identified by the {cmd:yaml_} prefix in their frame name.
 
 {synoptset 20 tabbed}{...}
 {synopthdr:options}
 {synoptline}
-{synopt:{opt det:ail}}show number of entries in each frame{p_end}
+{synopt:{opt det:ail}}show number of entries and source file for each frame{p_end}
 {synoptline}
+
+{pstd}
+{bf:Stored results:}
+{p_end}
+{phang2}{cmd:r(n_frames)} - number of YAML frames loaded{p_end}
 
 
 {marker clear}{...}
@@ -389,7 +432,7 @@ The {opt frame()} option requires Stata 16.0 or later.
 {title:Author}
 
 {pstd}
-Joao Pedro Azevedo{break}
+João Pedro Azevedo{break}
 UNICEF{break}
 jpazevedo@unicef.org
 
