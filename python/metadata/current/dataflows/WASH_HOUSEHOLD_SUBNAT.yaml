@@ -2,7 +2,7 @@ id: WASH_HOUSEHOLD_SUBNAT
 name: WASH Household subnational
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-07T08:54:12.227809+00:00'
+synced_at: '2025-12-07T12:49:30.993538+00:00'
 dimensions:
 - id: REF_AREA
   position: 1

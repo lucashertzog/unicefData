@@ -1,7 +1,7 @@
 _metadata:
   platform: Stata
   version: '2.0.0'
-  synced_at: '2025-12-07T03:43:51Z'
+  synced_at: '2025-12-07T08:59:50Z'
   source: unicef_api.config + SDMX API
   agency: UNICEF
   content_type: indicators

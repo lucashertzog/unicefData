@@ -163,13 +163,15 @@ program define unicefdata_xmltoyaml_py, rclass
         error 603
     }
     
-    * Count items by counting "- id:" lines in output file
+    * Count items by counting "    code: " lines in output file (dict format)
+    * The Python script outputs dict format: each item has "    code: XXX" line
     local count = 0
     tempname fh
     file open `fh' using "`outfile'", read text
     file read `fh' line
     while !r(eof) {
-        if (strpos(`"`line'"', "- id:") == 1) {
+        * Match lines that start with "    code: " (4 spaces + code:)
+        if (strmatch(`"`line'"', "    code: *") == 1) {
             local count = `count' + 1
         }
         file read `fh' line

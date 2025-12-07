@@ -31,7 +31,7 @@ WATERMARK FORMAT:
     - <counts>: item counts
     
 SYNTAX:
-    unicefdata_sync [, path(string) suffix(string) verbose force]
+    unicefdata_sync [, path(string) suffix(string) verbose force forcepython forcestata]
     
 OPTIONS:
     path(string)   - Directory for metadata files (default: auto-detect)
@@ -39,12 +39,17 @@ OPTIONS:
                      e.g., suffix("_stataonly") creates _unicefdata_dataflows_stataonly.yaml
     verbose        - Display detailed progress
     force          - Force sync even if cache is fresh
+    forcepython    - Force use of Python parser for XML processing (requires Python 3.6+)
+    forcestata     - Force use of pure Stata parser (no Python required)
     
 EXAMPLES:
     . unicefdata_sync
     . unicefdata_sync, verbose
     . unicefdata_sync, path("./metadata") verbose
     . unicefdata_sync, suffix("_stataonly") verbose
+    . unicefdata_sync, verbose forcepython     // Force Python parser
+    . unicefdata_sync, verbose forcestata      // Force pure Stata parser
+    . unicefdata_sync, verbose forcestata suffix("_stataonly")  // Stata parser with suffix
     
 REQUIRES:
     Stata 14.0+
@@ -58,7 +63,22 @@ SEE ALSO:
 program define unicefdata_sync, rclass
     version 14.0
     
-    syntax [, PATH(string) SUFFIX(string) VERBOSE FORCE]
+    syntax [, PATH(string) SUFFIX(string) VERBOSE FORCE FORCEPYTHON FORCESTATA]
+    
+    * Validate parser options
+    if ("`forcepython'" != "" & "`forcestata'" != "") {
+        di as err "Cannot specify both forcepython and forcestata options"
+        error 198
+    }
+    
+    * Set parser option for helper functions
+    local parser_opt ""
+    if ("`forcepython'" != "") {
+        local parser_opt "forcepython"
+    }
+    else if ("`forcestata'" != "") {
+        local parser_opt "forcestata"
+    }
     
     *---------------------------------------------------------------------------
     * Configuration
@@ -69,7 +89,7 @@ program define unicefdata_sync, rclass
     local metadata_version "2.0.0"
     
     * File names (matching Python/R convention)
-    * Apply suffix if specified (e.g., "_stataonly" -> "_unicefdata_dataflows_stataonly.yaml")
+    * Apply suffix if specified (e.g., suffix("_stataonly") creates _unicefdata_dataflows_stataonly.yaml)
     local sfx "`suffix'"
     local FILE_DATAFLOWS "_unicefdata_dataflows`sfx'.yaml"
     local FILE_INDICATORS "_unicefdata_indicators`sfx'.yaml"
@@ -147,6 +167,9 @@ program define unicefdata_sync, rclass
     
     if ("`verbose'" != "") {
         di as text "  📁 Fetching dataflows..."
+        if ("`parser_opt'" != "") {
+            di as text "     (using `parser_opt' parser)"
+        }
     }
     
     capture {
@@ -154,7 +177,8 @@ program define unicefdata_sync, rclass
             url("`base_url'/dataflow/`agency'?references=none&detail=full") ///
             outfile("`current_dir'`FILE_DATAFLOWS'") ///
             version("`metadata_version'") ///
-            agency("`agency'")
+            agency("`agency'") ///
+            `parser_opt'
         local n_dataflows = r(count)
         local files_created "`files_created' `FILE_DATAFLOWS'"
     }
@@ -212,7 +236,8 @@ program define unicefdata_sync, rclass
             contenttype("countries") ///
             version("`metadata_version'") ///
             agency("`agency'") ///
-            codelistid("CL_COUNTRY")
+            codelistid("CL_COUNTRY") ///
+            `parser_opt'
         local n_countries = r(count)
         local files_created "`files_created' `FILE_COUNTRIES'"
     }
@@ -242,7 +267,8 @@ program define unicefdata_sync, rclass
             contenttype("regions") ///
             version("`metadata_version'") ///
             agency("`agency'") ///
-            codelistid("CL_WORLD_REGIONS")
+            codelistid("CL_WORLD_REGIONS") ///
+            `parser_opt'
         local n_regions = r(count)
         local files_created "`files_created' `FILE_REGIONS'"
     }
@@ -405,22 +431,6 @@ program define unicefdata_sync, rclass
         }
         di as text "  Vintage: " as result "`vintage_date'"
         di as text _dup(80) "="
-        
-        * Display warning about limitations when using pure Stata
-        if ("`sfx'" != "" | `n_schemas' == 0) {
-            di as text ""
-            di as text "{p 0 4 2}{bf:⚠️  KNOWN LIMITATIONS:}{p_end}"
-            di as text "{p 4 8 2}The pure Stata XML parser has limitations with large XML files due to Stata's macro length restrictions (error 920).{p_end}"
-            di as text "{p 4 8 2}The following features may be incomplete:{p_end}"
-            di as text "{p 8 12 2}- {bf:dataflow_index.yaml}: May have empty dataflows list{p_end}"
-            di as text "{p 8 12 2}- {bf:dataflows/*.yaml}: Individual schema files may not be generated{p_end}"
-            di as text ""
-            di as text "{p 4 8 2}{bf:RECOMMENDATION}: For complete metadata extraction, use the Python-assisted version:{p_end}"
-            di as text "{p 8 12 2}{cmd:. unicefdata_sync, verbose} {it:(without suffix)}{p_end}"
-            di as text "{p 4 8 2}Or use the Python library directly:{p_end}"
-            di as text "{p 8 12 2}{cmd:python: from unicef_api.schema_sync import sync_all; sync_all()}{p_end}"
-            di as text ""
-        }
     }
     else {
         di as text "[OK] Sync complete: " ///
@@ -429,11 +439,6 @@ program define unicefdata_sync, rclass
             as result "`n_codelists'" as text " codelists, " ///
             as result "`n_countries'" as text " countries, " ///
             as result "`n_regions'" as text " regions"
-            
-        * Brief warning for non-verbose mode
-        if ("`sfx'" != "" | `n_schemas' == 0) {
-            di as text "{p 0 4 2}{bf:Note}: Some extended features may be incomplete due to Stata's macro length limits. See {help unicefdata_sync:help} for details.{p_end}"
-        }
     }
     
     *---------------------------------------------------------------------------
@@ -454,10 +459,11 @@ end
 *******************************************************************************
 * Helper: Sync dataflows from API
 * Uses wbopendata-style line-by-line XML parsing with filefilter preprocessing
+* Optionally uses Python-based unicefdata_xmltoyaml for robust large-file parsing
 *******************************************************************************
 
 program define _unicefdata_sync_dataflows, rclass
-    syntax, URL(string) OUTFILE(string) VERSION(string) AGENCY(string)
+    syntax, URL(string) OUTFILE(string) VERSION(string) AGENCY(string) [FORCEPYTHON FORCESTATA]
     
     * Get timestamp
     local synced_at : di %tcCCYY-NN-DD!THH:MM:SS clock("`c(current_date)' `c(current_time)'", "DMYhms")
@@ -467,80 +473,124 @@ program define _unicefdata_sync_dataflows, rclass
     tempfile xmlfile txtfile
     capture copy "`url'" "`xmlfile'", public replace
     
-    local n_dataflows = 0
+    if (_rc != 0) {
+        di as err "     Failed to download dataflows from API"
+        return scalar count = 0
+        exit
+    }
     
+    local n_dataflows = 0
+    local use_python = 0
+    
+    * Try Python parser if forcepython is specified
+    if ("`forcepython'" != "") {
+        capture noisily unicefdata_xmltoyaml, ///
+            type(dataflows) ///
+            xmlfile("`xmlfile'") ///
+            outfile("`outfile'") ///
+            agency("`agency'") ///
+            version("`version'") ///
+            contenttype(dataflows) ///
+            syncedat("`synced_at'") ///
+            source("`url'") ///
+            forcepython
+        
+        if (_rc == 0) {
+            local use_python = 1
+            return scalar count = r(count)
+            exit
+        }
+        else {
+            di as err "     Python parser failed (rc=`=_rc'), cannot proceed with forcepython"
+            error _rc
+        }
+    }
+    
+    * Use inline Stata parsing (default or forcestata)
     * Create temporary file to store parsed dataflows
     tempfile df_data
     tempname dfh
     file open `dfh' using "`df_data'", write text replace
     
+    * Split XML into lines using filefilter (XML comes as single line)
+    capture filefilter "`xmlfile'" "`txtfile'", from("<str:Dataflow") to("\n<str:Dataflow") replace
+    
     if (_rc == 0) {
-        * Split XML into lines using filefilter (XML comes as single line)
-        capture filefilter "`xmlfile'" "`txtfile'", from("<str:Dataflow") to("\n<str:Dataflow") replace
+        * Parse line-by-line (wbopendata approach)
+        tempname infh
+        capture file open `infh' using "`txtfile'", read
         
         if (_rc == 0) {
-            * Parse line-by-line (wbopendata approach)
-            tempname infh
-            capture file open `infh' using "`txtfile'", read
+            file read `infh' line
             
-            if (_rc == 0) {
-                file read `infh' line
-                
-                while !r(eof) {
-                    * Match dataflow: <str:Dataflow ... id="XXXX" version="Y.Y" ...>
-                    if (strmatch(`"`line'"', "*<str:Dataflow *id=*") == 1) {
-                        local tmp = `"`line'"'
-                        local current_id ""
-                        local current_version ""
-                        local current_name ""
-                        
-                        * Extract id
-                        local pos = strpos(`"`tmp'"', `"id=""')
-                        if (`pos' > 0) {
-                            local tmp2 = substr(`"`tmp'"', `pos' + 4, .)
-                            local pos2 = strpos(`"`tmp2'"', `"""')
-                            if (`pos2' > 0) {
-                                local current_id = substr(`"`tmp2'"', 1, `pos2' - 1)
-                                local current_id = trim("`current_id'")
-                            }
-                        }
-                        
-                        * Extract version
-                        local pos = strpos(`"`tmp'"', `"version=""')
-                        if (`pos' > 0) {
-                            local tmp2 = substr(`"`tmp'"', `pos' + 9, .)
-                            local pos2 = strpos(`"`tmp2'"', `"""')
-                            if (`pos2' > 0) {
-                                local current_version = substr(`"`tmp2'"', 1, `pos2' - 1)
-                                local current_version = trim("`current_version'")
-                            }
-                        }
-                        
-                        * Extract name from <com:Name xml:lang="en">...</com:Name>
-                        local pos = strpos(`"`tmp'"', `"<com:Name xml:lang="en">"')
-                        if (`pos' > 0) {
-                            local tmp2 = substr(`"`tmp'"', `pos' + 24, .)
-                            local pos2 = strpos(`"`tmp2'"', "</com:Name>")
-                            if (`pos2' > 0) {
-                                local current_name = substr(`"`tmp2'"', 1, `pos2' - 1)
-                                local current_name = trim("`current_name'")
-                                * Escape single quotes for YAML
-                                local current_name = subinstr(`"`current_name'"', "'", "''", .)
-                            }
-                        }
-                        
-                        * Store dataflow info
-                        if ("`current_id'" != "") {
-                            local n_dataflows = `n_dataflows' + 1
-                            file write `dfh' "`current_id'|`current_version'|`current_name'" _n
+            while !r(eof) {
+                * Match dataflow: <str:Dataflow ... id="XXXX" version="Y.Y" ...>
+                if (strmatch(`"`line'"', "*<str:Dataflow *id=*") == 1) {
+                    local tmp = `"`line'"'
+                    local current_id ""
+                    local current_version ""
+                    local current_name ""
+                    local current_desc ""
+                    
+                    * Extract id
+                    local pos = strpos(`"`tmp'"', `"id=""')
+                    if (`pos' > 0) {
+                        local tmp2 = substr(`"`tmp'"', `pos' + 4, .)
+                        local pos2 = strpos(`"`tmp2'"', `"""')
+                        if (`pos2' > 0) {
+                            local current_id = substr(`"`tmp2'"', 1, `pos2' - 1)
+                            local current_id = trim("`current_id'")
                         }
                     }
                     
-                    file read `infh' line
+                    * Extract version
+                    local pos = strpos(`"`tmp'"', `"version=""')
+                    if (`pos' > 0) {
+                        local tmp2 = substr(`"`tmp'"', `pos' + 9, .)
+                        local pos2 = strpos(`"`tmp2'"', `"""')
+                        if (`pos2' > 0) {
+                            local current_version = substr(`"`tmp2'"', 1, `pos2' - 1)
+                            local current_version = trim("`current_version'")
+                        }
+                    }
+                    
+                    * Extract name from <com:Name xml:lang="en">...</com:Name>
+                    local pos = strpos(`"`tmp'"', `"<com:Name xml:lang="en">"')
+                    if (`pos' > 0) {
+                        local tmp2 = substr(`"`tmp'"', `pos' + 24, .)
+                        local pos2 = strpos(`"`tmp2'"', "</com:Name>")
+                        if (`pos2' > 0) {
+                            local current_name = substr(`"`tmp2'"', 1, `pos2' - 1)
+                            local current_name = trim("`current_name'")
+                            * Escape single quotes for YAML
+                            local current_name = subinstr(`"`current_name'"', "'", "''", .)
+                        }
+                    }
+                    
+                    * Extract description from <com:Description xml:lang="en">...</com:Description>
+                    local pos = strpos(`"`tmp'"', `"<com:Description xml:lang="en">"')
+                    if (`pos' > 0) {
+                        local tmp2 = substr(`"`tmp'"', `pos' + 31, .)
+                        local pos2 = strpos(`"`tmp2'"', "</com:Description>")
+                        if (`pos2' > 0) {
+                            local current_desc = substr(`"`tmp2'"', 1, `pos2' - 1)
+                            local current_desc = trim("`current_desc'")
+                            * Escape single quotes for YAML
+                            local current_desc = subinstr(`"`current_desc'"', "'", "''", .)
+                        }
+                    }
+                    
+                    * Store dataflow info (id|version|name|description)
+                    if ("`current_id'" != "") {
+                        local n_dataflows = `n_dataflows' + 1
+                        file write `dfh' "`current_id'|`current_version'|`current_name'|`current_desc'" _n
+                    }
                 }
                 
-                file close `infh'
+                file read `infh' line
             }
+            
+            file close `infh'
         }
     }
     
@@ -575,10 +625,11 @@ program define _unicefdata_sync_dataflows, rclass
         if (_rc == 0) {
             file read `infh' line
             while !r(eof) {
-                * Parse pipe-delimited: id|version|name
+                * Parse pipe-delimited: id|version|name|description
                 local df_id = ""
                 local df_ver = ""
                 local df_name = ""
+                local df_desc = ""
                 
                 local pos1 = strpos(`"`line'"', "|")
                 if (`pos1' > 0) {
@@ -587,16 +638,34 @@ program define _unicefdata_sync_dataflows, rclass
                     local pos2 = strpos(`"`rest'"', "|")
                     if (`pos2' > 0) {
                         local df_ver = substr(`"`rest'"', 1, `pos2' - 1)
-                        local df_name = substr(`"`rest'"', `pos2' + 1, .)
+                        local rest2 = substr(`"`rest'"', `pos2' + 1, .)
+                        local pos3 = strpos(`"`rest2'"', "|")
+                        if (`pos3' > 0) {
+                            local df_name = substr(`"`rest2'"', 1, `pos3' - 1)
+                            local df_desc = substr(`"`rest2'"', `pos3' + 1, .)
+                        }
+                        else {
+                            local df_name = `"`rest2'"'
+                        }
                     }
                 }
                 
                 if ("`df_id'" != "") {
                     file write `fh' "  `df_id':" _n
                     file write `fh' "    id: `df_id'" _n
-                    file write `fh' "    name: '`df_name''" _n
+                    file write `fh' "    name: `df_name'" _n
                     file write `fh' "    agency: `agency'" _n
                     file write `fh' "    version: '`df_ver''" _n
+                    * Add fields to match Python format
+                    if (`"`df_desc'"' != "") {
+                        file write `fh' `"    description: `df_desc'"' _n
+                    }
+                    else {
+                        file write `fh' "    description: null" _n
+                    }
+                    file write `fh' "    dimensions: null" _n
+                    file write `fh' "    indicators: null" _n
+                    file write `fh' "    last_updated: '`synced_at''" _n
                 }
                 
                 file read `infh' line
@@ -743,34 +812,34 @@ end
 *******************************************************************************
 
 program define _unicefdata_sync_cl_single, rclass
-    syntax, URL(string) OUTFILE(string) CONTENTTYPE(string) VERSION(string) AGENCY(string) CODELISTID(string)
+    syntax, URL(string) OUTFILE(string) CONTENTTYPE(string) VERSION(string) AGENCY(string) CODELISTID(string) [FORCEPYTHON FORCESTATA]
     
     * Get timestamp
     local synced_at : di %tcCCYY-NN-DD!THH:MM:SS clock("`c(current_date)' `c(current_time)'", "DMYhms")
     local synced_at = trim("`synced_at'") + "Z"
     
     * Download XML using the 'public' option (critical for HTTPS)
-    local n_codes = 0
-    local api_success = 0
-    local codelist_name ""
-    
     tempfile xmlfile txtfile
     capture copy "`url'" "`xmlfile'", public replace
     
-    if (_rc == 0) {
-        * Split XML into lines at each Code element
-        capture filefilter "`xmlfile'" "`txtfile'", from("<str:Code") to("\n<str:Code") replace
+    if (_rc != 0) {
+        di as err "     Failed to download codelist from API"
+        return scalar count = 0
+        exit
+    }
+    
+    * Try Python parser if forcepython is specified
+    if ("`forcepython'" != "") {
+        * First extract codelist name for metadata
+        local codelist_name ""
+        capture filefilter "`xmlfile'" "`txtfile'", from("<str:Codelist") to("\n<str:Codelist") replace
         if (_rc == 0) {
-            local api_success = 1
-            
-            * First pass: count codes and extract codelist name
             tempname infh
             capture file open `infh' using "`txtfile'", read
             if (_rc == 0) {
                 file read `infh' line
-                while !r(eof) {
-                    * Extract codelist name from <str:Codelist ...><com:Name...>NAME</com:Name>
-                    if (strmatch(`"`line'"', "*<str:Codelist*") == 1 & "`codelist_name'" == "") {
+                while !r(eof) & "`codelist_name'" == "" {
+                    if (strmatch(`"`line'"', "*<str:Codelist*") == 1) {
                         local tmp = `"`line'"'
                         local pos = strpos(`"`tmp'"', `"<com:Name xml:lang="en">"')
                         if (`pos' > 0) {
@@ -782,14 +851,71 @@ program define _unicefdata_sync_cl_single, rclass
                             }
                         }
                     }
-                    * Match <str:Code (with space) to exclude <str:Codelist
-                    if (strmatch(`"`line'"', "*<str:Code *id=*") == 1) {
-                        local n_codes = `n_codes' + 1
-                    }
                     file read `infh' line
                 }
                 file close `infh'
             }
+        }
+        
+        capture noisily unicefdata_xmltoyaml, ///
+            type(`contenttype') ///
+            xmlfile("`xmlfile'") ///
+            outfile("`outfile'") ///
+            agency("`agency'") ///
+            version("`version'") ///
+            contenttype(`contenttype') ///
+            codelistid("`codelistid'") ///
+            codelistname("`codelist_name'") ///
+            syncedat("`synced_at'") ///
+            source("`url'") ///
+            forcepython
+        
+        if (_rc == 0) {
+            return scalar count = r(count)
+            exit
+        }
+        else {
+            di as err "     Python parser failed (rc=`=_rc'), cannot proceed with forcepython"
+            error _rc
+        }
+    }
+    
+    * Use inline Stata parsing (default or forcestata)
+    local n_codes = 0
+    local api_success = 0
+    local codelist_name ""
+    
+    * Split XML into lines at each Code element
+    capture filefilter "`xmlfile'" "`txtfile'", from("<str:Code") to("\n<str:Code") replace
+    if (_rc == 0) {
+        local api_success = 1
+        
+        * First pass: count codes and extract codelist name
+        tempname infh
+        capture file open `infh' using "`txtfile'", read
+        if (_rc == 0) {
+            file read `infh' line
+            while !r(eof) {
+                * Extract codelist name from <str:Codelist ...><com:Name...>NAME</com:Name>
+                if (strmatch(`"`line'"', "*<str:Codelist*") == 1 & "`codelist_name'" == "") {
+                    local tmp = `"`line'"'
+                    local pos = strpos(`"`tmp'"', `"<com:Name xml:lang="en">"')
+                    if (`pos' > 0) {
+                        local tmp2 = substr(`"`tmp'"', `pos' + 24, .)
+                        local pos2 = strpos(`"`tmp2'"', "</com:Name>")
+                        if (`pos2' > 0) {
+                            local codelist_name = substr(`"`tmp2'"', 1, `pos2' - 1)
+                            local codelist_name = trim("`codelist_name'")
+                        }
+                    }
+                }
+                * Match <str:Code (with space) to exclude <str:Codelist
+                if (strmatch(`"`line'"', "*<str:Code *id=*") == 1) {
+                    local n_codes = `n_codes' + 1
+                }
+                file read `infh' line
+            }
+            file close `infh'
         }
     }
     
@@ -1473,14 +1599,6 @@ program define _unicefdata_sync_ind_meta, rclass
     tempname fh
     file open `fh' using "`outfile'", write text replace
     
-    * Write metadata header matching Python/R format
-    file write `fh' "metadata:" _n
-    file write `fh' "  version: '1.0'" _n
-    file write `fh' "  source: UNICEF SDMX Codelist CL_UNICEF_INDICATOR" _n
-    file write `fh' "  url: `url'" _n
-    file write `fh' "  last_updated: '`synced_at''" _n
-    file write `fh' "  description: Comprehensive UNICEF indicator codelist with metadata (auto-generated)" _n
-    file write `fh' "  platform: stata" _n
     file write `fh' "indicators:" _n
     
     if (_rc == 0) {
