@@ -172,7 +172,12 @@ SDMX_NS <- c(
 .save_yaml <- function(filename, data, output_dir) {
   filepath <- file.path(output_dir, filename)
   yaml_content <- yaml::as.yaml(data, indent.mapping.sequence = TRUE)
-  writeLines(yaml_content, filepath, useBytes = TRUE)
+  # Standardize null representation: use 'null' instead of '~' (matching Python)
+  yaml_content <- gsub(": ~$", ": null", yaml_content)
+  yaml_content <- gsub(": ~\n", ": null\n", yaml_content)
+  # Remove trailing newlines and use cat to avoid extra newline from writeLines
+  yaml_content <- sub("\n+$", "", yaml_content)
+  cat(yaml_content, "\n", file = filepath, sep = "")
   invisible(filepath)
 }
 
@@ -257,6 +262,8 @@ sync_dataflows <- function(verbose = TRUE, output_dir = NULL) {
       agency = agency,
       version = version,
       description = if (is.na(description)) NULL else description,
+      dimensions = NULL,
+      indicators = NULL,
       last_updated = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC")
     )
   }
@@ -469,7 +476,12 @@ sync_indicators <- function(dataflows = NULL, verbose = TRUE, output_dir = NULL)
     indicators[[ind_code]] <- list(
       code = ind_code,
       name = ind_info$name,
-      dataflow = df_id
+      dataflow = df_id,
+      sdg_target = if (!is.null(ind_info$sdg)) ind_info$sdg else NULL,
+      unit = if (!is.null(ind_info$unit)) ind_info$unit else NULL,
+      description = NULL,
+      dimensions = NULL,
+      source = "config"
     )
     
     if (is.null(indicators_by_dataflow[[df_id]])) {
@@ -479,16 +491,19 @@ sync_indicators <- function(dataflows = NULL, verbose = TRUE, output_dir = NULL)
   }
   
   # Save with watermark - note source is now shared config
+  # Use named list for indicators_per_dataflow (matching Python format)
+  ind_counts <- as.list(sapply(indicators_by_dataflow, length))
+  
   data <- .create_watermarked(
     content_type = "indicators",
-    source_url = "config/common_indicators.yaml",
+    source_url = "unicef_api.config + SDMX API",
     content = list(
       indicators = indicators
     ),
     counts = list(
       total_indicators = length(indicators),
       dataflows_covered = length(indicators_by_dataflow),
-      indicators_per_dataflow = sapply(indicators_by_dataflow, length)
+      indicators_per_dataflow = ind_counts
     )
   )
   .save_yaml(FILE_INDICATORS, data, output_dir)

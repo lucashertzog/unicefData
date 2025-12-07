@@ -541,12 +541,18 @@ class MetadataSync:
             Tuple of (indicators dict, indicators_by_dataflow dict)
         """
         if verbose:
-            print("  Building indicator catalog...")
+            print("  Building indicator catalog from shared config...")
         
+        # Try to load from shared config file (same as R)
         try:
-            from unicef_api.config import COMMON_INDICATORS
-        except ImportError:
-            COMMON_INDICATORS = {}
+            from unicef_api.config_loader import load_shared_indicators
+            COMMON_INDICATORS = load_shared_indicators()
+        except (ImportError, FileNotFoundError):
+            # Fall back to hardcoded config
+            try:
+                from unicef_api.config import COMMON_INDICATORS
+            except ImportError:
+                COMMON_INDICATORS = {}
         
         indicators = {}
         indicators_by_dataflow = {}
