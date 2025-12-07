@@ -2,7 +2,7 @@ id: WASH_HOUSEHOLDS
 name: WASH Households
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-03T05:00:33.840799+00:00'
+synced_at: '2025-12-07T07:13:08.958360+00:00'
 dimensions:
 - id: REF_AREA
   position: 1

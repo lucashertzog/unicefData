@@ -1,11 +1,13 @@
 _metadata:
   platform: R
   version: 2.0.0
-  synced_at: '2025-12-05T10:13:00Z'
+  synced_at: '2025-12-07T07:24:06Z'
   source: https://sdmx.data.unicef.org/ws/public/sdmxapi/rest/codelist/UNICEF/CL_WORLD_REGIONS/latest
   agency: UNICEF
   content_type: regions
   total_regions: 111
+  codelist_id: CL_WORLD_REGIONS
+  codelist_name: World Geographic Regions
 regions:
   FAO_LIFDC: Low-Income Food-Deficit Countries
   UNDEV_002: Africa
@@ -119,3 +121,4 @@ regions:
   UNDEV_054: Melanesia
   UNDEV_057: Micronesia
   UNDEV_061: Polynesia
+

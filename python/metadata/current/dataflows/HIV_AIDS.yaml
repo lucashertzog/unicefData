@@ -2,7 +2,7 @@ id: HIV_AIDS
 name: HIV/AIDS
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-03T05:00:12.347302+00:00'
+synced_at: '2025-12-07T07:12:46.847479+00:00'
 dimensions:
 - id: REF_AREA
   position: 1

@@ -1,11 +1,13 @@
 _metadata:
   platform: R
   version: 2.0.0
-  synced_at: '2025-12-05T10:12:59Z'
+  synced_at: '2025-12-07T07:24:06Z'
   source: https://sdmx.data.unicef.org/ws/public/sdmxapi/rest/codelist/UNICEF/CL_COUNTRY/latest
   agency: UNICEF
   content_type: countries
   total_countries: 453
+  codelist_id: CL_COUNTRY
+  codelist_name: Statistical Reference Areas
 countries:
   ABW: Aruba
   AFG: Afghanistan
@@ -98,7 +100,7 @@ countries:
   GUF: French Guiana
   GUM: Guam
   GUY: Guyana
-  HKG: <U+0627><U+0644><U+0635><U+064A><U+0646><U+060C> <U+0645><U+0646><U+0637><U+0642><U+0629> <U+0647><U+0648><U+0646><U+063A> <U+0643><U+0648><U+0646><U+063A> <U+0627><U+0644><U+0625><U+062F><U+0627><U+0631><U+064A><U+0629> <U+0627><U+0644><U+062E><U+0627><U+0635><U+0629>
+  HKG: الصين، منطقة هونغ كونغ الإدارية الخاصة
   HND: Honduras
   HRV: Croatia
   HTI: Haiti
@@ -134,7 +136,7 @@ countries:
   LTU: Lithuania
   LUX: Luxembourg
   LVA: Latvia
-  MAC: <U+0627><U+0644><U+0635><U+064A><U+0646><U+060C> <U+0645><U+0646><U+0637><U+0642><U+0629> <U+0645><U+0627><U+0643><U+0627><U+0648> <U+0627><U+0644><U+0625><U+062F><U+0627><U+0631><U+064A><U+0629> <U+0627><U+0644><U+062E><U+0627><U+0635><U+0629>
+  MAC: الصين، منطقة ماكاو الإدارية الخاصة
   MAF: Saint Martin (French part)
   MAR: Morocco
   MCO: Monaco
@@ -164,7 +166,7 @@ countries:
   NGA: Nigeria
   NIC: Nicaragua
   NIU: Niue
-  NLD: <U+0647><U+0648><U+0644><U+0646><U+062F><U+0627>
+  NLD: هولندا
   NOR: Norway
   NPL: Nepal
   NRU: Nauru
@@ -207,7 +209,7 @@ countries:
   SVN: Slovenia
   SWE: Sweden
   SWZ: Eswatini
-  SXM: <U+0633><U+0627><U+0646><U+062A> <U+0645><U+0627><U+0631><U+062A><U+0646> (<U+0627><U+0644><U+062C><U+0632><U+0621> <U+0627><U+0644><U+0647><U+0648><U+0644><U+0646><U+062F><U+064A>)
+  SXM: سانت مارتن (الجزء الهولندي)
   SYC: Seychelles
   SYR: Syrian Arab Republic
   TCA: Turks and Caicos Islands
@@ -221,7 +223,7 @@ countries:
   TON: Tonga
   TTO: Trinidad and Tobago
   TUN: Tunisia
-  TUR: <U+062A><U+0631><U+0643><U+064A><U+0627>
+  TUR: تركيا
   TUV: Tuvalu
   TWN: Taïwan
   TZA: United Republic of Tanzania
@@ -460,3 +462,4 @@ countries:
   UNSDG_WESTERNEUROPE: Western Europe (UNSDG)
   UNSDG_MICRONESIA: Micronesia (UNSDG)
   WB_ECA: Europe and Central Asia (World Bank regions)
+

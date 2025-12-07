@@ -31,17 +31,20 @@ WATERMARK FORMAT:
     - <counts>: item counts
     
 SYNTAX:
-    unicefdata_sync [, path(string) verbose force]
+    unicefdata_sync [, path(string) suffix(string) verbose force]
     
 OPTIONS:
-    path(string) - Directory for metadata files (default: auto-detect)
-    verbose      - Display detailed progress
-    force        - Force sync even if cache is fresh
+    path(string)   - Directory for metadata files (default: auto-detect)
+    suffix(string) - Suffix to append to filenames before .yaml extension
+                     e.g., suffix("_stataonly") creates _unicefdata_dataflows_stataonly.yaml
+    verbose        - Display detailed progress
+    force          - Force sync even if cache is fresh
     
 EXAMPLES:
     . unicefdata_sync
     . unicefdata_sync, verbose
     . unicefdata_sync, path("./metadata") verbose
+    . unicefdata_sync, suffix("_stataonly") verbose
     
 REQUIRES:
     Stata 14.0+
@@ -55,7 +58,7 @@ SEE ALSO:
 program define unicefdata_sync, rclass
     version 14.0
     
-    syntax [, PATH(string) VERBOSE FORCE]
+    syntax [, PATH(string) SUFFIX(string) VERBOSE FORCE]
     
     *---------------------------------------------------------------------------
     * Configuration
@@ -66,12 +69,16 @@ program define unicefdata_sync, rclass
     local metadata_version "2.0.0"
     
     * File names (matching Python/R convention)
-    local FILE_DATAFLOWS "_unicefdata_dataflows.yaml"
-    local FILE_INDICATORS "_unicefdata_indicators.yaml"
-    local FILE_CODELISTS "_unicefdata_codelists.yaml"
-    local FILE_COUNTRIES "_unicefdata_countries.yaml"
-    local FILE_REGIONS "_unicefdata_regions.yaml"
-    local FILE_SYNC_HISTORY "_unicefdata_sync_history.yaml"
+    * Apply suffix if specified (e.g., "_stataonly" -> "_unicefdata_dataflows_stataonly.yaml")
+    local sfx "`suffix'"
+    local FILE_DATAFLOWS "_unicefdata_dataflows`sfx'.yaml"
+    local FILE_INDICATORS "_unicefdata_indicators`sfx'.yaml"
+    local FILE_CODELISTS "_unicefdata_codelists`sfx'.yaml"
+    local FILE_COUNTRIES "_unicefdata_countries`sfx'.yaml"
+    local FILE_REGIONS "_unicefdata_regions`sfx'.yaml"
+    local FILE_SYNC_HISTORY "_unicefdata_sync_history`sfx'.yaml"
+    local FILE_IND_META "unicef_indicators_metadata`sfx'.yaml"
+    local FILE_DF_INDEX "dataflow_index`sfx'.yaml"
     
     * Get current timestamp
     local synced_at : di %tcCCYY-NN-DD!THH:MM:SS clock("`c(current_date)' `c(current_time)'", "DMYhms")
@@ -199,7 +206,7 @@ program define unicefdata_sync, rclass
     }
     
     capture noisily {
-        _unicefdata_sync_codelist_single, ///
+        _unicefdata_sync_cl_single, ///
             url("`base_url'/codelist/`agency'/CL_COUNTRY/latest") ///
             outfile("`current_dir'`FILE_COUNTRIES'") ///
             contenttype("countries") ///
@@ -229,7 +236,7 @@ program define unicefdata_sync, rclass
     }
     
     capture noisily {
-        _unicefdata_sync_codelist_single, ///
+        _unicefdata_sync_cl_single, ///
             url("`base_url'/codelist/`agency'/CL_WORLD_REGIONS/latest") ///
             outfile("`current_dir'`FILE_REGIONS'") ///
             contenttype("regions") ///
@@ -278,7 +285,62 @@ program define unicefdata_sync, rclass
     }
     
     *---------------------------------------------------------------------------
-    * 6. Create vintage snapshot
+    * 6. Extended Sync: Dataflow Index and Schemas (dataflows/ folder)
+    *---------------------------------------------------------------------------
+    
+    if ("`verbose'" != "") {
+        di as text "  📁 Syncing dataflow schemas (extended)..."
+    }
+    
+    local n_schemas = 0
+    capture noisily {
+        _unicefdata_sync_dataflow_index, ///
+            outdir("`current_dir'") ///
+            agency("`agency'") ///
+            suffix("`sfx'")
+        local n_schemas = r(count)
+        local files_created "`files_created' `FILE_DF_INDEX'"
+    }
+    
+    if (_rc != 0) {
+        local errors "`errors' DataflowIndex: `=_rc'"
+        if ("`verbose'" != "") {
+            di as err "     ✗ Dataflow index error: " _rc
+        }
+    }
+    else if ("`verbose'" != "") {
+        di as text "     ✓ `FILE_DF_INDEX' + " as result "`n_schemas'" as text " schema files"
+    }
+    
+    *---------------------------------------------------------------------------
+    * 7. Extended Sync: Full indicator catalog from API
+    *---------------------------------------------------------------------------
+    
+    if ("`verbose'" != "") {
+        di as text "  📁 Syncing full indicator catalog..."
+    }
+    
+    local n_full_indicators = 0
+    capture noisily {
+        _unicefdata_sync_ind_meta, ///
+            outfile("`current_dir'`FILE_IND_META'") ///
+            agency("`agency'")
+        local n_full_indicators = r(count)
+        local files_created "`files_created' `FILE_IND_META'"
+    }
+    
+    if (_rc != 0) {
+        local errors "`errors' IndicatorCatalog: `=_rc'"
+        if ("`verbose'" != "") {
+            di as err "     ✗ Indicator catalog error: " _rc
+        }
+    }
+    else if ("`verbose'" != "") {
+        di as text "     ✓ `FILE_IND_META' - " as result "`n_full_indicators'" as text " indicators"
+    }
+    
+    *---------------------------------------------------------------------------
+    * 8. Create vintage snapshot
     *---------------------------------------------------------------------------
     
     local vintage_dir "`path'vintages/`vintage_date'/"
@@ -302,12 +364,14 @@ program define unicefdata_sync, rclass
             file write `fh' "codelists: `n_codelists'" _n
             file write `fh' "countries: `n_countries'" _n
             file write `fh' "regions: `n_regions'" _n
+            file write `fh' "dataflow_schemas: `n_schemas'" _n
+            file write `fh' "full_indicator_catalog: `n_full_indicators'" _n
             file close `fh'
         }
     }
     
     *---------------------------------------------------------------------------
-    * 7. Update sync history
+    * 9. Update sync history
     *---------------------------------------------------------------------------
     
     capture noisily _unicefdata_update_sync_history, ///
@@ -334,6 +398,8 @@ program define unicefdata_sync, rclass
         di as text "  - Codelists:   " as result "`n_codelists'"
         di as text "  - Countries:   " as result "`n_countries'"
         di as text "  - Regions:     " as result "`n_regions'"
+        di as text "  - Schemas:     " as result "`n_schemas'" as text " (extended)"
+        di as text "  - Full catalog:" as result "`n_full_indicators'" as text " (extended)"
         if ("`errors'" != "") {
             di as err "  ⚠️  Errors: `errors'"
         }
@@ -655,7 +721,7 @@ end
 * Uses wbopendata-style line-by-line XML parsing with filefilter preprocessing
 *******************************************************************************
 
-program define _unicefdata_sync_codelist_single, rclass
+program define _unicefdata_sync_cl_single, rclass
     syntax, URL(string) OUTFILE(string) CONTENTTYPE(string) VERSION(string) AGENCY(string) CODELISTID(string)
     
     * Get timestamp
@@ -1036,6 +1102,436 @@ program define _unicefdata_sync_indicators, rclass
     file close `fh'
     
     return scalar count = 25
+end
+
+*******************************************************************************
+* Extended Sync: Dataflow Index with dimension/attribute counts
+* Generates dataflow_index.yaml matching Python/R format
+*******************************************************************************
+
+program define _unicefdata_sync_dataflow_index, rclass
+    syntax, OUTDIR(string) AGENCY(string) [SUFFIX(string)]
+    
+    * Get timestamp
+    local synced_at : di %tcCCYY-NN-DD!THH:MM:SS clock("`c(current_date)' `c(current_time)'", "DMYhms")
+    local synced_at = trim("`synced_at'") + "Z"
+    
+    local base_url "https://sdmx.data.unicef.org/ws/public/sdmxapi/rest"
+    
+    * Set suffix for filenames
+    local sfx "`suffix'"
+    
+    * First get list of all dataflows
+    local df_url "`base_url'/dataflow/`agency'?references=none&detail=full"
+    tempfile df_xml df_txt
+    capture copy "`df_url'" "`df_xml'", public replace
+    
+    if (_rc != 0) {
+        di as err "Failed to fetch dataflow list"
+        return scalar count = 0
+        exit
+    }
+    
+    * Parse dataflow list to get IDs
+    capture filefilter "`df_xml'" "`df_txt'", from("<str:Dataflow") to("\n<str:Dataflow") replace
+    
+    * Build list of dataflows
+    local df_ids ""
+    local df_names ""
+    local df_versions ""
+    local n_dataflows = 0
+    
+    tempname infh
+    capture file open `infh' using "`df_txt'", read
+    if (_rc == 0) {
+        file read `infh' line
+        while !r(eof) {
+            if (strmatch(`"`line'"', `"*<str:Dataflow *id=*"') == 1) {
+                * Extract ID
+                local tmp = `"`line'"'
+                local pos = strpos(`"`tmp'"', `"id=""')
+                if (`pos' > 0) {
+                    local tmp2 = substr(`"`tmp'"', `pos' + 4, .)
+                    local pos2 = strpos(`"`tmp2'"', `"""')
+                    if (`pos2' > 0) {
+                        local df_id = substr(`"`tmp2'"', 1, `pos2' - 1)
+                        local df_ids "`df_ids' `df_id'"
+                        local n_dataflows = `n_dataflows' + 1
+                        
+                        * Extract version
+                        local pos3 = strpos(`"`tmp'"', `"version=""')
+                        if (`pos3' > 0) {
+                            local tmp3 = substr(`"`tmp'"', `pos3' + 9, .)
+                            local pos4 = strpos(`"`tmp3'"', `"""')
+                            if (`pos4' > 0) {
+                                local df_ver = substr(`"`tmp3'"', 1, `pos4' - 1)
+                                local df_versions "`df_versions' `df_ver'"
+                            }
+                        }
+                        else {
+                            local df_versions "`df_versions' 1.0"
+                        }
+                        
+                        * Extract name
+                        local pos5 = strpos(`"`tmp'"', `"<com:Name xml:lang="en">"')
+                        if (`pos5' > 0) {
+                            local tmp4 = substr(`"`tmp'"', `pos5' + 24, .)
+                            local pos6 = strpos(`"`tmp4'"', "</com:Name>")
+                            if (`pos6' > 0) {
+                                local df_name = substr(`"`tmp4'"', 1, `pos6' - 1)
+                                local df_name = subinstr(`"`df_name'"', "'", "''", .)
+                                local df_names `"`df_names'"`df_name'" "'
+                            }
+                        }
+                        else {
+                            local df_names `"`df_names'"" "'
+                        }
+                    }
+                }
+            }
+            file read `infh' line
+        }
+        file close `infh'
+    }
+    
+    * Create dataflows subdirectory (with suffix if provided)
+    if ("`sfx'" != "") {
+        local dataflows_dir "`outdir'dataflows`sfx'/"
+    }
+    else {
+        local dataflows_dir "`outdir'dataflows/"
+    }
+    capture mkdir "`dataflows_dir'"
+    
+    * Open index file
+    local index_file "`outdir'dataflow_index`sfx'.yaml"
+    tempname fh
+    file open `fh' using "`index_file'", write text replace
+    
+    file write `fh' "metadata_version: '1.0'" _n
+    file write `fh' "synced_at: '`synced_at''" _n
+    file write `fh' "source: SDMX API Data Structure Definitions" _n
+    file write `fh' "agency: `agency'" _n
+    file write `fh' "total_dataflows: `n_dataflows'" _n
+    file write `fh' "dataflows:" _n
+    
+    * For each dataflow, fetch DSD and count dimensions/attributes
+    local success_count = 0
+    forvalues i = 1/`n_dataflows' {
+        local df_id : word `i' of `df_ids'
+        local df_ver : word `i' of `df_versions'
+        local df_name : word `i' of `df_names'
+        
+        * Fetch DSD for this dataflow
+        local dsd_url "`base_url'/dataflow/`agency'/`df_id'/`df_ver'?references=all"
+        tempfile dsd_xml dsd_txt
+        capture copy "`dsd_url'" "`dsd_xml'", public replace
+        
+        if (_rc == 0) {
+            * Count dimensions (str:Dimension elements with id attribute)
+            capture filefilter "`dsd_xml'" "`dsd_txt'", from("<str:Dimension") to("\n<str:Dimension") replace
+            
+            local n_dims = 0
+            tempname dsdh
+            capture file open `dsdh' using "`dsd_txt'", read
+            if (_rc == 0) {
+                file read `dsdh' line
+                while !r(eof) {
+                    if (strmatch(`"`line'"', `"*<str:Dimension *id=*"') == 1) {
+                        local n_dims = `n_dims' + 1
+                    }
+                    file read `dsdh' line
+                }
+                file close `dsdh'
+            }
+            
+            * Count attributes
+            capture filefilter "`dsd_xml'" "`dsd_txt'", from("<str:Attribute") to("\n<str:Attribute") replace
+            
+            local n_attrs = 0
+            capture file open `dsdh' using "`dsd_txt'", read
+            if (_rc == 0) {
+                file read `dsdh' line
+                while !r(eof) {
+                    if (strmatch(`"`line'"', `"*<str:Attribute *id=*"') == 1) {
+                        local n_attrs = `n_attrs' + 1
+                    }
+                    file read `dsdh' line
+                }
+                file close `dsdh'
+            }
+            
+            * Write to index
+            file write `fh' "- id: `df_id'" _n
+            file write `fh' "  name: '`df_name''" _n
+            file write `fh' "  version: '`df_ver''" _n
+            file write `fh' "  dimensions_count: `n_dims'" _n
+            file write `fh' "  attributes_count: `n_attrs'" _n
+            
+            * Write individual dataflow schema file
+            _unicefdata_sync_df_schema, ///
+                dsdxml("`dsd_xml'") ///
+                outfile("`dataflows_dir'`df_id'.yaml") ///
+                dfid("`df_id'") ///
+                dfname("`df_name'") ///
+                dfver("`df_ver'") ///
+                agency("`agency'") ///
+                syncedat("`synced_at'")
+            
+            local success_count = `success_count' + 1
+        }
+        else {
+            * Failed to fetch DSD
+            file write `fh' "- id: `df_id'" _n
+            file write `fh' "  name: '`df_name''" _n
+            file write `fh' "  version: '`df_ver''" _n
+            file write `fh' "  dimensions_count: null" _n
+            file write `fh' "  attributes_count: null" _n
+            file write `fh' "  error: 'Failed to fetch DSD'" _n
+        }
+        
+        * Small delay to avoid rate limiting
+        sleep 200
+    }
+    
+    file close `fh'
+    
+    return scalar count = `success_count'
+    return scalar total = `n_dataflows'
+end
+
+*******************************************************************************
+* Helper: Sync single dataflow schema to YAML file
+*******************************************************************************
+
+program define _unicefdata_sync_df_schema
+    syntax, DSDXML(string) OUTFILE(string) DFID(string) DFNAME(string) ///
+            DFVER(string) AGENCY(string) SYNCEDAT(string)
+    
+    tempfile txt_file
+    tempname fh dsdh
+    
+    file open `fh' using "`outfile'", write text replace
+    
+    * Write header
+    file write `fh' "id: `dfid'" _n
+    file write `fh' "name: '`dfname''" _n
+    file write `fh' "version: '`dfver''" _n
+    file write `fh' "agency: `agency'" _n
+    file write `fh' "synced_at: '`syncedat''" _n
+    
+    * Parse dimensions
+    file write `fh' "dimensions:" _n
+    
+    capture filefilter "`dsdxml'" "`txt_file'", from("<str:Dimension") to("\n<str:Dimension") replace
+    
+    local pos_num = 0
+    capture file open `dsdh' using "`txt_file'", read
+    if (_rc == 0) {
+        file read `dsdh' line
+        while !r(eof) {
+            if (strmatch(`"`line'"', `"*<str:Dimension *id=*"') == 1) {
+                local tmp = `"`line'"'
+                
+                * Extract id
+                local pos = strpos(`"`tmp'"', `"id=""')
+                if (`pos' > 0) {
+                    local tmp2 = substr(`"`tmp'"', `pos' + 4, .)
+                    local pos2 = strpos(`"`tmp2'"', `"""')
+                    if (`pos2' > 0) {
+                        local dim_id = substr(`"`tmp2'"', 1, `pos2' - 1)
+                        local pos_num = `pos_num' + 1
+                        
+                        * Extract position
+                        local dim_pos = `pos_num'
+                        local pos3 = strpos(`"`tmp'"', `"position=""')
+                        if (`pos3' > 0) {
+                            local tmp3 = substr(`"`tmp'"', `pos3' + 10, .)
+                            local pos4 = strpos(`"`tmp3'"', `"""')
+                            if (`pos4' > 0) {
+                                local dim_pos = substr(`"`tmp3'"', 1, `pos4' - 1)
+                            }
+                        }
+                        
+                        * Extract codelist reference
+                        local codelist = ""
+                        local pos5 = strpos(`"`tmp'"', `"<Ref id=""')
+                        if (`pos5' > 0) {
+                            local tmp4 = substr(`"`tmp'"', `pos5' + 9, .)
+                            local pos6 = strpos(`"`tmp4'"', `"""')
+                            if (`pos6' > 0) {
+                                local codelist = substr(`"`tmp4'"', 1, `pos6' - 1)
+                            }
+                        }
+                        
+                        file write `fh' "- id: `dim_id'" _n
+                        file write `fh' "  position: `dim_pos'" _n
+                        if ("`codelist'" != "") {
+                            file write `fh' "  codelist: `codelist'" _n
+                        }
+                    }
+                }
+            }
+            file read `dsdh' line
+        }
+        file close `dsdh'
+    }
+    
+    * Parse time dimension
+    file write `fh' "time_dimension: TIME_PERIOD" _n
+    
+    * Parse primary measure
+    file write `fh' "primary_measure: OBS_VALUE" _n
+    
+    * Parse attributes
+    file write `fh' "attributes:" _n
+    
+    capture filefilter "`dsdxml'" "`txt_file'", from("<str:Attribute") to("\n<str:Attribute") replace
+    
+    capture file open `dsdh' using "`txt_file'", read
+    if (_rc == 0) {
+        file read `dsdh' line
+        while !r(eof) {
+            if (strmatch(`"`line'"', `"*<str:Attribute *id=*"') == 1) {
+                local tmp = `"`line'"'
+                
+                * Extract id
+                local pos = strpos(`"`tmp'"', `"id=""')
+                if (`pos' > 0) {
+                    local tmp2 = substr(`"`tmp'"', `pos' + 4, .)
+                    local pos2 = strpos(`"`tmp2'"', `"""')
+                    if (`pos2' > 0) {
+                        local attr_id = substr(`"`tmp2'"', 1, `pos2' - 1)
+                        
+                        * Extract codelist reference
+                        local codelist = ""
+                        local pos5 = strpos(`"`tmp'"', `"<Ref id=""')
+                        if (`pos5' > 0) {
+                            local tmp4 = substr(`"`tmp'"', `pos5' + 9, .)
+                            local pos6 = strpos(`"`tmp4'"', `"""')
+                            if (`pos6' > 0) {
+                                local codelist = substr(`"`tmp4'"', 1, `pos6' - 1)
+                            }
+                        }
+                        
+                        file write `fh' "- id: `attr_id'" _n
+                        if ("`codelist'" != "") {
+                            file write `fh' "  codelist: `codelist'" _n
+                        }
+                    }
+                }
+            }
+            file read `dsdh' line
+        }
+        file close `dsdh'
+    }
+    
+    file close `fh'
+end
+
+*******************************************************************************
+* Extended Sync: Full indicator catalog from CL_UNICEF_INDICATOR codelist
+* Generates unicef_indicators_metadata.yaml matching Python/R format
+*******************************************************************************
+
+program define _unicefdata_sync_ind_meta, rclass
+    syntax, OUTFILE(string) AGENCY(string)
+    
+    * Get timestamp
+    local synced_at : di %tcCCYY-NN-DD!THH:MM:SS clock("`c(current_date)' `c(current_time)'", "DMYhms")
+    local synced_at = trim("`synced_at'") + "Z"
+    
+    local base_url "https://sdmx.data.unicef.org/ws/public/sdmxapi/rest"
+    local url "`base_url'/codelist/`agency'/CL_UNICEF_INDICATOR/latest"
+    
+    tempfile xmlfile txtfile
+    capture copy "`url'" "`xmlfile'", public replace
+    
+    local n_indicators = 0
+    
+    tempname fh
+    file open `fh' using "`outfile'", write text replace
+    
+    file write `fh' "indicators:" _n
+    
+    if (_rc == 0) {
+        * Split XML into lines at each Code element
+        capture filefilter "`xmlfile'" "`txtfile'", from("<str:Code ") to("\n<str:Code ") replace
+        
+        if (_rc == 0) {
+            tempname infh
+            capture file open `infh' using "`txtfile'", read
+            
+            if (_rc == 0) {
+                file read `infh' line
+                while !r(eof) {
+                    * Match code elements (with space to exclude Codelist)
+                    if (strmatch(`"`line'"', `"*<str:Code *id=*"') == 1) {
+                        local tmp = `"`line'"'
+                        
+                        * Extract code ID
+                        local pos = strpos(`"`tmp'"', `"id=""')
+                        if (`pos' > 0) {
+                            local tmp2 = substr(`"`tmp'"', `pos' + 4, .)
+                            local pos2 = strpos(`"`tmp2'"', `"""')
+                            if (`pos2' > 0) {
+                                local code_id = substr(`"`tmp2'"', 1, `pos2' - 1)
+                                
+                                * Extract name
+                                local code_name = ""
+                                local pos3 = strpos(`"`tmp'"', `"<com:Name xml:lang="en">"')
+                                if (`pos3' > 0) {
+                                    local tmp3 = substr(`"`tmp'"', `pos3' + 24, .)
+                                    local pos4 = strpos(`"`tmp3'"', "</com:Name>")
+                                    if (`pos4' > 0) {
+                                        local code_name = substr(`"`tmp3'"', 1, `pos4' - 1)
+                                        local code_name = trim("`code_name'")
+                                        * Escape single quotes
+                                        local code_name = subinstr(`"`code_name'"', "'", "''", .)
+                                    }
+                                }
+                                
+                                * Extract description (if available)
+                                local code_desc = ""
+                                local pos5 = strpos(`"`tmp'"', `"<com:Description xml:lang="en">"')
+                                if (`pos5' > 0) {
+                                    local tmp4 = substr(`"`tmp'"', `pos5' + 31, .)
+                                    local pos6 = strpos(`"`tmp4'"', "</com:Description>")
+                                    if (`pos6' > 0) {
+                                        local code_desc = substr(`"`tmp4'"', 1, `pos6' - 1)
+                                        local code_desc = trim("`code_desc'")
+                                        local code_desc = subinstr(`"`code_desc'"', "'", "''", .)
+                                    }
+                                }
+                                
+                                * Determine category (prefix before first underscore)
+                                local category = "`code_id'"
+                                local underscore_pos = strpos("`code_id'", "_")
+                                if (`underscore_pos' > 0) {
+                                    local category = substr("`code_id'", 1, `underscore_pos' - 1)
+                                }
+                                
+                                * Write indicator entry
+                                file write `fh' "  `code_id':" _n
+                                file write `fh' "    category: `category'" _n
+                                file write `fh' "    code: `code_id'" _n
+                                file write `fh' "    description: '`code_desc''" _n
+                                file write `fh' "    name: '`code_name''" _n
+                                
+                                local n_indicators = `n_indicators' + 1
+                            }
+                        }
+                    }
+                    file read `infh' line
+                }
+                file close `infh'
+            }
+        }
+    }
+    
+    file close `fh'
+    
+    return scalar count = `n_indicators'
 end
 
 *******************************************************************************

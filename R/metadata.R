@@ -1220,8 +1220,93 @@ ensure_metadata <- function(max_age_days = 30, verbose = FALSE, cache_dir = NULL
     dir.create(current_dir, recursive = TRUE)
   }
   filepath <- file.path(current_dir, filename)
-  yaml::write_yaml(data, filepath)
+  # Write YAML without line wrapping for cross-platform consistency
+  yaml_lines <- .yaml_no_wrap(data)
+  writeLines(yaml_lines, filepath, useBytes = TRUE)
   invisible(filepath)
+}
+
+#' Convert R list to YAML without line wrapping
+#' @param data List to convert
+#' @param indent Current indentation level
+#' @return Character vector of YAML lines
+#' @keywords internal
+.yaml_no_wrap <- function(data, indent = 0) {
+  lines <- character()
+  prefix <- strrep("  ", indent)
+  
+  if (is.null(data)) {
+    return("~")
+  }
+  
+  if (!is.list(data)) {
+    # Scalar value
+    return(.yaml_scalar(data))
+  }
+  
+  names_data <- names(data)
+  
+  for (i in seq_along(data)) {
+    key <- names_data[i]
+    value <- data[[i]]
+    
+    if (is.null(key) || key == "") {
+      # List item (no key)
+      if (is.list(value) && length(value) > 0) {
+        lines <- c(lines, paste0(prefix, "- ", names(value)[1], ": ", .yaml_scalar(value[[1]])))
+        if (length(value) > 1) {
+          for (j in 2:length(value)) {
+            lines <- c(lines, paste0(prefix, "  ", names(value)[j], ": ", .yaml_scalar(value[[j]])))
+          }
+        }
+      } else {
+        lines <- c(lines, paste0(prefix, "- ", .yaml_scalar(value)))
+      }
+    } else {
+      # Named key
+      if (is.list(value) && length(value) > 0 && !is.null(names(value))) {
+        lines <- c(lines, paste0(prefix, key, ":"))
+        lines <- c(lines, .yaml_no_wrap(value, indent + 1))
+      } else if (is.list(value) && length(value) > 0) {
+        # Unnamed list (array)
+        lines <- c(lines, paste0(prefix, key, ":"))
+        for (item in value) {
+          if (is.list(item)) {
+            lines <- c(lines, .yaml_no_wrap(item, indent + 1))
+          } else {
+            lines <- c(lines, paste0(prefix, "  - ", .yaml_scalar(item)))
+          }
+        }
+      } else {
+        lines <- c(lines, paste0(prefix, key, ": ", .yaml_scalar(value)))
+      }
+    }
+  }
+  
+  return(lines)
+}
+
+#' Convert scalar value to YAML string
+#' @param x Scalar value
+#' @return Character string in YAML format
+#' @keywords internal
+.yaml_scalar <- function(x) {
+  if (is.null(x) || length(x) == 0) {
+    return("''")
+  }
+  if (is.logical(x)) {
+    return(tolower(as.character(x)))
+  }
+  if (is.numeric(x)) {
+    return(as.character(x))
+  }
+  # String - check if quoting needed
+  x <- as.character(x)
+  if (x == "" || grepl("^[\\s]|[\\s]$|[:#\\[\\]{}\"'|>]", x, perl = TRUE) || x %in% c("true", "false", "null", "~")) {
+    # Quote strings that need it
+    return(paste0("'", gsub("'", "''", x), "'"))
+  }
+  return(x)
 }
 
 .load_yaml <- function(filename) {

@@ -1,7 +1,7 @@
 _metadata:
   platform: python
   version: 2.0.0
-  synced_at: '2025-12-05T10:06:34.669605Z'
+  synced_at: '2025-12-07T07:06:51.111641Z'
   source: https://sdmx.data.unicef.org/ws/public/sdmxapi/rest/codelist/UNICEF
   agency: UNICEF
   content_type: codelists
@@ -464,7 +464,8 @@ codelists:
       Y_GE95: 95 years old and over
       _T: Total
       _U: Unknown
-    last_updated: '2025-12-05T10:06:34.224165Z'
+    last_updated: '2025-12-07T07:06:50.651379Z'
+    name: Age group code list
   CL_WEALTH_QUINTILE:
     id: CL_WEALTH_QUINTILE
     agency: UNICEF
@@ -486,7 +487,8 @@ codelists:
       R60: Richest 60%
       R80: Richest 80%
       _T: Total
-    last_updated: '2025-12-05T10:06:34.333369Z'
+    last_updated: '2025-12-07T07:06:50.764567Z'
+    name: Wealth Quintile
   CL_RESIDENCE:
     id: CL_RESIDENCE
     agency: UNICEF
@@ -495,7 +497,8 @@ codelists:
       _T: Total
       U: Urban
       R: Rural
-    last_updated: '2025-12-05T10:06:34.446357Z'
+    last_updated: '2025-12-07T07:06:50.879511Z'
+    name: Type of Residence (Urbanisation)
   CL_UNIT_MEASURE:
     id: CL_UNIT_MEASURE
     agency: UNICEF
@@ -581,7 +584,8 @@ codelists:
       RATE: Rate
       D_PER_100000_BIRTHS: Deaths per 100000 births
       1_IN_X: 1 in X
-    last_updated: '2025-12-05T10:06:34.559763Z'
+    last_updated: '2025-12-07T07:06:50.996012Z'
+    name: Unit of Measure
   CL_OBS_STATUS:
     id: CL_OBS_STATUS
     agency: UNICEF
@@ -625,4 +629,5 @@ codelists:
       EXCL: Excluded
       BEP: Time series break; estimated value; provisional value
       PRED: Predicted
-    last_updated: '2025-12-05T10:06:34.669410Z'
+    last_updated: '2025-12-07T07:06:51.111441Z'
+    name: Observation Status

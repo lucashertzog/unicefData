@@ -1,11 +1,13 @@
 _metadata:
   platform: python
   version: 2.0.0
-  synced_at: '2025-12-05T10:06:34.909106Z'
+  synced_at: '2025-12-07T07:06:51.352490Z'
   source: https://sdmx.data.unicef.org/ws/public/sdmxapi/rest/codelist/UNICEF/CL_COUNTRY/latest
   agency: UNICEF
   content_type: countries
   total_countries: 453
+  codelist_id: CL_COUNTRY
+  codelist_name: Statistical Reference Areas
 countries:
   ABW: Aruba
   AFG: Afghanistan
