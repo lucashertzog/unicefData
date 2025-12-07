@@ -458,6 +458,110 @@ Use `list_categories()` for the complete list.
 
 ---
 
+## Metadata Synchronization
+
+The unicefData package maintains synchronized YAML metadata files across all three platforms (Python, R, Stata). These files contain dataflow definitions, indicator catalogs, country codes, and codelist mappings.
+
+### Python
+
+```python
+import sys
+sys.path.insert(0, 'python')
+
+from unicef_api.metadata import MetadataSync
+from unicef_api.schema_sync import sync_dataflow_schemas
+from unicef_api.indicator_registry import refresh_indicator_cache
+
+# Sync core metadata files
+ms = MetadataSync()
+ms.sync_all(verbose=True)
+
+# Generate dataflow schemas (dataflows/*.yaml)
+sync_dataflow_schemas(output_dir='python/metadata/current')
+
+# Generate full indicator catalog (733 indicators)
+refresh_indicator_cache()
+```
+
+**Generated files:** `python/metadata/current/`
+- `_unicefdata_dataflows.yaml` - 69 dataflows
+- `_unicefdata_indicators.yaml` - 25 common SDG indicators
+- `_unicefdata_codelists.yaml` - 5 dimension codelists
+- `_unicefdata_countries.yaml` - 453 country codes
+- `_unicefdata_regions.yaml` - 111 regional codes
+- `unicef_indicators_metadata.yaml` - 733 indicators (full catalog)
+- `dataflow_index.yaml` - Dataflow schema index
+- `dataflows/*.yaml` - 69 individual dataflow schemas
+
+### R
+
+```r
+# Set working directory to R folder
+setwd("R")
+
+# Load and run metadata sync
+source("metadata_sync.R")
+sync_all_metadata(verbose = TRUE)
+
+# Generate full indicator catalog
+source("indicator_registry.R")
+refresh_indicator_cache()
+
+# Generate dataflow schemas (requires schema_sync.R)
+source("schema_sync.R")
+sync_dataflow_schemas()
+```
+
+**Generated files:** `R/metadata/current/`
+- Same file structure as Python
+
+### Stata
+
+```stata
+* Standard sync (uses Python for large XML files when available)
+unicefdata_sync, verbose
+
+* Pure Stata sync (with suffix for separate files)
+unicefdata_sync, suffix("_stataonly") verbose
+
+* View help for all options
+help unicefdata_sync
+```
+
+**Generated files:** `stata/metadata/current/`
+- Same file structure as Python/R
+- `*_stataonly.yaml` files when using suffix option
+
+#### ⚠️ Stata Limitations
+
+The pure Stata XML parser has limitations with large XML files due to Stata's macro length restrictions (error 920). This affects:
+- `dataflow_index.yaml` - May have empty dataflows list
+- `dataflows/*.yaml` - Individual schema files may not be generated
+
+**Recommended:** Use the standard `unicefdata_sync, verbose` command (without suffix) which uses Python assistance for complete metadata extraction. Or use Python directly:
+
+```stata
+python:
+from unicef_api.schema_sync import sync_dataflow_schemas
+sync_dataflow_schemas(output_dir='stata/metadata/current')
+end
+```
+
+### Metadata Consistency
+
+All platforms should generate matching metadata with:
+- Same record counts across Python, R, and Stata
+- Standardized `_metadata` headers with platform, version, timestamp
+- Shared indicator definitions from `config/common_indicators.yaml`
+
+Use the status script to verify consistency:
+
+```bash
+python tests/generate_metadata_status.py --detailed
+```
+
+---
+
 ## Features
 
 | Feature | R | Python | Stata |
@@ -507,14 +611,21 @@ See the examples directories:
 
 ```
 unicefData/
+├── config/                 # Shared configuration
+│   └── common_indicators.yaml  # 25 SDG indicators (Python/R/Stata source)
 ├── R/                      # R package source
+│   ├── metadata/current/   # R metadata files
+│   └── *.R                 # R source files
 ├── python/                 # Python package source
+│   ├── metadata/current/   # Python metadata files
+│   └── unicef_api/         # Python package
 ├── stata/                  # Stata package source
 │   ├── src/u/              # Main ado files (unicefdata.ado, etc.)
 │   ├── src/_/              # Internal subroutines
-│   ├── metadata/           # YAML metadata files
+│   ├── metadata/current/   # Stata metadata files
 │   └── examples/           # Stata examples
-├── metadata/               # Shared metadata specifications
+├── tests/                  # Cross-platform test utilities
+│   └── generate_metadata_status.py  # Metadata consistency checker
 └── README.md
 ```
 
