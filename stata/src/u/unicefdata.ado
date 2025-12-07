@@ -1,6 +1,6 @@
 *******************************************************************************
 * unicefdata
-*! v 1.2.0   04Dec2025               by Joao Pedro Azevedo (UNICEF)
+*! v 1.2.1   07Dec2025               by Joao Pedro Azevedo (UNICEF)
 * Download indicators from UNICEF Data Warehouse via SDMX API
 * Aligned with R get_unicef() and Python unicef_api
 * Uses YAML metadata for dataflow detection and validation

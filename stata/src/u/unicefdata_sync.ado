@@ -1,6 +1,6 @@
 *******************************************************************************
 * unicefdata_sync
-*! v 1.0.0   05Dec2025               by Joao Pedro Azevedo (UNICEF)
+*! v 1.1.0   07Dec2025               by Joao Pedro Azevedo (UNICEF)
 * Sync UNICEF metadata from SDMX API to local YAML files
 * Creates standardized YAML files with watermarks matching R/Python format
 *******************************************************************************
@@ -405,6 +405,22 @@ program define unicefdata_sync, rclass
         }
         di as text "  Vintage: " as result "`vintage_date'"
         di as text _dup(80) "="
+        
+        * Display warning about limitations when using pure Stata
+        if ("`sfx'" != "" | `n_schemas' == 0) {
+            di as text ""
+            di as text "{p 0 4 2}{bf:⚠️  KNOWN LIMITATIONS:}{p_end}"
+            di as text "{p 4 8 2}The pure Stata XML parser has limitations with large XML files due to Stata's macro length restrictions (error 920).{p_end}"
+            di as text "{p 4 8 2}The following features may be incomplete:{p_end}"
+            di as text "{p 8 12 2}- {bf:dataflow_index.yaml}: May have empty dataflows list{p_end}"
+            di as text "{p 8 12 2}- {bf:dataflows/*.yaml}: Individual schema files may not be generated{p_end}"
+            di as text ""
+            di as text "{p 4 8 2}{bf:RECOMMENDATION}: For complete metadata extraction, use the Python-assisted version:{p_end}"
+            di as text "{p 8 12 2}{cmd:. unicefdata_sync, verbose} {it:(without suffix)}{p_end}"
+            di as text "{p 4 8 2}Or use the Python library directly:{p_end}"
+            di as text "{p 8 12 2}{cmd:python: from unicef_api.schema_sync import sync_all; sync_all()}{p_end}"
+            di as text ""
+        }
     }
     else {
         di as text "[OK] Sync complete: " ///
@@ -413,6 +429,11 @@ program define unicefdata_sync, rclass
             as result "`n_codelists'" as text " codelists, " ///
             as result "`n_countries'" as text " countries, " ///
             as result "`n_regions'" as text " regions"
+            
+        * Brief warning for non-verbose mode
+        if ("`sfx'" != "" | `n_schemas' == 0) {
+            di as text "{p 0 4 2}{bf:Note}: Some extended features may be incomplete due to Stata's macro length limits. See {help unicefdata_sync:help} for details.{p_end}"
+        }
     }
     
     *---------------------------------------------------------------------------
@@ -1452,6 +1473,14 @@ program define _unicefdata_sync_ind_meta, rclass
     tempname fh
     file open `fh' using "`outfile'", write text replace
     
+    * Write metadata header matching Python/R format
+    file write `fh' "metadata:" _n
+    file write `fh' "  version: '1.0'" _n
+    file write `fh' "  source: UNICEF SDMX Codelist CL_UNICEF_INDICATOR" _n
+    file write `fh' "  url: `url'" _n
+    file write `fh' "  last_updated: '`synced_at''" _n
+    file write `fh' "  description: Comprehensive UNICEF indicator codelist with metadata (auto-generated)" _n
+    file write `fh' "  platform: stata" _n
     file write `fh' "indicators:" _n
     
     if (_rc == 0) {

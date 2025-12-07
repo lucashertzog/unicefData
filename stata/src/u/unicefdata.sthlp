@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.2.0  04Dec2025}{...}
+{* *! version 1.2.1  07Dec2025}{...}
 {vieweralsosee "[R] import delimited" "help import delimited"}{...}
 {vieweralsosee "" "--"}{...}
 {vieweralsosee "wbopendata" "help wbopendata"}{...}
@@ -276,19 +276,42 @@ Wide format output:{p_end}
 aligned with the R {cmd:get_unicef()} and Python {cmd:unicef_api} implementations.
 
 {pstd}
-Metadata files are located in {cmd:stata/metadata/}:
+Metadata files are located in {cmd:stata/metadata/current/}:
 
-{phang2}{cmd:indicators.yaml} - Maps indicator codes to dataflows, names, SDG targets{p_end}
-{phang2}{cmd:codelists.yaml} - Valid codes for sex, age, wealth, residence{p_end}
-{phang2}{cmd:dataflows.yaml} - Available UNICEF SDMX dataflows{p_end}
+{phang2}{cmd:_unicefdata_dataflows.yaml} - 69 SDMX dataflow definitions{p_end}
+{phang2}{cmd:_unicefdata_indicators.yaml} - 25 common SDG indicators{p_end}
+{phang2}{cmd:_unicefdata_codelists.yaml} - Valid codes for sex, age, wealth, residence{p_end}
+{phang2}{cmd:_unicefdata_countries.yaml} - 453 country ISO3 codes{p_end}
+{phang2}{cmd:_unicefdata_regions.yaml} - 111 regional aggregate codes{p_end}
+{phang2}{cmd:unicef_indicators_metadata.yaml} - Full indicator catalog (733 indicators){p_end}
 
 {pstd}
 The {helpb yaml} command is used to parse these files. If {cmd:yaml} is not installed,
 the command falls back to prefix-based dataflow detection.
 
 {pstd}
+To synchronize metadata from the UNICEF SDMX API:{p_end}
+{phang2}{cmd:. unicefdata_sync, verbose}{p_end}
+
+{pstd}
 To install the {cmd:yaml} package:{p_end}
 {phang2}{cmd:. ssc install yaml}{p_end}
+
+
+{marker consistency}{...}
+{title:Cross-Platform Consistency}
+
+{pstd}
+All three platforms (Python, R, Stata) generate identical metadata files with:
+
+{phang2}- Same record counts (69 dataflows, 453 countries, etc.){p_end}
+{phang2}- Same field names and structures{p_end}
+{phang2}- Standardized {cmd:_metadata} headers with platform, version, timestamp{p_end}
+{phang2}- Shared indicator definitions from {cmd:config/common_indicators.yaml}{p_end}
+
+{pstd}
+Use the Python status script to verify consistency:{p_end}
+{phang2}{cmd:python tests/generate_metadata_status.py --detailed}{p_end}
 
 
 {marker author}{...}
@@ -297,7 +320,7 @@ To install the {cmd:yaml} package:{p_end}
 {pstd}
 Joao Pedro Azevedo{break}
 UNICEF{break}
-jpazevedo@unicef.org
+jazevedo@unicef.org
 
 {pstd}
 This command is part of the {cmd:unicefData} package, which provides 
@@ -314,5 +337,5 @@ Online: {browse "https://data.unicef.org/":UNICEF Data Warehouse},
 {browse "https://sdmx.data.unicef.org/":UNICEF SDMX API}
 
 {psee}
-Help: {helpb wbopendata} (similar command for World Bank data)
+Help: {helpb unicefdata_sync}, {helpb wbopendata} (similar command for World Bank data)
 {p_end}

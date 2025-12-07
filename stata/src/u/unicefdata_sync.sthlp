@@ -1,11 +1,12 @@
 {smcl}
-{* *! version 1.0.0  05Dec2025}{...}
+{* *! version 1.1.0  07Dec2025}{...}
 {vieweralsosee "[R] unicefdata" "help unicefdata"}{...}
 {vieweralsosee "[R] yaml" "help yaml"}{...}
 {viewerjumpto "Syntax" "unicefdata_sync##syntax"}{...}
 {viewerjumpto "Description" "unicefdata_sync##description"}{...}
 {viewerjumpto "Options" "unicefdata_sync##options"}{...}
 {viewerjumpto "Examples" "unicefdata_sync##examples"}{...}
+{viewerjumpto "Limitations" "unicefdata_sync##limitations"}{...}
 {viewerjumpto "Stored results" "unicefdata_sync##results"}{...}
 {viewerjumpto "Author" "unicefdata_sync##author"}{...}
 {title:Title}
@@ -27,6 +28,7 @@
 {synoptline}
 {syntab:Main}
 {synopt:{opt path(string)}}directory for metadata files{p_end}
+{synopt:{opt suffix(string)}}suffix for output filenames (e.g., "_stataonly"){p_end}
 {synopt:{opt verbose}}display detailed progress{p_end}
 {synopt:{opt force}}force sync even if cache is fresh{p_end}
 {synoptline}
@@ -44,6 +46,11 @@ country codes, regional aggregates, and indicator mappings.
 All generated YAML files follow the standardized {cmd:_unicefdata_<name>.yaml} 
 naming convention and include watermark headers matching the R and Python 
 implementations.
+
+{pstd}
+{bf:Note:} For complete metadata extraction, especially for large XML files 
+like dataflow schemas, consider using the Python-assisted version or the 
+Python library directly. See {help unicefdata_sync##limitations:Limitations} below.
 
 
 {marker files}{...}
@@ -88,6 +95,12 @@ Each YAML file includes a {cmd:_metadata} block with:
 If not specified, the command auto-detects the package installation directory.
 
 {phang}
+{opt suffix(string)} appends a suffix to all output filenames before the .yaml 
+extension. This is useful for generating separate metadata files using different 
+parsers. For example, {opt suffix("_stataonly")} creates files like 
+{cmd:_unicefdata_dataflows_stataonly.yaml}.
+
+{phang}
 {opt verbose} displays detailed progress messages including file names and counts.
 
 {phang}
@@ -109,6 +122,69 @@ If not specified, the command auto-detects the package installation directory.
 
 {pstd}Force sync even if cache is fresh{p_end}
 {phang2}{cmd:. unicefdata_sync, force verbose}{p_end}
+
+{pstd}Generate Stata-only metadata with suffix{p_end}
+{phang2}{cmd:. unicefdata_sync, suffix("_stataonly") verbose}{p_end}
+
+
+{marker limitations}{...}
+{title:Known Limitations}
+
+{pstd}
+{bf:⚠️  Stata Macro Length Limits (Error 920)}
+
+{pstd}
+Stata has internal limits on macro string length that can cause issues when 
+parsing large XML files from the UNICEF SDMX API. This affects:
+
+{p2colset 8 40 42 2}{...}
+{p2col:{cmd:dataflow_index.yaml}}May have an empty or incomplete dataflows list{p_end}
+{p2col:{cmd:dataflows/*.yaml}}Individual schema files may not be generated{p_end}
+{p2colreset}{...}
+
+{pstd}
+These limitations occur because:
+
+{phang2}1. Large XML responses exceed Stata's local macro limit (~32,768 characters){p_end}
+{phang2}2. The pure Stata XML parser must accumulate content in macros{p_end}
+{phang2}3. Some UNICEF dataflow schemas contain extensive metadata{p_end}
+
+{pstd}
+{bf:Recommended Solutions:}
+
+{pstd}
+{ul:Option 1: Use Python-assisted extraction (recommended)}
+
+{phang2}The standard {cmd:unicefdata_sync} command (without suffix) uses Python 
+for large XML files when available. This provides complete metadata extraction:{p_end}
+
+{phang3}{cmd:. unicefdata_sync, verbose}{p_end}
+
+{pstd}
+{ul:Option 2: Use the Python library directly}
+
+{phang2}For complete control and guaranteed full extraction:{p_end}
+
+{phang3}{cmd:python:}{p_end}
+{phang3}{cmd:from unicef_api.schema_sync import sync_all}{p_end}
+{phang3}{cmd:sync_all()}{p_end}
+{phang3}{cmd:end}{p_end}
+
+{pstd}
+{ul:Option 3: Use the R package}
+
+{phang2}The R implementation handles large XML files without macro limitations:{p_end}
+
+{phang3}In R: {cmd:unicefData::sync_all_metadata()}{p_end}
+
+{pstd}
+{bf:Metadata Consistency}
+
+{pstd}
+The unicefData package is designed to generate consistent metadata across Python, 
+R, and Stata. All files should have matching record counts and metadata headers. 
+If you notice discrepancies, regenerate using the Python or R implementations 
+as the reference.
 
 
 {marker results}{...}
