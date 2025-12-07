@@ -1,7 +1,7 @@
 _metadata:
   platform: R
   version: 2.0.0
-  synced_at: '2025-12-07T07:24:06Z'
+  synced_at: '2025-12-07T12:02:20Z'
   source: https://sdmx.data.unicef.org/ws/public/sdmxapi/rest/codelist/UNICEF/CL_COUNTRY/latest
   agency: UNICEF
   content_type: countries
@@ -462,4 +462,3 @@ countries:
   UNSDG_WESTERNEUROPE: Western Europe (UNSDG)
   UNSDG_MICRONESIA: Micronesia (UNSDG)
   WB_ECA: Europe and Central Asia (World Bank regions)
-
