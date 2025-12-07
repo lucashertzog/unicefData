@@ -2,34 +2,44 @@
 """
 Generate metadata status summary table for unicefData package.
 
-This script checks the metadata files across all three platforms (Python, R, Stata)
-and generates a markdown table showing the status of each file.
+This script checks the metadata files across all four platforms (Python, R, 
+Stata with Python parser, Stata-only parser) and generates a markdown table 
+showing the status of each file. It can also compare record counts across platforms.
 
 Usage:
     python generate_metadata_status.py
     python generate_metadata_status.py --output markdown
     python generate_metadata_status.py --output csv
     python generate_metadata_status.py --detailed
+    python generate_metadata_status.py --compare
 """
 
 import os
 import sys
+import logging
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional, NamedTuple
 import yaml
 import argparse
 
+# Configure logging
+logging.basicConfig(level=logging.WARNING, format='%(levelname)s: %(message)s')
+logger = logging.getLogger(__name__)
+
 # Repository root (relative to this script location)
 SCRIPT_DIR = Path(__file__).parent
 REPO_ROOT = SCRIPT_DIR.parent
 
-# Metadata directories
-METADATA_DIRS = {
-    'Python': REPO_ROOT / 'python' / 'metadata' / 'current',
-    'R': REPO_ROOT / 'R' / 'metadata' / 'current',
-    'Stata (Python)': REPO_ROOT / 'stata' / 'metadata' / 'current',
-    'Stata (only)': REPO_ROOT / 'stata' / 'metadata' / 'current',
+# Platform configuration: (directory, suffix_for_files)
+PLATFORM_CONFIG = {
+    'Python': (REPO_ROOT / 'python' / 'metadata' / 'current', ''),
+    'R': (REPO_ROOT / 'R' / 'metadata' / 'current', ''),
+    'Stata (Python)': (REPO_ROOT / 'stata' / 'metadata' / 'current', ''),
+    'Stata (only)': (REPO_ROOT / 'stata' / 'metadata' / 'current', '_stataonly'),
 }
+
+# For backward compatibility
+METADATA_DIRS = {k: v[0] for k, v in PLATFORM_CONFIG.items()}
 
 # Files to check (base names without suffix)
 METADATA_FILES = [
@@ -52,6 +62,7 @@ class FileStats(NamedTuple):
     exists: bool
     records: Optional[int]
     lines: Optional[int]
+    non_missing_attrs: Optional[int]
     has_header: bool
     header_keys: List[str]
 
@@ -98,19 +109,49 @@ def check_header(data: dict) -> Tuple[bool, List[str]]:
     return (has_header, found_keys)
 
 
-def count_records_in_yaml(filepath: Path) -> Tuple[Optional[int], bool, List[str]]:
+def count_non_missing_attrs(records) -> int:
+    """
+    Count non-missing (non-None, non-empty) attribute values across all records.
+    
+    Args:
+        records: List of dicts or dict of dicts
+        
+    Returns:
+        Total count of non-missing attribute values
+    """
+    count = 0
+    
+    if isinstance(records, list):
+        for record in records:
+            if isinstance(record, dict):
+                for value in record.values():
+                    if value is not None and value != '' and value != []:
+                        count += 1
+    elif isinstance(records, dict):
+        for key, record in records.items():
+            if isinstance(record, dict):
+                for value in record.values():
+                    if value is not None and value != '' and value != []:
+                        count += 1
+            elif record is not None and record != '':
+                count += 1
+    
+    return count
+
+
+def count_records_in_yaml(filepath: Path) -> Tuple[Optional[int], Optional[int], bool, List[str]]:
     """
     Count the number of records in a YAML file and check for header.
     
     Returns:
-        Tuple of (record_count, has_header, header_keys)
+        Tuple of (record_count, non_missing_attrs, has_header, header_keys)
     """
     try:
         with open(filepath, 'r', encoding='utf-8') as f:
             data = yaml.safe_load(f)
         
         if data is None:
-            return (0, False, [])
+            return (0, 0, False, [])
         
         has_header, header_keys = check_header(data)
         
@@ -119,85 +160,101 @@ def count_records_in_yaml(filepath: Path) -> Tuple[Optional[int], bool, List[str
             # Check common list keys
             for key in ['dataflows', 'codelists', 'countries', 'regions', 'indicators', 'codes']:
                 if key in data:
-                    if isinstance(data[key], list):
-                        return (len(data[key]), has_header, header_keys)
-                    elif isinstance(data[key], dict):
-                        return (len(data[key]), has_header, header_keys)
+                    records = data[key]
+                    if isinstance(records, (list, dict)):
+                        non_missing = count_non_missing_attrs(records)
+                        return (len(records), non_missing, has_header, header_keys)
             
             # For dataflow_index, count dataflows list
             if 'dataflows' in data:
-                return (len(data['dataflows']), has_header, header_keys)
+                records = data['dataflows']
+                non_missing = count_non_missing_attrs(records) if records else 0
+                return (len(records) if records else 0, non_missing, has_header, header_keys)
             
             # For indicator metadata with 'indicators' as dict
             if 'indicators' in data and isinstance(data['indicators'], dict):
-                return (len(data['indicators']), has_header, header_keys)
+                records = data['indicators']
+                non_missing = count_non_missing_attrs(records)
+                return (len(records), non_missing, has_header, header_keys)
                 
             # Fallback: count top-level keys (excluding metadata)
-            count = len([k for k in data.keys() if not k.startswith('_') and k != 'metadata'])
-            return (count, has_header, header_keys)
+            top_keys = [k for k in data.keys() if not k.startswith('_') and k != 'metadata']
+            count = len(top_keys)
+            return (count, count, has_header, header_keys)
         elif isinstance(data, list):
-            return (len(data), has_header, header_keys)
+            non_missing = count_non_missing_attrs(data)
+            return (len(data), non_missing, has_header, header_keys)
         
-        return (None, has_header, header_keys)
+        return (None, None, has_header, header_keys)
     except Exception as e:
-        return (None, False, [])
+        logger.warning(f"Error parsing YAML file {filepath}: {e}")
+        return (None, None, False, [])
 
 
-def get_file_stats(base_dir: Path, file_base: str, is_stataonly: bool = False) -> FileStats:
+def get_file_stats(base_dir: Path, file_base: str, suffix: str = '') -> FileStats:
     """
     Get comprehensive statistics for a file.
+    
+    Args:
+        base_dir: Base metadata directory
+        file_base: Base filename without extension
+        suffix: Optional suffix to append (e.g., '_stataonly')
     
     Returns:
         FileStats named tuple
     """
     # Handle special case for dataflows directory
     if file_base == 'dataflows/*.yaml':
-        if is_stataonly:
-            dataflows_dir = base_dir / 'dataflows_stataonly'
+        if suffix:
+            dataflows_dir = base_dir / f'dataflows{suffix}'
         else:
             dataflows_dir = base_dir / 'dataflows'
         
         if not dataflows_dir.exists():
-            return FileStats(exists=False, records=None, lines=None, has_header=False, header_keys=[])
+            return FileStats(exists=False, records=None, lines=None, non_missing_attrs=None, has_header=False, header_keys=[])
         
         yaml_files = list(dataflows_dir.glob('*.yaml'))
         count = len(yaml_files)
         
-        # Count total lines across all files
+        # Count total lines and non-missing attrs across all files
         total_lines = sum(count_lines(f) for f in yaml_files)
+        total_non_missing = 0
         
-        # Check header on first file
+        # Check header on first file and count attrs
         has_header = False
         header_keys = []
-        if yaml_files:
-            _, has_header, header_keys = count_records_in_yaml(yaml_files[0])
+        for yf in yaml_files:
+            _, non_missing, hdr, hkeys = count_records_in_yaml(yf)
+            total_non_missing += non_missing if non_missing else 0
+            if not has_header and hdr:
+                has_header = hdr
+                header_keys = hkeys
         
         return FileStats(
             exists=count > 0,
             records=count if count > 0 else None,
             lines=total_lines if count > 0 else None,
+            non_missing_attrs=total_non_missing if count > 0 else None,
             has_header=has_header,
             header_keys=header_keys
         )
     
     # Regular files
-    if is_stataonly:
-        filename = f"{file_base}_stataonly.yaml"
-    else:
-        filename = f"{file_base}.yaml"
+    filename = f"{file_base}{suffix}.yaml"
     
     filepath = base_dir / filename
     
     if not filepath.exists():
-        return FileStats(exists=False, records=None, lines=None, has_header=False, header_keys=[])
+        return FileStats(exists=False, records=None, lines=None, non_missing_attrs=None, has_header=False, header_keys=[])
     
     lines = count_lines(filepath)
-    records, has_header, header_keys = count_records_in_yaml(filepath)
+    records, non_missing_attrs, has_header, header_keys = count_records_in_yaml(filepath)
     
     return FileStats(
         exists=True,
         records=records,
         lines=lines,
+        non_missing_attrs=non_missing_attrs,
         has_header=has_header,
         header_keys=header_keys
     )
@@ -210,9 +267,8 @@ def generate_status_table(detailed: bool = False) -> List[Dict]:
     for file_base in METADATA_FILES:
         row = {'file': f"`{file_base}.yaml`" if file_base != 'dataflows/*.yaml' else '`dataflows/*.yaml`'}
         
-        for platform, base_dir in METADATA_DIRS.items():
-            is_stataonly = platform == 'Stata (only)'
-            stats = get_file_stats(base_dir, file_base, is_stataonly)
+        for platform, (base_dir, suffix) in PLATFORM_CONFIG.items():
+            stats = get_file_stats(base_dir, file_base, suffix)
             
             if detailed:
                 if stats.exists and stats.records is not None:
@@ -352,15 +408,155 @@ def format_csv(data: List[Dict], detailed: bool = False) -> str:
     return "\n".join(lines)
 
 
+def compare_platforms(data: List[Dict]) -> Tuple[bool, str]:
+    """
+    Compare record counts, lines, and non-missing attributes across all four platforms.
+    
+    Returns:
+        Tuple of (all_match, comparison_report)
+    """
+    platforms = ['Python', 'R', 'Stata (Python)', 'Stata (only)']
+    
+    lines = [
+        "## Metadata Comparison Report",
+        "",
+        f"Generated: {__import__('datetime').datetime.now().isoformat()}",
+        "",
+        "### Record Count Comparison",
+        "",
+        "| File | Python | R | Stata (Python) | Stata (only) | Status |",
+        "|------|--------|---|----------------|--------------|--------|",
+    ]
+    
+    all_match = True
+    mismatches = []
+    missing_files = []
+    
+    # Collect stats for detailed tables
+    lines_data = []
+    attrs_data = []
+    
+    for row in data:
+        file_name = row['file']
+        counts = {}
+        file_lines = {}
+        file_attrs = {}
+        
+        for platform in platforms:
+            stats_key = f"{platform}_stats"
+            if stats_key in row and row[stats_key].exists:
+                counts[platform] = row[stats_key].records
+                file_lines[platform] = row[stats_key].lines
+                file_attrs[platform] = row[stats_key].non_missing_attrs
+            else:
+                counts[platform] = None
+                file_lines[platform] = None
+                file_attrs[platform] = None
+        
+        lines_data.append((file_name, file_lines))
+        attrs_data.append((file_name, file_attrs))
+        
+        # Build display strings
+        displays = []
+        for platform in platforms:
+            if counts[platform] is not None:
+                displays.append(str(counts[platform]))
+            else:
+                displays.append("-")
+        
+        # Check if all existing platforms match
+        existing_counts = [c for c in counts.values() if c is not None]
+        
+        if len(existing_counts) == 0:
+            status = "⚠️ Missing"
+            missing_files.append(file_name)
+            all_match = False
+        elif len(set(existing_counts)) == 1:
+            if len(existing_counts) == len(platforms):
+                status = "✅ Match"
+            else:
+                status = f"⚠️ Partial ({len(existing_counts)}/4)"
+                all_match = False
+        else:
+            status = "❌ Mismatch"
+            mismatches.append((file_name, counts))
+            all_match = False
+        
+        lines.append(f"| {file_name} | {' | '.join(displays)} | {status} |")
+    
+    # Add Lines comparison table
+    lines.extend([
+        "",
+        "### Line Count Comparison",
+        "",
+        "| File | Python | R | Stata (Python) | Stata (only) |",
+        "|------|--------|---|----------------|--------------|",
+    ])
+    
+    for file_name, file_lines in lines_data:
+        displays = []
+        for platform in platforms:
+            val = file_lines.get(platform)
+            displays.append(f"{val:,}" if val is not None else "-")
+        lines.append(f"| {file_name} | {' | '.join(displays)} |")
+    
+    # Add Non-missing attributes comparison table
+    lines.extend([
+        "",
+        "### Non-Missing Attributes Comparison",
+        "",
+        "| File | Python | R | Stata (Python) | Stata (only) |",
+        "|------|--------|---|----------------|--------------|",
+    ])
+    
+    for file_name, file_attrs in attrs_data:
+        displays = []
+        for platform in platforms:
+            val = file_attrs.get(platform)
+            displays.append(f"{val:,}" if val is not None else "-")
+        lines.append(f"| {file_name} | {' | '.join(displays)} |")
+    
+    # Summary
+    lines.extend([
+        "",
+        "### Summary",
+        "",
+    ])
+    
+    if all_match:
+        lines.append("✅ **All platforms have matching record counts!**")
+    else:
+        if mismatches:
+            lines.append(f"❌ **{len(mismatches)} file(s) with mismatched counts:**")
+            for file_name, counts in mismatches:
+                count_str = ", ".join([f"{p}: {c}" for p, c in counts.items() if c is not None])
+                lines.append(f"  - {file_name}: {count_str}")
+            lines.append("")
+        
+        if missing_files:
+            lines.append(f"⚠️ **{len(missing_files)} file(s) missing on some platforms:**")
+            for file_name in missing_files:
+                lines.append(f"  - {file_name}")
+    
+    return all_match, "\n".join(lines)
+
+
 def main():
     parser = argparse.ArgumentParser(description='Generate metadata status summary table')
     parser.add_argument('--output', '-o', choices=['markdown', 'csv', 'both', 'report'], 
                         default='markdown', help='Output format')
     parser.add_argument('--detailed', '-d', action='store_true',
                         help='Include line counts and header status')
+    parser.add_argument('--compare', '-c', action='store_true',
+                        help='Compare record counts across all four platforms')
     parser.add_argument('--save', '-s', action='store_true',
                         help='Save output to file(s)')
+    parser.add_argument('--verbose', '-v', action='store_true',
+                        help='Enable verbose logging')
     args = parser.parse_args()
+    
+    if args.verbose:
+        logger.setLevel(logging.DEBUG)
     
     print("Scanning metadata directories...")
     print(f"  Repository root: {REPO_ROOT}")
@@ -406,7 +602,29 @@ def main():
             with open(output_path, 'w', encoding='utf-8') as f:
                 f.write(csv_output)
             print(f"\nSaved to: {output_path}")
+    
+    # Run comparison if requested
+    if args.compare:
+        # Need detailed stats for comparison
+        if not args.detailed and args.output != 'report':
+            data = generate_status_table(detailed=True)
+        
+        all_match, comparison_report = compare_platforms(data)
+        
+        print("\n" + "=" * 70)
+        print(comparison_report)
+        
+        if args.save:
+            output_path = SCRIPT_DIR / 'metadata_comparison.md'
+            with open(output_path, 'w', encoding='utf-8') as f:
+                f.write(comparison_report)
+            print(f"\nSaved to: {output_path}")
+        
+        # Return exit code based on comparison result
+        return 0 if all_match else 1
+    
+    return 0
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())

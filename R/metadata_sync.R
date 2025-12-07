@@ -177,7 +177,10 @@ SDMX_NS <- c(
   yaml_content <- gsub(": ~\n", ": null\n", yaml_content)
   # Remove trailing newlines and use cat to avoid extra newline from writeLines
   yaml_content <- sub("\n+$", "", yaml_content)
-  cat(yaml_content, "\n", file = filepath, sep = "")
+  # Ensure UTF-8 encoding when writing (important for special characters from API)
+  con <- file(filepath, "w", encoding = "UTF-8")
+  on.exit(close(con))
+  cat(yaml_content, "\n", file = con, sep = "")
   invisible(filepath)
 }
 
@@ -520,23 +523,31 @@ sync_indicators <- function(dataflows = NULL, verbose = TRUE, output_dir = NULL)
 
 #' Sync all metadata from UNICEF SDMX API
 #'
-#' Downloads dataflows, codelists, countries, regions, and indicator
-#' definitions, saving them as YAML files with standardized watermarks.
+#' Downloads dataflows, codelists, countries, regions, indicator
+#' definitions, and optionally dataflow schemas, saving them as YAML files 
+#' with standardized watermarks.
 #'
 #' @param verbose Print progress messages
 #' @param output_dir Output directory (default: R/metadata/current/)
+#' @param include_schemas Sync dataflow schemas (default: TRUE). This generates
+#'   dataflow_index.yaml and individual dataflow YAML files in dataflows/
+#' @param include_sample_values Include sample values in schemas (default: TRUE)
 #' @return List with sync summary
 #' @export
 #'
 #' @examples
 #' \dontrun{
-#' # Sync all metadata
+#' # Sync all metadata including schemas
 #' results <- sync_all_metadata()
+#' 
+#' # Sync without schemas (faster)
+#' results <- sync_all_metadata(include_schemas = FALSE)
 #' 
 #' # Sync with custom output directory
 #' results <- sync_all_metadata(output_dir = "./my_metadata/")
 #' }
-sync_all_metadata <- function(verbose = TRUE, output_dir = NULL) {
+sync_all_metadata <- function(verbose = TRUE, output_dir = NULL, 
+                               include_schemas = TRUE, include_sample_values = TRUE) {
   if (is.null(output_dir)) output_dir <- .get_metadata_dir()
   
   results <- list(
@@ -547,6 +558,8 @@ sync_all_metadata <- function(verbose = TRUE, output_dir = NULL) {
     countries = 0,
     regions = 0,
     indicators = 0,
+    schemas = NULL,
+    schemas_failed = NULL,
     files_created = character(),
     errors = character()
   )
@@ -610,6 +623,46 @@ sync_all_metadata <- function(verbose = TRUE, output_dir = NULL) {
     if (verbose) cat(sprintf("    Error: %s\n", e$message))
   })
   
+  # 6. Sync dataflow schemas (if requested)
+  if (include_schemas) {
+    tryCatch({
+      # Source the schema_sync.R if not already loaded
+      schema_sync_path <- file.path(dirname(sys.frame(1)$ofile %||% "."), "schema_sync.R")
+      if (!file.exists(schema_sync_path)) {
+        # Try relative to output_dir
+        schema_sync_path <- file.path(dirname(output_dir), "..", "schema_sync.R")
+      }
+      if (!file.exists(schema_sync_path)) {
+        # Try relative to working directory
+        schema_sync_path <- file.path(getwd(), "schema_sync.R")
+      }
+      if (!file.exists(schema_sync_path)) {
+        schema_sync_path <- file.path(getwd(), "R", "schema_sync.R")
+      }
+      
+      if (file.exists(schema_sync_path)) {
+        source(schema_sync_path, local = FALSE)
+      }
+      
+      if (exists("sync_dataflow_schemas")) {
+        if (verbose) cat("  Syncing dataflow schemas...\n")
+        schema_result <- sync_dataflow_schemas(
+          output_dir = output_dir, 
+          verbose = verbose, 
+          include_sample_values = include_sample_values
+        )
+        results$schemas <- schema_result$success
+        results$schemas_failed <- schema_result$failed
+        results$files_created <- c(results$files_created, "dataflow_index.yaml", "dataflows/")
+      } else {
+        if (verbose) cat("  Warning: sync_dataflow_schemas not available\n")
+      }
+    }, error = function(e) {
+      results$errors <<- c(results$errors, paste("Schemas:", e$message))
+      if (verbose) cat(sprintf("    Error syncing schemas: %s\n", e$message))
+    })
+  }
+  
   # Summary
   if (verbose) {
     cat(strrep("-", 80), "\n")
@@ -619,6 +672,13 @@ sync_all_metadata <- function(verbose = TRUE, output_dir = NULL) {
     cat(sprintf("  - %s - %d countries\n", FILE_COUNTRIES, results$countries))
     cat(sprintf("  - %s - %d regions\n", FILE_REGIONS, results$regions))
     cat(sprintf("  - %s - %d indicators\n", FILE_INDICATORS, results$indicators))
+    if (!is.null(results$schemas)) {
+      cat(sprintf("  - dataflow_index.yaml + dataflows/ - %d schemas", results$schemas))
+      if (!is.null(results$schemas_failed) && results$schemas_failed > 0) {
+        cat(sprintf(" (%d failed)", results$schemas_failed))
+      }
+      cat("\n")
+    }
     if (length(results$errors) > 0) {
       cat(sprintf("  Errors: %d\n", length(results$errors)))
       for (err in results$errors) {
