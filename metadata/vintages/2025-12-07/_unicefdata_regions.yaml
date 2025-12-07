@@ -1,7 +1,7 @@
 _metadata:
   platform: python
   version: 2.0.0
-  synced_at: '2025-12-05T18:07:08.722544Z'
+  synced_at: '2025-12-07T08:52:30.857232Z'
   source: https://sdmx.data.unicef.org/ws/public/sdmxapi/rest/codelist/UNICEF/CL_WORLD_REGIONS/latest
   agency: UNICEF
   content_type: regions

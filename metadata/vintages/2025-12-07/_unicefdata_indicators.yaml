@@ -1,7 +1,7 @@
 _metadata:
   platform: python
   version: 2.0.0
-  synced_at: '2025-12-07T12:12:29.890099Z'
+  synced_at: '2025-12-07T08:52:30.864161Z'
   source: unicef_api.config + SDMX API
   agency: UNICEF
   content_type: indicators
@@ -50,7 +50,7 @@ indicators:
     source: config
   NT_ANT_WHZ_NE2:
     code: NT_ANT_WHZ_NE2
-    name: Wasting prevalence (moderate + severe)
+    name: Wasting prevalence
     dataflow: NUTRITION
     sdg_target: 2.2.2
     unit: Percentage
@@ -68,7 +68,7 @@ indicators:
     source: config
   ED_ANAR_L02:
     code: ED_ANAR_L02
-    name: Adjusted net attendance rate, lower secondary
+    name: Adjusted net attendance rate, primary education
     dataflow: EDUCATION_UIS_SDG
     sdg_target: 4.1.1
     unit: Percentage
@@ -79,7 +79,7 @@ indicators:
     code: ED_CR_L1_UIS_MOD
     name: Completion rate, primary education
     dataflow: EDUCATION_UIS_SDG
-    sdg_target: 4.1.2
+    sdg_target: 4.1.1
     unit: Percentage
     description: null
     dimensions: null
@@ -88,15 +88,6 @@ indicators:
     code: ED_CR_L2_UIS_MOD
     name: Completion rate, lower secondary education
     dataflow: EDUCATION_UIS_SDG
-    sdg_target: 4.1.2
-    unit: Percentage
-    description: null
-    dimensions: null
-    source: config
-  ED_MAT_L2:
-    code: ED_MAT_L2
-    name: Minimum proficiency in mathematics, lower secondary
-    dataflow: EDUCATION_UIS_SDG
     sdg_target: 4.1.1
     unit: Percentage
     description: null
@@ -104,7 +95,16 @@ indicators:
     source: config
   ED_READ_L2:
     code: ED_READ_L2
-    name: Minimum proficiency in reading, lower secondary
+    name: Reading proficiency, end of lower secondary
+    dataflow: EDUCATION_UIS_SDG
+    sdg_target: 4.1.1
+    unit: Percentage
+    description: null
+    dimensions: null
+    source: config
+  ED_MAT_L2:
+    code: ED_MAT_L2
+    name: Mathematics proficiency, end of lower secondary
     dataflow: EDUCATION_UIS_SDG
     sdg_target: 4.1.1
     unit: Percentage
@@ -113,7 +113,7 @@ indicators:
     source: config
   IM_DTP3:
     code: IM_DTP3
-    name: DTP3 immunisation coverage
+    name: DTP3 immunization coverage
     dataflow: IMMUNISATION
     sdg_target: 3.b.1
     unit: Percentage
@@ -122,7 +122,7 @@ indicators:
     source: config
   IM_MCV1:
     code: IM_MCV1
-    name: Measles 1st dose coverage
+    name: Measles immunization coverage (MCV1)
     dataflow: IMMUNISATION
     sdg_target: 3.b.1
     unit: Percentage
@@ -165,15 +165,6 @@ indicators:
     description: null
     dimensions: null
     source: config
-  MNCH_ABR:
-    code: MNCH_ABR
-    name: Adolescent birth rate
-    dataflow: MNCH
-    sdg_target: 3.7.2
-    unit: Births per 1,000 women aged 15-19
-    description: null
-    dimensions: null
-    source: config
   MNCH_MMR:
     code: MNCH_MMR
     name: Maternal mortality ratio
@@ -185,10 +176,19 @@ indicators:
     source: config
   MNCH_SAB:
     code: MNCH_SAB
-    name: Skilled attendant at birth
+    name: Skilled attendance at birth
     dataflow: MNCH
     sdg_target: 3.1.2
     unit: Percentage
+    description: null
+    dimensions: null
+    source: config
+  MNCH_ABR:
+    code: MNCH_ABR
+    name: Adolescent birth rate
+    dataflow: MNCH
+    sdg_target: 3.7.2
+    unit: Births per 1,000 women aged 15-19
     description: null
     dimensions: null
     source: config
@@ -203,7 +203,7 @@ indicators:
     source: config
   PT_CHLD_1-14_PS-PSY-V_CGVR:
     code: PT_CHLD_1-14_PS-PSY-V_CGVR
-    name: Children experiencing violent discipline
+    name: Violent discipline (children 1-14)
     dataflow: PT
     sdg_target: 16.2.1
     unit: Percentage
@@ -212,7 +212,7 @@ indicators:
     source: config
   PT_F_20-24_MRD_U18_TND:
     code: PT_F_20-24_MRD_U18_TND
-    name: Child marriage (women married by 18)
+    name: Child marriage before age 18 (women 20-24)
     dataflow: PT_CM
     sdg_target: 5.3.1
     unit: Percentage
@@ -221,7 +221,7 @@ indicators:
     source: config
   PT_F_15-49_FGM:
     code: PT_F_15-49_FGM
-    name: Female genital mutilation prevalence (15-49)
+    name: Female genital mutilation prevalence (women 15-49)
     dataflow: PT_FGM
     sdg_target: 5.3.2
     unit: Percentage
@@ -230,8 +230,7 @@ indicators:
     source: config
   ECD_CHLD_LMPSL:
     code: ECD_CHLD_LMPSL
-    name: Children developmentally on track (literacy-numeracy, physical, social-emotional,
-      learning)
+    name: Children developmentally on track (literacy-numeracy, physical, social-emotional)
     dataflow: ECD
     sdg_target: 4.2.1
     unit: Percentage
@@ -240,7 +239,7 @@ indicators:
     source: config
   PV_CHLD_DPRV-S-L1-HS:
     code: PV_CHLD_DPRV-S-L1-HS
-    name: Children in severe deprivation (health and shelter)
+    name: Child multidimensional poverty (severe deprivation in at least 1 dimension)
     dataflow: CHLD_PVTY
     sdg_target: 1.2.1
     unit: Percentage

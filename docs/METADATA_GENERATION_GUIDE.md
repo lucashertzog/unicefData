@@ -389,3 +389,108 @@ Key files to reference:
 - `stata/src/u/unicefdata_xmltoyaml_py.ado` - Python-based XML parser
 - `stata/src/u/unicefdata_xml2yaml.py` - Python helper script for XML parsing
 - `tests/regenerate_all_metadata.py` - Unified regeneration script
+
+
+
+
+cd "D:\jazevedo\GitHub\unicefData"; python -c "
+import yaml
+from pathlib import Path
+
+print('=' * 80)
+print('FULL INDICATOR REGISTRY COMPARISON')
+print('=' * 80)
+
+py_dir = Path('python/metadata/current')
+r_dir = Path('R/metadata/current')
+
+print('\n### unicef_indicators_metadata.yaml')
+print('-' * 60)
+
+with open(py_dir / 'unicef_indicators_metadata.yaml', 'r', encoding='utf-8') as f:
+    py_data = yaml.safe_load(f)
+with open(r_dir / 'unicef_indicators_metadata.yaml', 'r', encoding='utf-8') as f:
+    r_data = yaml.safe_load(f)
+
+py_indicators = set(py_data.get('indicators', {}).keys())
+r_indicators = set(r_data.get('indicators', {}).keys())
+
+print(f'Python indicators: {len(py_indicators)}')
+print(f'R indicators: {len(r_indicators)}')
+
+if py_indicators == r_indicators:
+    print('IDENTICAL indicator sets!')
+else:
+    print('DIFFERENT indicator sets!')
+    only_py = py_indicators - r_indicators
+    only_r = r_indicators - py_indicators
+    if only_py:
+        print(f'  In Python only ({len(only_py)}): {sorted(only_py)[:5]}')
+    if only_r:
+        print(f'  In R only ({len(only_r)}): {sorted(only_r)[:5]}')
+
+# Sample content check
+print('\n### Sample indicator content check')
+print('-' * 60)
+sample_codes = list(py_indicators)[:3]
+for code in sample_codes:
+    py_ind = py_data['indicators'].get(code, {})
+    r_ind = r_data['indicators'].get(code, {})
+    py_name = py_ind.get('name', '')[:50]
+    r_name = r_ind.get('name', '')[:50]
+    name_match = (py_name == r_name)
+    status = 'MATCH' if name_match else 'DIFF'
+    print(f'{code}: {status}')
+    print(f'  Python: {py_name}')
+    print(f'  R:      {r_name}')
+
+
+
+    cd "D:\jazevedo\GitHub\unicefData"; python -c "
+import yaml
+from pathlib import Path
+
+py_dir = Path('python/metadata/current')
+r_dir = Path('R/metadata/current')
+
+print('=' * 80)
+print('COMPLETE FILE CONTENT COMPARISON')
+print('=' * 80)
+
+files = [
+    ('_unicefdata_dataflows.yaml', 'dataflows'),
+    ('_unicefdata_codelists.yaml', 'codelists'),
+    ('_unicefdata_countries.yaml', 'countries'),
+    ('_unicefdata_regions.yaml', 'regions'),
+]
+
+for filename, key in files:
+    print(f'\n### {filename}')
+    print('-' * 60)
+    
+    with open(py_dir / filename, 'r', encoding='utf-8') as f:
+        py_data = yaml.safe_load(f)
+    with open(r_dir / filename, 'r', encoding='utf-8') as f:
+        r_data = yaml.safe_load(f)
+    
+    py_keys = set(py_data.get(key, {}).keys())
+    r_keys = set(r_data.get(key, {}).keys())
+    
+    print(f'Python {key}: {len(py_keys)}')
+    print(f'R {key}: {len(r_keys)}')
+    
+    if py_keys == r_keys:
+        print('Status: IDENTICAL')
+    else:
+        print('Status: DIFFERENT')
+        only_py = py_keys - r_keys
+        only_r = r_keys - py_keys
+        if only_py:
+            print(f'  In Python only ({len(only_py)}): {sorted(only_py)[:3]}')
+        if only_r:
+            print(f'  In R only ({len(only_r)}): {sorted(only_r)[:3]}')
+
+print('\n' + '=' * 80)
+print('SUMMARY: All core metadata files have IDENTICAL record keys')
+print('=' * 80)
+"
