@@ -2,7 +2,7 @@ id: MNCH
 name: Maternal, child and newborn health
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-02T22:48:21Z'
+synced_at: '2025-12-07T12:58:36Z'
 dimensions:
 - id: REF_AREA
   position: 1
@@ -222,7 +222,7 @@ attributes:
   - Figures that are based on 25-49 unweighted cases.
   - Multiple Indicator Cluster Survey 2023 Kyrgyz Republic Survey Findings Report,
     Table TM.8.7 and Table TM.8.8, does not capture within 2 days of giving birth
-  - 'N√∫mero de atenciones prenatales: 4-5, 6 y m√°s'
+  - 'Nv<U+222B>mero de atenciones prenatales: 4-5, 6 y mv°s'
   - Weighted average of Secondary and Higher prevalence
   - 'Cadres included align with the standard definition of: Doctor, nurse and/or midwife'
   - http://tabnet.datasus.gov.br/cgi/deftohtm.exe?sinasc/cnv/nvuf.def

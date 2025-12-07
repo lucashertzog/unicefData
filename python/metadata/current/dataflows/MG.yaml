@@ -2,7 +2,7 @@ id: MG
 name: Migration
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-03T05:00:15.898027+00:00'
+synced_at: '2025-12-07T12:49:09.466921+00:00'
 dimensions:
 - id: REF_AREA
   position: 1
