@@ -1,7 +1,7 @@
 _metadata:
   platform: Stata
   version: '2.0.0'
-  synced_at: '2025-12-07T02:53:34Z'
+  synced_at: '2025-12-07T03:43:50Z'
   source: https://sdmx.data.unicef.org/ws/public/sdmxapi/rest/dataflow/UNICEF?references=none&detail=full
   agency: UNICEF
   content_type: dataflows
