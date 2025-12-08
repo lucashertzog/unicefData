@@ -1,7 +1,7 @@
 _metadata:
   platform: R
   version: 2.0.0
-  synced_at: '2025-12-07T12:57:24Z'
+  synced_at: '2025-12-08T13:30:34Z'
   source: https://sdmx.data.unicef.org/ws/public/sdmxapi/rest/codelist/UNICEF
   agency: UNICEF
   content_type: codelists
@@ -465,7 +465,7 @@ codelists:
       Y_GE95: 95 years old and over
       _T: Total
       _U: Unknown
-    last_updated: '2025-12-07T12:57:23Z'
+    last_updated: '2025-12-08T13:30:33Z'
   CL_WEALTH_QUINTILE:
     id: CL_WEALTH_QUINTILE
     name: Wealth Quintile
@@ -488,7 +488,7 @@ codelists:
       R60: Richest 60%
       R80: Richest 80%
       _T: Total
-    last_updated: '2025-12-07T12:57:24Z'
+    last_updated: '2025-12-08T13:30:34Z'
   CL_RESIDENCE:
     id: CL_RESIDENCE
     name: Type of Residence (Urbanisation)
@@ -498,7 +498,7 @@ codelists:
       _T: Total
       U: Urban
       R: Rural
-    last_updated: '2025-12-07T12:57:24Z'
+    last_updated: '2025-12-08T13:30:34Z'
   CL_UNIT_MEASURE:
     id: CL_UNIT_MEASURE
     name: Unit of Measure
@@ -511,12 +511,12 @@ codelists:
       BIRTHS_1000: 1000 Births
       D: Number of deaths
       DPIA: Adjusted disability parity index
-      D_PER_1000_1: <U+0648><U+0641><U+064A><U+0627><U+062A> <U+0644><U+0643><U+0644> 1000 <U+0637><U+0641><U+0644> <U+0628><U+0639><U+0645><U+0631> <U+0633><U+0646><U+0629> <U+0648><U+0627><U+062D><U+062F><U+0629>
+      D_PER_1000_1: وفيات لكل 1000 طفل بعمر سنة واحدة
       D_PER_1000_10: Deaths per 1,000 children aged 10
       D_PER_1000_15: Deaths per 1,000 youths aged 15
       D_PER_1000_20: Deaths per 1,000 youths aged 20
-      D_PER_1000_5: <U+0648><U+0641><U+064A><U+0627><U+062A> <U+0644><U+0643><U+0644> 1000 <U+0637><U+0641><U+0644> <U+0628><U+0639><U+0645><U+0631> 5 <U+0633><U+0646><U+0648><U+0627><U+062A>
-      D_PER_1000_B: <U+0648><U+0641><U+064A><U+0627><U+062A> <U+0644><U+0643><U+0644> 1000 <U+0645><U+0648><U+0644><U+0648><U+062F> <U+062D><U+064A>
+      D_PER_1000_5: وفيات لكل 1000 طفل بعمر 5 سنوات
+      D_PER_1000_B: وفيات لكل 1000 مولود حي
       EUR: Euro
       GDP_CAP: As % of GDP per capita
       GDP_PERC: '% of GDP'
@@ -585,7 +585,7 @@ codelists:
       RATE: Rate
       D_PER_100000_BIRTHS: Deaths per 100000 births
       1_IN_X: 1 in X
-    last_updated: '2025-12-07T12:57:24Z'
+    last_updated: '2025-12-08T13:30:34Z'
   CL_OBS_STATUS:
     id: CL_OBS_STATUS
     name: Observation Status
@@ -630,4 +630,4 @@ codelists:
       EXCL: Excluded
       BEP: Time series break; estimated value; provisional value
       PRED: Predicted
-    last_updated: '2025-12-07T12:57:24Z'
+    last_updated: '2025-12-08T13:30:34Z'
