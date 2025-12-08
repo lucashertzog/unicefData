@@ -53,17 +53,24 @@ CACHE_MAX_AGE_DAYS <- 30
   # Try to find R directory relative to current working directory
   script_dir <- getwd()
   
+  # Priority order: look for R/metadata/current first (project root case)
+  # then metadata/current (if already in R/ directory)
   candidates <- c(
+    file.path(script_dir, "R", "metadata", "current"),      # If in project root (highest priority)
     file.path(script_dir, "metadata", "current"),           # If in R/
-    file.path(script_dir, "R", "metadata", "current"),      # If in project root
-    file.path(script_dir, "..", "metadata", "current"),     # If in R/examples/
-    file.path(script_dir, "..", "R", "metadata", "current") # If in project subdirectory
+    file.path(script_dir, "..", "R", "metadata", "current"), # If in project subdirectory
+    file.path(script_dir, "..", "metadata", "current")      # If in R/examples/
   )
   
   for (metadata_dir in candidates) {
-    parent_dir <- dirname(metadata_dir)
-    # Check if parent exists (metadata/ directory)
-    if (dir.exists(dirname(parent_dir))) {
+    # Check if the R/ or metadata/ parent exists to validate correct location
+    parent_dir <- dirname(metadata_dir)  # e.g., R/metadata or metadata
+    grandparent_dir <- dirname(parent_dir)  # e.g., R or .
+    
+    # For R/metadata/current, check if R/ exists
+    # For metadata/current (when in R/), check if metadata/ parent is within R structure
+    if (dir.exists(parent_dir) || 
+        (dir.exists(grandparent_dir) && basename(grandparent_dir) == "R")) {
       # Create current/ if needed
       if (!dir.exists(metadata_dir)) {
         dir.create(metadata_dir, recursive = TRUE, showWarnings = FALSE)

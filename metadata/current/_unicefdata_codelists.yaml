@@ -1,7 +1,7 @@
 _metadata:
-  platform: python
+  platform: R
   version: 2.0.0
-  synced_at: '2025-12-07T12:40:08.527207Z'
+  synced_at: '2025-12-08T13:09:42Z'
   source: https://sdmx.data.unicef.org/ws/public/sdmxapi/rest/codelist/UNICEF
   agency: UNICEF
   content_type: codelists
@@ -15,6 +15,7 @@ _metadata:
 codelists:
   CL_AGE:
     id: CL_AGE
+    name: Age group code list
     agency: UNICEF
     version: latest
     codes:
@@ -464,10 +465,10 @@ codelists:
       Y_GE95: 95 years old and over
       _T: Total
       _U: Unknown
-    last_updated: '2025-12-07T12:40:08.082964Z'
-    name: Age group code list
+    last_updated: '2025-12-08T13:09:41Z'
   CL_WEALTH_QUINTILE:
     id: CL_WEALTH_QUINTILE
+    name: Wealth Quintile
     agency: UNICEF
     version: latest
     codes:
@@ -487,20 +488,20 @@ codelists:
       R60: Richest 60%
       R80: Richest 80%
       _T: Total
-    last_updated: '2025-12-07T12:40:08.203140Z'
-    name: Wealth Quintile
+    last_updated: '2025-12-08T13:09:41Z'
   CL_RESIDENCE:
     id: CL_RESIDENCE
+    name: Type of Residence (Urbanisation)
     agency: UNICEF
     version: latest
     codes:
       _T: Total
       U: Urban
       R: Rural
-    last_updated: '2025-12-07T12:40:08.310395Z'
-    name: Type of Residence (Urbanisation)
+    last_updated: '2025-12-08T13:09:42Z'
   CL_UNIT_MEASURE:
     id: CL_UNIT_MEASURE
+    name: Unit of Measure
     agency: UNICEF
     version: latest
     codes:
@@ -584,10 +585,10 @@ codelists:
       RATE: Rate
       D_PER_100000_BIRTHS: Deaths per 100000 births
       1_IN_X: 1 in X
-    last_updated: '2025-12-07T12:40:08.419724Z'
-    name: Unit of Measure
+    last_updated: '2025-12-08T13:09:42Z'
   CL_OBS_STATUS:
     id: CL_OBS_STATUS
+    name: Observation Status
     agency: UNICEF
     version: latest
     codes:
@@ -603,7 +604,7 @@ codelists:
       K: Data included in another category
       L: Missing value; data exist but were not collected
       M: Missing value; data cannot exist
-      N: Not significant
+      'N': Not significant
       O: Missing value
       P: Provisional value
       Q: Missing value; suppressed
@@ -629,5 +630,4 @@ codelists:
       EXCL: Excluded
       BEP: Time series break; estimated value; provisional value
       PRED: Predicted
-    last_updated: '2025-12-07T12:40:08.527009Z'
-    name: Observation Status
+    last_updated: '2025-12-08T13:09:42Z'
