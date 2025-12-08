@@ -199,10 +199,10 @@ sync_metadata <- function(cache_dir = NULL, verbose = TRUE) {
     if (verbose) message(sprintf("     \u2717 Regions error: %s", e$message))
   })
   
-  # 5. Sync indicators
+  # 5. Build indicators
   tryCatch({
     if (verbose) message("  \U0001F4C1 Building indicator catalog...")
-    indicators <- sync_indicators(verbose = FALSE)
+    indicators <- build_indicator_catalog(verbose = FALSE)
     results$indicators <- length(indicators$indicators)
     results$files_created <- c(results$files_created, .metadata_config$FILE_INDICATORS)
     if (verbose) {
@@ -439,7 +439,7 @@ sync_regions <- function(verbose = TRUE) {
   invisible(result)
 }
 
-#' Sync indicator catalog
+#' Build indicator catalog
 #'
 #' Builds indicator catalog from common SDG indicators.
 #' Tries to load from shared config/indicators.yaml first, 
@@ -449,7 +449,7 @@ sync_regions <- function(verbose = TRUE) {
 #' @param use_shared_config Try to load from shared YAML config (default: TRUE)
 #' @return List with indicator metadata
 #' @export
-sync_indicators <- function(verbose = TRUE, use_shared_config = TRUE) {
+build_indicator_catalog <- function(verbose = TRUE, use_shared_config = TRUE) {
   if (verbose) message("  Building indicator catalog...")
   
   # Try to load from shared config first
