@@ -5,6 +5,9 @@
 * This is a standalone script for syncing Stata metadata using ONLY Stata
 * (no Python dependency). Note: May hit Stata macro limits for large files.
 *
+* Output goes to: stataonly/metadata/current/
+* This separate folder makes it easy to track pure-Stata output in git commits.
+*
 * For syncing all languages, use the orchestrator:
 *     python tests/orchestrator_metadata.py --all
 *
@@ -42,15 +45,15 @@ run "stata/src/u/unicefdata_sync.ado"
 pwd
 
 * Run sync with forcestata and force (to regenerate)
-* Note: The indicator metadata file (unicef_indicators_metadata_stataonly.yaml)
-* may fail because it exceeds Stata's macro length limits (~730+ indicators)
-* Other files should work fine with pure Stata parser
-unicefdata_sync, verbose forcestata suffix("_stataonly") force
+* Output to separate stataonly/metadata folder for clean git tracking
+* Note: Some files may fail due to Stata's macro length limits (~730+ indicators)
+* Core files (dataflows, codelists, countries, regions, indicators) should work
+unicefdata_sync, path("stataonly/metadata") verbose forcestata force
 
 * Show results
 di "Sync completed (pure Stata parser)"
-di "Note: unicef_indicators_metadata_stataonly.yaml may be missing"
-di "      if macro limits were exceeded. This is expected behavior."
+di "Output saved to: stataonly/metadata/current/"
+di "Note: Some extended files may be missing if macro limits were exceeded."
 
 log close stataonly
 

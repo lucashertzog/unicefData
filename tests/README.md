@@ -104,9 +104,9 @@ Each language has its own standalone sync script that can be run independently.
 | `sync_metadata_python.py` | Python | Native | `python/metadata/current/` |
 | `sync_metadata_r.R` | R | Native | `R/metadata/current/` |
 | `sync_metadata_stata.do` | Stata | Python-assisted | `stata/metadata/current/` |
-| `sync_metadata_stataonly.do` | Stata | Pure Stata | `stata/metadata/current/` (with `_stataonly` suffix) |
+| `sync_metadata_stataonly.do` | Stata | Pure Stata | `stataonly/metadata/current/` |
 
-**Note:** The `sync_metadata_stataonly.do` script uses a pure Stata YAML parser, which may hit Stata's macro length limits for very large files (like the indicator metadata with 730+ indicators).
+**Note:** The `sync_metadata_stataonly.do` script uses a pure Stata YAML parser, which may hit Stata's macro length limits for very large files (like the indicator metadata with 730+ indicators). Its output goes to a separate `stataonly/` folder for cleaner git tracking.
 
 ### Reporting
 
@@ -165,7 +165,7 @@ After running sync scripts, metadata files are written to:
 | Python | `python/metadata/current/` | `unicef_indicators_metadata.yaml`, `dataflows/*.yaml` |
 | R | `R/metadata/current/` | `unicef_indicators_metadata.yaml`, `dataflows/*.yaml` |
 | Stata | `stata/metadata/current/` | `unicef_indicators_metadata.yaml`, `dataflows/*.yaml` |
-| Stata (only) | `stata/metadata/current/` | `unicef_indicators_metadata_stataonly.yaml` |
+| Stata (pure) | `stataonly/metadata/current/` | Core metadata files (no large files due to macro limits) |
 
 ## Prerequisites
 
