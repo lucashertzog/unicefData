@@ -1,13 +1,14 @@
 *******************************************************************************
 * _unicef_search_indicators.ado
-*! v 1.0.0   09Dec2025               by Joao Pedro Azevedo (UNICEF)
-* Search UNICEF indicators by keyword
+*! v 1.2.0   09Dec2025               by Joao Pedro Azevedo (UNICEF)
+* Search UNICEF indicators by keyword using YAML metadata
+* Uses yaml.ado for robust YAML parsing
 *******************************************************************************
 
 program define _unicef_search_indicators, rclass
     version 14.0
     
-    syntax , KEYword(string) [LIMIT(integer 20) VERBOSE METApath(string)]
+    syntax , Keyword(string) [Limit(integer 20) VERBOSE METApath(string)]
     
     quietly {
     
@@ -16,12 +17,16 @@ program define _unicef_search_indicators, rclass
         *-----------------------------------------------------------------------
         
         if ("`metapath'" == "") {
-            findfile unicefdata.ado
+            capture findfile unicefdata.ado
             if (_rc == 0) {
                 local ado_path "`r(fn)'"
-                local ado_dir = subinstr("`ado_path'", "src/u/unicefdata.ado", "", .)
-                local ado_dir = subinstr("`ado_dir'", "src\u\unicefdata.ado", "", .)
+                local ado_dir = subinstr("`ado_path'", "\", "/", .)
+                local ado_dir = subinstr("`ado_dir'", "src/u/unicefdata.ado", "", .)
                 local metapath "`ado_dir'metadata/vintages/"
+            }
+            
+            if ("`metapath'" == "") | (!fileexists("`metapath'indicators.yaml")) {
+                local metapath "metadata/vintages/"
             }
             
             if ("`metapath'" == "") | (!fileexists("`metapath'indicators.yaml")) {
@@ -47,64 +52,66 @@ program define _unicef_search_indicators, rclass
         }
         
         *-----------------------------------------------------------------------
-        * Read YAML file using yaml.ado
+        * Read YAML file and search
         *-----------------------------------------------------------------------
         
         preserve
         
         yaml read using "`yaml_file'", replace
         
-        * Keep only indicator entries (parent starts with "indicators_")
-        keep if substr(parent, 1, 11) == "indicators_" | parent == "indicators"
+        * Get all indicator codes under 'indicators' parent
+        yaml list indicators, keys children
+        local all_indicators "`r(keys)'"
         
-        * Extract indicator code from parent
-        gen indicator = subinstr(parent, "indicators_", "", 1)
-        
-        * Get the name entries
-        keep if strpos(key, "_name") > 0
-        rename value name
-        
-        * Also need dataflow - merge back
-        tempfile names_data
-        save `names_data'
-        
-        * Re-read for dataflow
-        yaml read using "`yaml_file'", replace
-        keep if substr(parent, 1, 11) == "indicators_" | parent == "indicators"
-        keep if strpos(key, "_dataflow") > 0
-        gen indicator = subinstr(parent, "indicators_", "", 1)
-        rename value dataflow
-        keep indicator dataflow
-        
-        * Merge
-        merge 1:1 indicator using `names_data', keep(3) nogen
-        
-        * Keep essential columns
-        keep indicator name dataflow
-        
-        *-----------------------------------------------------------------------
-        * Search by keyword (case-insensitive)
-        *-----------------------------------------------------------------------
-        
+        * Search in both code and name
         local keyword_lower = lower("`keyword'")
+        local matches ""
+        local match_names ""
+        local match_dataflows ""
+        local n_matches = 0
         
-        * Search in both indicator code and name
-        gen _match = (strpos(lower(indicator), "`keyword_lower'") > 0) | ///
-                     (strpos(lower(name), "`keyword_lower'") > 0)
-        
-        keep if _match == 1
-        drop _match
-        
-        * Sort by indicator
-        sort indicator
-        
-        * Limit results
-        local n_found = _N
-        if (`n_found' > `limit') {
-            keep in 1/`limit'
+        foreach ind of local all_indicators {
+            * Check if keyword matches indicator code
+            local ind_lower = lower("`ind'")
+            local found = 0
+            
+            if (strpos("`ind_lower'", "`keyword_lower'") > 0) {
+                local found = 1
+            }
+            
+            * Also check name
+            if (`found' == 0) {
+                capture yaml get indicators:`ind', attributes(name) quiet
+                if (_rc == 0 & "`r(name)'" != "") {
+                    local name_lower = lower("`r(name)'")
+                    if (strpos("`name_lower'", "`keyword_lower'") > 0) {
+                        local found = 1
+                    }
+                }
+            }
+            
+            if (`found' == 1) {
+                local ++n_matches
+                local matches "`matches' `ind'"
+                
+                * Get name and dataflow for this indicator
+                capture yaml get indicators:`ind', attributes(name dataflow) quiet
+                if (_rc == 0) {
+                    local match_names `"`match_names' "`r(name)'""'
+                    local match_dataflows "`match_dataflows' `r(dataflow)'"
+                }
+                else {
+                    local match_names `"`match_names' "N/A""'
+                    local match_dataflows "`match_dataflows' N/A"
+                }
+                
+                if (`n_matches' >= `limit') {
+                    continue, break
+                }
+            }
         }
         
-        local n_shown = _N
+        local matches = strtrim("`matches'")
         
         restore
         
@@ -115,92 +122,48 @@ program define _unicef_search_indicators, rclass
     *---------------------------------------------------------------------------
     
     noi di ""
-    noi di as text "{hline 78}"
-    noi di as text `"Indicators matching "`keyword'""'
-    noi di as text "{hline 78}"
+    noi di as text "{hline 70}"
+    noi di as text "Search Results for: " as result "`keyword'"
+    noi di as text "{hline 70}"
     noi di ""
     
-    if (`n_found' == 0) {
-        noi di as text "No indicators found matching '" as result "`keyword'" as text "'"
-        noi di ""
-        noi di as text "Try a different search term or use 'unicefdata, flows' to see available dataflows."
-        return scalar n_found = 0
-        exit
-    }
-    
-    * Re-do the search for display
-    preserve
-    quietly {
-        yaml read using "`yaml_file'", replace
-        
-        keep if substr(parent, 1, 11) == "indicators_" | parent == "indicators"
-        gen indicator = subinstr(parent, "indicators_", "", 1)
-        keep if strpos(key, "_name") > 0
-        rename value name
-        
-        tempfile names_data
-        save `names_data'
-        
-        yaml read using "`yaml_file'", replace
-        keep if substr(parent, 1, 11) == "indicators_" | parent == "indicators"
-        keep if strpos(key, "_dataflow") > 0
-        gen indicator = subinstr(parent, "indicators_", "", 1)
-        rename value dataflow
-        keep indicator dataflow
-        
-        merge 1:1 indicator using `names_data', keep(3) nogen
-        keep indicator name dataflow
-        
-        local keyword_lower = lower("`keyword'")
-        gen _match = (strpos(lower(indicator), "`keyword_lower'") > 0) | ///
-                     (strpos(lower(name), "`keyword_lower'") > 0)
-        keep if _match == 1
-        drop _match
-        sort indicator
-        
-        if (_N > `limit') {
-            keep in 1/`limit'
-        }
-    }
-    
-    noi di as text _col(2) "{ul:Indicator}" _col(28) "{ul:Name}" _col(60) "{ul:Dataflow}"
-    noi di ""
-    
-    local n_shown = _N
-    forvalues i = 1/`n_shown' {
-        local ind = indicator[`i']
-        local nm = name[`i']
-        local df = dataflow[`i']
-        
-        * Truncate name if too long
-        if (length("`nm'") > 30) {
-            local nm = substr("`nm'", 1, 27) + "..."
-        }
-        
-        noi di as result _col(2) "`ind'" as text _col(28) "`nm'" as result _col(60) "`df'"
-    }
-    
-    restore
-    
-    noi di ""
-    noi di as text "{hline 78}"
-    if (`n_found' > `limit') {
-        noi di as text "Showing " as result `n_shown' as text " of " as result `n_found' as text " matches. Use " as result "limit(N)" as text " to see more."
+    if (`n_matches' == 0) {
+        noi di as text "  No indicators found matching '`keyword'"
     }
     else {
-        noi di as text "Found " as result `n_found' as text " matching indicator(s)"
+        noi di as text _col(2) "{ul:Indicator}" _col(20) "{ul:Dataflow}" _col(35) "{ul:Name}"
+        noi di ""
+        
+        forvalues i = 1/`n_matches' {
+            local ind : word `i' of `matches'
+            local df : word `i' of `match_dataflows'
+            local nm : word `i' of `match_names'
+            
+            * Truncate name if too long
+            if (length("`nm'") > 35) {
+                local nm = substr("`nm'", 1, 32) + "..."
+            }
+            
+            noi di as result _col(2) "`ind'" as text _col(20) "`df'" _col(35) "`nm'"
+        }
+        
+        if (`n_matches' >= `limit') {
+            noi di ""
+            noi di as text "  (Showing first `limit' matches. Use limit() option for more.)"
+        }
     }
-    noi di as text "{hline 78}"
+    
     noi di ""
-    noi di as text "Usage: " as result "unicefdata, indicator(<code>) countries(<iso3>)"
+    noi di as text "{hline 70}"
+    noi di as text "Found: " as result `n_matches' as text " indicator(s)"
+    noi di as text "{hline 70}"
     
     *---------------------------------------------------------------------------
     * Return values
     *---------------------------------------------------------------------------
     
-    return scalar n_found = `n_found'
-    return scalar n_shown = `n_shown'
+    return scalar n_matches = `n_matches'
+    return local indicators "`matches'"
     return local keyword "`keyword'"
-    return local yaml_file "`yaml_file'"
     
 end

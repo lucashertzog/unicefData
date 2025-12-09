@@ -1,7 +1,8 @@
 *******************************************************************************
 * _unicef_list_dataflows.ado
-*! v 1.0.0   09Dec2025               by Joao Pedro Azevedo (UNICEF)
+*! v 1.2.0   09Dec2025               by Joao Pedro Azevedo (UNICEF)
 * List available UNICEF SDMX dataflows from YAML metadata
+* Uses yaml.ado for robust YAML parsing
 *******************************************************************************
 
 program define _unicef_list_dataflows, rclass
@@ -16,14 +17,21 @@ program define _unicef_list_dataflows, rclass
         *-----------------------------------------------------------------------
         
         if ("`metapath'" == "") {
-            * Find the package installation path
-            findfile unicefdata.ado
+            * Find the package installation path from unicefdata.ado
+            capture findfile unicefdata.ado
             if (_rc == 0) {
                 local ado_path "`r(fn)'"
-                * Extract directory (go up from src/u/ to find metadata/)
-                local ado_dir = subinstr("`ado_path'", "src/u/unicefdata.ado", "", .)
-                local ado_dir = subinstr("`ado_dir'", "src\u\unicefdata.ado", "", .)
+                * Go up from src/u/ to repo root, then to metadata/vintages/
+                * Handle both forward and back slashes
+                local ado_dir = subinstr("`ado_path'", "\", "/", .)
+                local ado_dir = subinstr("`ado_dir'", "src/u/unicefdata.ado", "", .)
                 local metapath "`ado_dir'metadata/vintages/"
+            }
+            
+            * Fallback to current working directory path
+            if ("`metapath'" == "") | (!fileexists("`metapath'dataflows.yaml")) {
+                * Try relative to current directory
+                local metapath "metadata/vintages/"
             }
             
             * Fallback to PLUS directory
@@ -58,39 +66,45 @@ program define _unicef_list_dataflows, rclass
         * Use yaml read command (loads into current dataset)
         yaml read using "`yaml_file'", replace
         
-        * Filter to dataflow entries only (parent = "dataflows")
-        keep if parent == "dataflows"
+        *-----------------------------------------------------------------------
+        * Extract dataflow IDs using yaml list
+        *-----------------------------------------------------------------------
+        
+        * Get immediate children under 'dataflows' parent
+        yaml list dataflows, keys children
+        local dataflow_ids "`r(keys)'"
         
         * Count dataflows
-        local n_flows = _N
+        local n_flows : word count `dataflow_ids'
         
-        *-----------------------------------------------------------------------
-        * Extract dataflow IDs and names
-        *-----------------------------------------------------------------------
+        * Now build results dataset
+        clear
+        gen str50 dataflow_id = ""
+        gen str100 name = ""
         
-        * The key format is "dataflows_CME" -> extract ID
-        gen dataflow_id = subinstr(key, "dataflows_", "", 1)
-        replace dataflow_id = subinstr(dataflow_id, "_name", "", 1)
-        replace dataflow_id = subinstr(dataflow_id, "_description", "", 1)
-        
-        * Keep only rows with "name" type info (not parent markers)
-        keep if type != "parent" & strpos(key, "_name") > 0
-        
-        * Clean up key to get just the ID
-        replace dataflow_id = subinstr(key, "dataflows_", "", 1)
-        replace dataflow_id = subinstr(dataflow_id, "_name", "", 1)
-        
-        * Rename value to name
-        rename value name
-        
-        * Keep essential columns
-        keep dataflow_id name
+        local obs = 0
+        foreach id of local dataflow_ids {
+            local ++obs
+            set obs `obs'
+            replace dataflow_id = "`id'" in `obs'
+            
+            * Get name attribute for this dataflow
+            * Keys are like: dataflows_CME_name
+            capture yaml get dataflows:`id', attributes(name) quiet
+            if (_rc == 0 & "`r(name)'" != "") {
+                replace name = "`r(name)'" in `obs'
+            }
+            else {
+                replace name = "`id'" in `obs'
+            }
+        }
         
         * Sort
         sort dataflow_id
         
-        * Get count
-        local n_flows = _N
+        * Store data for display
+        tempfile flowdata
+        save `flowdata'
         
         restore
         
@@ -106,20 +120,10 @@ program define _unicef_list_dataflows, rclass
     noi di as text "{hline 70}"
     noi di ""
     
-    * Re-read and display
+    * Re-load for display
     preserve
-    quietly {
-        yaml read using "`yaml_file'", replace
-        keep if parent == "dataflows" & type != "parent" & strpos(key, "_name") > 0
-        
-        gen dataflow_id = subinstr(key, "dataflows_", "", 1)
-        replace dataflow_id = subinstr(dataflow_id, "_name", "", 1)
-        rename value name
-        keep dataflow_id name
-        sort dataflow_id
-        
-        local n_flows = _N
-    }
+    quietly use `flowdata', clear
+    local n_flows = _N
     
     if ("`detail'" != "") {
         noi di as text _col(2) "{ul:Dataflow ID}" _col(25) "{ul:Name}"
@@ -168,6 +172,7 @@ program define _unicef_list_dataflows, rclass
     *---------------------------------------------------------------------------
     
     return scalar n_dataflows = `n_flows'
+    return local dataflow_ids "`dataflow_ids'"
     return local yaml_file "`yaml_file'"
     
 end

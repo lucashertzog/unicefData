@@ -1,13 +1,14 @@
 *******************************************************************************
 * _unicef_list_indicators.ado
-*! v 1.0.0   09Dec2025               by Joao Pedro Azevedo (UNICEF)
-* List indicators in a specific UNICEF SDMX dataflow
+*! v 1.2.0   09Dec2025               by Joao Pedro Azevedo (UNICEF)
+* List UNICEF indicators for a specific dataflow using YAML metadata
+* Uses yaml.ado for robust YAML parsing
 *******************************************************************************
 
 program define _unicef_list_indicators, rclass
     version 14.0
     
-    syntax , DATAFLOW(string) [LIMIT(integer 50) VERBOSE METApath(string)]
+    syntax , Dataflow(string) [VERBOSE METApath(string)]
     
     quietly {
     
@@ -16,12 +17,16 @@ program define _unicef_list_indicators, rclass
         *-----------------------------------------------------------------------
         
         if ("`metapath'" == "") {
-            findfile unicefdata.ado
+            capture findfile unicefdata.ado
             if (_rc == 0) {
                 local ado_path "`r(fn)'"
-                local ado_dir = subinstr("`ado_path'", "src/u/unicefdata.ado", "", .)
-                local ado_dir = subinstr("`ado_dir'", "src\u\unicefdata.ado", "", .)
+                local ado_dir = subinstr("`ado_path'", "\", "/", .)
+                local ado_dir = subinstr("`ado_dir'", "src/u/unicefdata.ado", "", .)
                 local metapath "`ado_dir'metadata/vintages/"
+            }
+            
+            if ("`metapath'" == "") | (!fileexists("`metapath'indicators.yaml")) {
+                local metapath "metadata/vintages/"
             }
             
             if ("`metapath'" == "") | (!fileexists("`metapath'indicators.yaml")) {
@@ -42,11 +47,8 @@ program define _unicef_list_indicators, rclass
             exit 601
         }
         
-        * Uppercase the dataflow for matching
-        local dataflow = upper("`dataflow'")
-        
         if ("`verbose'" != "") {
-            noi di as text "Listing indicators for dataflow: " as result "`dataflow'"
+            noi di as text "Reading indicators from: " as result "`yaml_file'"
         }
         
         *-----------------------------------------------------------------------
@@ -57,46 +59,30 @@ program define _unicef_list_indicators, rclass
         
         yaml read using "`yaml_file'", replace
         
-        * Get dataflow entries
-        keep if substr(parent, 1, 11) == "indicators_" | parent == "indicators"
-        keep if strpos(key, "_dataflow") > 0
-        gen indicator = subinstr(parent, "indicators_", "", 1)
-        rename value df_value
+        * Get all indicator codes under 'indicators' parent
+        yaml list indicators, keys children
+        local all_indicators "`r(keys)'"
         
-        * Filter to matching dataflow
-        keep if upper(df_value) == "`dataflow'"
+        * Filter to those matching the specified dataflow
+        local dataflow_upper = upper("`dataflow'")
+        local matches ""
+        local match_names ""
+        local n_matches = 0
         
-        tempfile df_data
-        save `df_data'
-        local n_indicators = _N
-        
-        if (`n_indicators' == 0) {
-            restore
-            noi di as err "No indicators found for dataflow '`dataflow''"
-            noi di as text "Use 'unicefdata, flows' to see available dataflows."
-            exit 198
+        foreach ind of local all_indicators {
+            * Get dataflow attribute for this indicator
+            capture yaml get indicators:`ind', attributes(dataflow name) quiet
+            if (_rc == 0) {
+                local ind_df = upper("`r(dataflow)'")
+                if ("`ind_df'" == "`dataflow_upper'") {
+                    local ++n_matches
+                    local matches "`matches' `ind'"
+                    local match_names `"`match_names' "`r(name)'""'
+                }
+            }
         }
         
-        * Get names for these indicators
-        yaml read using "`yaml_file'", replace
-        keep if substr(parent, 1, 11) == "indicators_" | parent == "indicators"
-        keep if strpos(key, "_name") > 0
-        gen indicator = subinstr(parent, "indicators_", "", 1)
-        rename value name
-        keep indicator name
-        
-        * Merge with dataflow filter
-        merge 1:1 indicator using `df_data', keep(3) nogen
-        
-        * Sort
-        sort indicator
-        
-        * Limit
-        local n_total = _N
-        if (_N > `limit') {
-            keep in 1/`limit'
-        }
-        local n_shown = _N
+        local matches = strtrim("`matches'")
         
         restore
         
@@ -108,75 +94,42 @@ program define _unicef_list_indicators, rclass
     
     noi di ""
     noi di as text "{hline 70}"
-    noi di as text "Indicators in dataflow: " as result "`dataflow'"
+    noi di as text "Indicators in Dataflow: " as result "`dataflow_upper'"
     noi di as text "{hline 70}"
     noi di ""
     
-    * Re-do for display
-    preserve
-    quietly {
-        yaml read using "`yaml_file'", replace
-        keep if substr(parent, 1, 11) == "indicators_" | parent == "indicators"
-        keep if strpos(key, "_dataflow") > 0
-        gen indicator = subinstr(parent, "indicators_", "", 1)
-        rename value df_value
-        keep if upper(df_value) == "`dataflow'"
-        
-        tempfile df_data
-        save `df_data'
-        
-        yaml read using "`yaml_file'", replace
-        keep if substr(parent, 1, 11) == "indicators_" | parent == "indicators"
-        keep if strpos(key, "_name") > 0
-        gen indicator = subinstr(parent, "indicators_", "", 1)
-        rename value name
-        keep indicator name
-        
-        merge 1:1 indicator using `df_data', keep(3) nogen
-        sort indicator
-        
-        if (_N > `limit') {
-            keep in 1/`limit'
-        }
-    }
-    
-    noi di as text _col(2) "{ul:Indicator Code}" _col(30) "{ul:Name}"
-    noi di ""
-    
-    local n_shown = _N
-    forvalues i = 1/`n_shown' {
-        local ind = indicator[`i']
-        local nm = name[`i']
-        
-        * Truncate name if too long
-        if (length("`nm'") > 40) {
-            local nm = substr("`nm'", 1, 37) + "..."
-        }
-        
-        noi di as result _col(2) "`ind'" as text _col(30) "`nm'"
-    }
-    
-    restore
-    
-    noi di ""
-    noi di as text "{hline 70}"
-    if (`n_total' > `limit') {
-        noi di as text "Showing " as result `n_shown' as text " of " as result `n_total' as text " indicators. Use " as result "limit(N)" as text " to see more."
+    if (`n_matches' == 0) {
+        noi di as text "  No indicators found for dataflow '`dataflow_upper'"
+        noi di as text "  Use 'unicefdata, flows' to see available dataflows."
     }
     else {
-        noi di as text "Total: " as result `n_total' as text " indicator(s) in " as result "`dataflow'"
+        noi di as text _col(2) "{ul:Indicator}" _col(25) "{ul:Name}"
+        noi di ""
+        
+        forvalues i = 1/`n_matches' {
+            local ind : word `i' of `matches'
+            local nm : word `i' of `match_names'
+            
+            * Truncate name if too long
+            if (length("`nm'") > 45) {
+                local nm = substr("`nm'", 1, 42) + "..."
+            }
+            
+            noi di as result _col(2) "`ind'" as text _col(25) "`nm'"
+        }
     }
-    noi di as text "{hline 70}"
+    
     noi di ""
-    noi di as text "Usage: " as result "unicefdata, indicator(<code>) countries(<iso3>)"
+    noi di as text "{hline 70}"
+    noi di as text "Total: " as result `n_matches' as text " indicator(s) in `dataflow_upper'"
+    noi di as text "{hline 70}"
     
     *---------------------------------------------------------------------------
     * Return values
     *---------------------------------------------------------------------------
     
-    return scalar n_indicators = `n_total'
-    return scalar n_shown = `n_shown'
-    return local dataflow "`dataflow'"
-    return local yaml_file "`yaml_file'"
+    return scalar n_indicators = `n_matches'
+    return local indicators "`matches'"
+    return local dataflow "`dataflow_upper'"
     
 end
