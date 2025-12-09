@@ -1,7 +1,19 @@
-* Sync metadata with pure Stata parser (no Python)
+* ==============================================================================
+* sync_metadata_stataonly.do - Sync Stata metadata (pure Stata parser)
+* ==============================================================================
+*
+* This is a standalone script for syncing Stata metadata using ONLY Stata
+* (no Python dependency). Note: May hit Stata macro limits for large files.
+*
+* For syncing all languages, use the orchestrator:
+*     python tests/orchestrator_metadata.py --all
+*
+* Usage:
+*     do tests/sync_metadata_stataonly.do
+*
 * Run from: C:\GitHub\others\unicefData
-* Usage: do tests/sync_metadata_stataonly.do
-* Note: The forcestata option may hit macro limits for large files
+* Log output: tests/logs/sync_metadata_stataonly.log
+* ==============================================================================
 
 clear all
 set more off

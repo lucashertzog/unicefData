@@ -1,6 +1,17 @@
-* Sync metadata with Python helper
+* ==============================================================================
+* sync_metadata_stata.do - Sync Stata metadata from UNICEF SDMX API (Python-assisted)
+* ==============================================================================
+*
+* This is a standalone script for syncing Stata metadata using Python helpers.
+* For syncing all languages, use the orchestrator:
+*     python tests/orchestrator_metadata.py --all
+*
+* Usage:
+*     do tests/sync_metadata_stata.do
+*
 * Run from: C:\GitHub\others\unicefData
-* Usage: do tests/sync_metadata_stata.do
+* Log output: tests/logs/sync_metadata_stata.log
+* ==============================================================================
 
 clear all
 set more off

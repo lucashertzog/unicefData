@@ -1,7 +1,18 @@
 #!/usr/bin/env Rscript
-# Sync R metadata from UNICEF SDMX API
+# ==============================================================================
+# sync_metadata_r.R - Sync R metadata from UNICEF SDMX API
+# ==============================================================================
+#
+# This is a standalone script for syncing R metadata only.
+# For syncing all languages, use the orchestrator:
+#     python tests/orchestrator_metadata.py --all
+#
+# Usage:
+#     Rscript tests/sync_metadata_r.R
+#
 # Run from: C:\GitHub\others\unicefData
-# Usage: Rscript tests/sync_metadata_r.R
+# Log output: tests/logs/sync_metadata_r.log
+# ==============================================================================
 
 # ==============================================================================
 # Setup
