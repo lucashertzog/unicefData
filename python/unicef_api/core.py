@@ -34,7 +34,7 @@ from unicef_api.metadata import MetadataSync
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-__all__ = ['unicefData']
+__all__ = ['unicefData', 'unicefdata']
 
 
 # =============================================================================
@@ -638,6 +638,14 @@ def _simplify_columns(df: pd.DataFrame, format: str) -> pd.DataFrame:
     else:
         # For wide format, keep all pivoted columns
         return df
+
+
+# =============================================================================
+# Lowercase Alias (for consistency with Stata's case-insensitive commands)
+# =============================================================================
+
+# Alias for users accustomed to Stata's case-insensitive unicefdata command
+unicefdata = unicefData
 
 
 
