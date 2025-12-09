@@ -33,7 +33,7 @@ def get_sdmx(
     This is the low-level function for downloading SDMX data. It provides
     direct control over SDMX query parameters, matching the R package's get_sdmx().
     
-    For most use cases, prefer get_unicef() which provides a simpler interface
+    For most use cases, prefer unicefData() which provides a simpler interface
     with automatic dataflow detection and post-processing options.
     
     Args:
@@ -95,7 +95,7 @@ def get_sdmx(
         >>> df = get_sdmx(flow="CME", key="CME_MRY0T4", tidy=False)
     
     See Also:
-        - get_unicef(): High-level function with auto-detection and post-processing
+        - unicefData(): High-level function with auto-detection and post-processing
         - list_dataflows(): List available dataflows
     """
     global _client

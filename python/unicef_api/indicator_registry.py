@@ -404,7 +404,7 @@ def get_dataflow_for_indicator(indicator_code: str, default: str = "GLOBAL_DATAF
     
     IMPORTANT: Known dataflow overrides are checked FIRST as an optimization.
     This avoids unnecessary 404 errors for indicators where the API metadata
-    is known to be incorrect. The get_unicef() function also has fallback 
+    is known to be incorrect. The unicefData() function also has fallback 
     logic that will try alternative dataflows if the returned one fails.
     
     Args:
@@ -429,7 +429,7 @@ def get_dataflow_for_indicator(indicator_code: str, default: str = "GLOBAL_DATAF
     """
     # FIRST: Check known overrides (optimization to avoid 404 errors)
     # These are indicators where the API metadata reports the wrong dataflow.
-    # Even if we remove these, the fallback logic in get_unicef() would still work,
+    # Even if we remove these, the fallback logic in unicefData() would still work,
     # but this saves an unnecessary failed API request.
     KNOWN_CORRECT_DATAFLOWS = {
         # Child Marriage - metadata says PT but data is in PT_CM
@@ -677,7 +677,7 @@ def search_indicators(
         print(f"\n  Showing {len(matches)} of {total_matches} results. Use limit=0 to see all.")
     
     print("\n  Usage tips:")
-    print("  - get_unicef(indicator='CODE') to fetch data for an indicator")
+    print("  - unicefData(indicator='CODE') to fetch data for an indicator")
     print("  - get_indicator_info('CODE') to see full metadata for an indicator")
     print("  - list_categories() to see all available categories")
     print()

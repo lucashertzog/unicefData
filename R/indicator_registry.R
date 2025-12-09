@@ -832,7 +832,7 @@ search_indicators <- function(query = NULL, category = NULL, limit = 50, show_de
   }
   
   cat("\n  Usage tips:\n")
-  cat("  - get_unicef(indicator = 'CODE') to fetch data for an indicator\n")
+  cat("  - unicefData(indicator = 'CODE') to fetch data for an indicator\n")
   cat("  - get_indicator_info('CODE') to see full metadata for an indicator\n")
   cat("  - list_categories() to see all available categories\n\n")
   

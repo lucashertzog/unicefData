@@ -15,7 +15,7 @@ validation/
 ├── testthat/                          # R unit tests (testthat framework)
 │   ├── test-available_indicators.R
 │   ├── test-build_indicator_catalog.R
-│   └── test-get_unicef.R
+│   └── test-unicefData.R
 ├── testthat.R                         # R CMD check test runner
 │
 ├── # === Orchestrators === #
@@ -141,7 +141,7 @@ R CMD check .
 
 | Script | Description |
 |--------|-------------|
-| `test_prod_sdg_indicators.py` | Tests the `get_unicef()` function by downloading indicators used in PROD-SDG-REP-2025 |
+| `test_prod_sdg_indicators.py` | Tests the `unicefData()` function by downloading indicators used in PROD-SDG-REP-2025 |
 
 ## Log Files
 

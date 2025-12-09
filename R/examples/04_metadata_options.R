@@ -14,14 +14,14 @@
 # ============================================================================
 
 # Adjust path if running from examples directory
-if (file.exists("../unicef_api/get_unicef.R")) {
-  source("../unicef_api/get_unicef.R")
-} else if (file.exists("R/unicef_api/get_unicef.R")) {
-  source("R/unicef_api/get_unicef.R")
-} else if (file.exists("unicefData/R/get_unicef.R")) {
-  source("unicefData/R/get_unicef.R")
+if (file.exists("../unicef_api/unicefData.R")) {
+  source("../unicef_api/unicefData.R")
+} else if (file.exists("R/unicef_api/unicefData.R")) {
+  source("R/unicef_api/unicefData.R")
+} else if (file.exists("unicefData/R/unicefData.R")) {
+  source("unicefData/R/unicefData.R")
 } else {
-  stop("Could not find get_unicef.R")
+  stop("Could not find unicefData.R")
 }
 
 cat(strrep("=", 70), "\n")
@@ -36,7 +36,7 @@ COUNTRIES <- c("ALB", "USA", "BRA", "IND", "NGA", "ETH", "CHN")
 cat("\n--- Example 1: Add Region ---\n")
 cat("UNICEF/World Bank regional classification\n\n")
 
-df <- get_unicef(
+df <- unicefData(
   indicator = "CME_MRY0T4",
   countries = COUNTRIES,
   start_year = 2020,
@@ -53,7 +53,7 @@ print(df[, c("iso3", "country", "region", "value")])
 cat("\n--- Example 2: Add Income Group ---\n")
 cat("World Bank income classification\n\n")
 
-df <- get_unicef(
+df <- unicefData(
   indicator = "CME_MRY0T4",
   countries = COUNTRIES,
   start_year = 2020,
@@ -69,7 +69,7 @@ print(df[, c("iso3", "country", "income_group", "value")])
 cat("\n--- Example 3: Add Indicator Name ---\n")
 cat("Full indicator description\n\n")
 
-df <- get_unicef(
+df <- unicefData(
   indicator = c("CME_MRY0T4", "CME_MRM0"),
   countries = c("ALB", "USA"),
   start_year = 2020,
@@ -85,7 +85,7 @@ print(df[, c("iso3", "indicator", "indicator_name", "value")])
 cat("\n--- Example 4: Multiple Metadata ---\n")
 cat("Combine region, income group, and indicator name\n\n")
 
-df <- get_unicef(
+df <- unicefData(
   indicator = "CME_MRY0T4",
   countries = COUNTRIES,
   start_year = 2020,
@@ -102,7 +102,7 @@ print(head(df[, c("iso3", "region", "income_group", "value")]))
 cat("\n--- Example 5: Simplify Output ---\n")
 cat("Keep only essential columns\n\n")
 
-df <- get_unicef(
+df <- unicefData(
   indicator = "CME_MRY0T4",
   countries = COUNTRIES,
   start_year = 2020,

@@ -24,7 +24,7 @@ if (!requireNamespace("httr", quietly = TRUE)) {
 `%||%` <- function(x, y) if (is.null(x)) y else x
 
 # Source core functions
-if (!exists("get_unicef_raw", mode = "function")) {
+if (!exists("unicefData_raw", mode = "function")) {
   script_file <- sys.frame(1)$ofile
   script_dir <- if (is.null(script_file)) "." else dirname(script_file)
   core_path <- file.path(script_dir, "unicef_core.R")
@@ -57,8 +57,8 @@ fetch_sdmx <- function(url, ua, retry) {
 #' @return A tibble with columns \code{id}, \code{agency}, and \code{version}
 #' @export
 list_unicef_flows <- memoise::memoise(
-  function(cache_dir = tools::R_user_dir("get_unicef","cache"), retry = 3) {
-    ua <- httr::user_agent("get_unicef/1.0 (+https://github.com/jpazvd/get_unicef)")
+  function(cache_dir = tools::R_user_dir("unicefData","cache"), retry = 3) {
+    ua <- httr::user_agent("unicefData/1.0 (+https://github.com/jpazvd/unicefData)")
     url <- "https://sdmx.data.unicef.org/ws/public/sdmxapi/rest/dataflow/UNICEF?references=none&detail=full"
     xml_text <- fetch_sdmx(url, ua, retry)
     doc <- xml2::read_xml(xml_text)
@@ -82,9 +82,9 @@ list_unicef_flows <- memoise::memoise(
 #' @return A tibble with columns \code{code} and \code{description}
 #' @export
 list_unicef_codelist <- memoise::memoise(
-  function(flow, dimension, cache_dir = tools::R_user_dir("get_unicef","cache"), retry = 3) {
+  function(flow, dimension, cache_dir = tools::R_user_dir("unicefData","cache"), retry = 3) {
     stopifnot(is.character(flow), is.character(dimension), length(flow) == 1, length(dimension) == 1)
-    ua <- httr::user_agent("get_unicef/1.0 (+https://github.com/jpazvd/get_unicef)")
+    ua <- httr::user_agent("unicefData/1.0 (+https://github.com/jpazvd/unicefData)")
     url <- sprintf(
       "https://sdmx.data.unicef.org/ws/public/sdmxapi/rest/structure/codelist/UNICEF.%s.%s?references=none&detail=full",
       flow, dimension
@@ -167,7 +167,7 @@ list_unicef_codelist <- memoise::memoise(
 #' @examples
 #' \dontrun{
 #' # Fetch under-5 mortality for specific countries (clean output)
-#' df <- get_unicef(
+#' df <- unicefData(
 #'   indicator = "CME_MRY0T4",
 #'   countries = c("ALB", "USA", "BRA"),
 #'   start_year = 2015,
@@ -175,37 +175,37 @@ list_unicef_codelist <- memoise::memoise(
 #' )
 #' 
 #' # Get raw SDMX data with all original columns
-#' df_raw <- get_unicef(
+#' df_raw <- unicefData(
 #'   indicator = "CME_MRY0T4",
 #'   countries = c("ALB", "USA"),
 #'   raw = TRUE
 #' )
 #' 
 #' # Get latest value per country (cross-sectional)
-#' df <- get_unicef(
+#' df <- unicefData(
 #'   indicator = "CME_MRY0T4",
 #'   latest = TRUE
 #' )
 #' 
 #' # Wide format with region metadata
-#' df <- get_unicef(
+#' df <- unicefData(
 #'   indicator = "CME_MRY0T4",
 #'   format = "wide",
 #'   add_metadata = c("region", "income_group")
 #' )
 #' 
 #' # Multiple indicators merged automatically
-#' df <- get_unicef(
+#' df <- unicefData(
 #'   indicator = c("CME_MRY0T4", "NT_ANT_HAZ_NE2_MOD"),
 #'   format = "wide_indicators",
 #'   latest = TRUE
 #' )
 #' 
 #' # Legacy syntax (still supported)
-#' df <- get_unicef(flow = "CME", key = "CME_MRY0T4")
+#' df <- unicefData(flow = "CME", key = "CME_MRY0T4")
 #' }
 #' @export
-get_unicef <- function(
+unicefData <- function(
     # New unified parameter names
     indicator     = NULL,
     dataflow      = NULL,
@@ -270,8 +270,8 @@ get_unicef <- function(
   # Handle structure request
   if (detail == "structure") {
     if (is.null(dataflow)) stop("Dataflow must be specified for structure request.")
-    # Use legacy fetch_sdmx for structure as get_unicef_raw is for data
-    ua <- httr::user_agent("get_unicef/1.0")
+    # Use legacy fetch_sdmx for structure as unicefData_raw is for data
+    ua <- httr::user_agent("unicefData/1.0")
     base <- "https://sdmx.data.unicef.org/ws/public/sdmxapi/rest"
     url <- sprintf("%s/structure/dataflow/UNICEF.%s?references=all&detail=full", base, dataflow[1])
     return(xml2::read_xml(fetch_sdmx(url, ua, max_retries)))
@@ -279,10 +279,10 @@ get_unicef <- function(
   
   # 1. Fetch Raw Data
   # Use memoise if cache=TRUE
-  fetcher <- if (cache) memoise::memoise(get_unicef_raw) else get_unicef_raw
+  fetcher <- if (cache) memoise::memoise(unicefData_raw) else unicefData_raw
   
-  # Handle multiple dataflows if provided, otherwise auto-detect inside get_unicef_raw
-  # But get_unicef_raw takes single dataflow usually, or auto-detects from indicator.
+  # Handle multiple dataflows if provided, otherwise auto-detect inside unicefData_raw
+  # But unicefData_raw takes single dataflow usually, or auto-detects from indicator.
   # If multiple dataflows provided, we need to loop.
   
   if (!is.null(dataflow) && length(dataflow) > 1) {

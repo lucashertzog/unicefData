@@ -9,16 +9,16 @@
 # Matches: python/examples/06_test_fallback.py
 
 # Adjust path if running from examples directory
-if (file.exists("unicef_api/get_unicef.R")) {
-  source("unicef_api/get_unicef.R")
-} else if (file.exists("../unicef_api/get_unicef.R")) {
-  source("../unicef_api/get_unicef.R")
-} else if (file.exists("R/unicef_api/get_unicef.R")) {
-  source("R/unicef_api/get_unicef.R")
-} else if (file.exists("unicefData/R/unicef_api/get_unicef.R")) {
-  source("unicefData/R/unicef_api/get_unicef.R")
+if (file.exists("unicef_api/unicefData.R")) {
+  source("unicef_api/unicefData.R")
+} else if (file.exists("../unicef_api/unicefData.R")) {
+  source("../unicef_api/unicefData.R")
+} else if (file.exists("R/unicef_api/unicefData.R")) {
+  source("R/unicef_api/unicefData.R")
+} else if (file.exists("unicefData/R/unicef_api/unicefData.R")) {
+  source("unicefData/R/unicef_api/unicefData.R")
 } else {
-  stop("Could not find get_unicef.R")
+  stop("Could not find unicefData.R")
 }
 
 cat("======================================================================\n")
@@ -69,7 +69,7 @@ for (t in tests) {
   start <- Sys.time()
   
   tryCatch({
-    df <- get_unicef(
+    df <- unicefData(
       indicator = t$indicator,
       countries = t$countries,
       start_year = 2015

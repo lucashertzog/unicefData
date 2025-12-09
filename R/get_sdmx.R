@@ -71,7 +71,7 @@ get_sdmx <- function(
   }
 
   fetch_flow <- function(fl) {
-    ua   <- .get_unicef_ua
+    ua   <- .unicefData_ua
     base <- "https://sdmx.data.unicef.org/ws/public/sdmxapi/rest"
 
     ver <- version %||% {

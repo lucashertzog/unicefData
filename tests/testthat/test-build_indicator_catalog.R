@@ -13,7 +13,7 @@ test_that("unicefData exports expected functions", {
   skip_if_not_installed("unicefData")
   
   # Check that key functions are exported
-  expect_true(exists("get_unicef", envir = asNamespace("unicefData")))
+  expect_true(exists("unicefData", envir = asNamespace("unicefData")))
   expect_true(exists("list_indicators", envir = asNamespace("unicefData")))
 })
 
@@ -28,5 +28,5 @@ test_that("package has expected namespace", {
   expect_gt(length(exports), 0)
   
   # Core functions should be exported
-  expect_true("get_unicef" %in% exports)
+  expect_true("unicefData" %in% exports)
 })

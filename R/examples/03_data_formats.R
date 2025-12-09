@@ -12,14 +12,14 @@
 #   5. Most recent N values (MRV)
 
 # Adjust path if running from examples directory
-if (file.exists("../unicef_api/get_unicef.R")) {
-  source("../unicef_api/get_unicef.R")
-} else if (file.exists("R/unicef_api/get_unicef.R")) {
-  source("R/unicef_api/get_unicef.R")
-} else if (file.exists("unicefData/R/unicef_api/get_unicef.R")) {
-  source("unicefData/R/unicef_api/get_unicef.R")
+if (file.exists("../unicef_api/unicefData.R")) {
+  source("../unicef_api/unicefData.R")
+} else if (file.exists("R/unicef_api/unicefData.R")) {
+  source("R/unicef_api/unicefData.R")
+} else if (file.exists("unicefData/R/unicef_api/unicefData.R")) {
+  source("unicefData/R/unicef_api/unicefData.R")
 } else {
-  stop("Could not find get_unicef.R")
+  stop("Could not find unicefData.R")
 }
 
 cat("======================================================================\n")
@@ -34,7 +34,7 @@ COUNTRIES <- c("ALB", "USA", "BRA", "IND", "NGA")
 cat("\n--- Example 1: Long Format (Default) ---\n")
 cat("One row per observation\n\n")
 
-df <- get_unicef(
+df <- unicefData(
   indicator = "CME_MRY0T4",
   countries = COUNTRIES,
   start_year = 2020,
@@ -50,7 +50,7 @@ print(head(df[, c("iso3", "country", "period", "value")], 10))
 cat("\n--- Example 2: Wide Format (Years as Columns) ---\n")
 cat("Countries as rows, years as columns\n\n")
 
-df <- get_unicef(
+df <- unicefData(
   indicator = "CME_MRY0T4",
   countries = COUNTRIES,
   start_year = 2020,
@@ -66,7 +66,7 @@ print(df)
 cat("\n--- Example 3: Wide Indicators ---\n")
 cat("Indicators as columns (for comparison)\n\n")
 
-df <- get_unicef(
+df <- unicefData(
   indicator = c("CME_MRY0T4", "CME_MRM0"),
   countries = COUNTRIES,
   start_year = 2020,
@@ -82,7 +82,7 @@ print(head(df, 10))
 cat("\n--- Example 4: Latest Value Per Country ---\n")
 cat("Cross-sectional analysis (one value per country)\n\n")
 
-df <- get_unicef(
+df <- unicefData(
   indicator = "CME_MRY0T4",
   countries = COUNTRIES,
   start_year = 2015,
@@ -98,7 +98,7 @@ print(df[, c("iso3", "country", "period", "value")])
 cat("\n--- Example 5: Most Recent 3 Values (MRV=3) ---\n")
 cat("Keep only 3 most recent years per country\n\n")
 
-df <- get_unicef(
+df <- unicefData(
   indicator = "CME_MRY0T4",
   countries = c("ALB", "USA"),
   start_year = 2010,
@@ -115,7 +115,7 @@ cat("\n--- Example 6: Default Behavior ---\n")
 cat("Only indicator specified -> All countries, all years, totals only\n\n")
 
 # Note: Limiting to a short time range to avoid fetching too much data for the example
-df <- get_unicef(
+df <- unicefData(
   indicator = "CME_MRY0T4",
   start_year = 2021
 )
@@ -136,7 +136,7 @@ cat("1. Wide by Wealth Quintile:\n")
 # Note: Not all indicators have wealth disaggregation. 
 # Using an indicator that typically does (e.g. Stunting or similar if CME doesn't in this context)
 # But CME_MRY0T4 often has it in MICS. Let's try.
-df_wealth <- get_unicef(
+df_wealth <- unicefData(
   indicator = "CME_MRY0T4",
   countries = c("COL", "PER"),
   start_year = 2015,
@@ -146,7 +146,7 @@ print(head(df_wealth))
 
 # Wide by Sex
 cat("\n2. Wide by Sex:\n")
-df_sex <- get_unicef(
+df_sex <- unicefData(
   indicator = "CME_MRY0T4",
   countries = c("ZWE", "KEN"),
   start_year = 2019,

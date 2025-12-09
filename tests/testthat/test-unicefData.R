@@ -1,13 +1,13 @@
-# Test get_unicef function
+# Test unicefData function
 # This tests the main data retrieval function
 
-test_that("get_unicef returns data frame for valid indicator", {
+test_that("unicefData returns data frame for valid indicator", {
   skip_if_not_installed("unicefData")
   skip_on_cran()  # Skip on CRAN (requires network)
   
   # Use a known good indicator
   result <- tryCatch(
-    get_unicef(indicator = "PT_CHLD_Y0T4_MDD", ref_area = "AFG"),
+    unicefData(indicator = "PT_CHLD_Y0T4_MDD", ref_area = "AFG"),
     error = function(e) NULL
   )
   
@@ -20,13 +20,13 @@ test_that("get_unicef returns data frame for valid indicator", {
   }
 })
 
-test_that("get_unicef handles network errors gracefully", {
+test_that("unicefData handles network errors gracefully", {
   skip_if_not_installed("unicefData")
   skip_on_cran()
   
   # Invalid indicator should handle error gracefully
   result <- tryCatch(
-    get_unicef(indicator = "NONEXISTENT_INDICATOR_XYZ", ref_area = "AFG"),
+    unicefData(indicator = "NONEXISTENT_INDICATOR_XYZ", ref_area = "AFG"),
     error = function(e) "error",
     warning = function(w) "warning"
   )

@@ -57,7 +57,7 @@ source("R/tests/test_git_unicef.R")
   - `api_unf_edu.csv`
   - `api_unf_hiv.csv`
   - etc.
-- A log file `test_get_unicef.log` created in the working directory.
+- A log file `test_unicefData.log` created in the working directory.
 
 ---
 

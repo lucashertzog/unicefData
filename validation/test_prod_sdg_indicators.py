@@ -2,7 +2,7 @@
 Test Script: Replicate PROD-SDG-REP-2025 Indicator Downloads
 =============================================================
 
-This script tests the get_unicef() function by downloading all indicators
+This script tests the unicefData() function by downloading all indicators
 used in the PROD-SDG-REP-2025 project's 0121_get_data_api.R script.
 
 Original indicators extracted from:
@@ -20,7 +20,7 @@ from datetime import datetime
 # Add the python package to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'python'))
 
-from unicef_api import get_unicef, search_indicators, list_categories
+from unicef_api import unicefData, search_indicators, list_categories
 
 # =============================================================================
 # INDICATOR DEFINITIONS (from 0121_get_data_api.R)
@@ -178,12 +178,12 @@ def test_single_indicator_download(category_name, category_info, verbose=True):
     try:
         # Use explicit dataflow if specified, otherwise let auto-detect work
         if use_explicit_dataflow:
-            df = get_unicef(
+            df = unicefData(
                 indicator=indicators,
                 dataflow=expected_dataflow
             )
         else:
-            df = get_unicef(
+            df = unicefData(
                 indicator=indicators,
                 # Don't specify dataflow - let it auto-detect
             )
@@ -322,7 +322,7 @@ def test_indicator_discovery():
 
 def compare_with_original(category_name, category_info):
     """
-    Download data using get_unicef() and compare row counts with 
+    Download data using unicefData() and compare row counts with 
     what the original URLs would return.
     """
     import requests
@@ -350,13 +350,13 @@ def compare_with_original(category_name, category_info):
         print(f"  Original failed: {e}")
         original_rows = None
     
-    # Download with get_unicef()
+    # Download with unicefData()
     try:
-        df_new = get_unicef(indicator=category_info["indicators"])
+        df_new = unicefData(indicator=category_info["indicators"])
         new_rows = len(df_new)
-        print(f"  get_unicef rows: {new_rows:,}")
+        print(f"  unicefData rows: {new_rows:,}")
     except Exception as e:
-        print(f"  get_unicef failed: {e}")
+        print(f"  unicefData failed: {e}")
         new_rows = None
     
     if original_rows and new_rows:
