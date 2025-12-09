@@ -2,22 +2,22 @@ id: CME_SUBNAT_ZWE
 name: CME Zimbabwe
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-09T01:18:45Z'
+synced_at: '2025-12-09T01:59:06Z'
 dimensions:
 - id: REF_AREA
   position: 1
   codelist: CL_CME_REF_AREA_SUBNAT
   values:
   - ZWE-1-1_2
-  - ZWE-1_1
-  - ZWE-10-1_2
   - ZWE-10-10_2
   - ZWE-10-11_2
   - ZWE-10-12_2
   - ZWE-10-13_2
   - ZWE-10-14_2
+  - ZWE-10-1_2
   - ZWE-10-2_2
   - ZWE-10-3_2
+  - ZWE-10-4_2
   is_exhaustive: no
   total_values_count: 101
 - id: INDICATOR

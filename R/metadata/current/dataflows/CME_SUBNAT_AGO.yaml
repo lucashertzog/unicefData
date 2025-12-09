@@ -2,7 +2,7 @@ id: CME_SUBNAT_AGO
 name: CME Angola
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-09T01:18:03Z'
+synced_at: '2025-12-09T01:58:22Z'
 dimensions:
 - id: REF_AREA
   position: 1
@@ -13,11 +13,11 @@ dimensions:
   - AGO-1-3_1
   - AGO-1-4_1
   - AGO-1-5_1
-  - AGO-1_1
-  - AGO-10-1_1
   - AGO-10-10_1
   - AGO-10-11_1
   - AGO-10-12_1
+  - AGO-10-13_1
+  - AGO-10-1_1
   is_exhaustive: no
   total_values_count: 181
 - id: INDICATOR

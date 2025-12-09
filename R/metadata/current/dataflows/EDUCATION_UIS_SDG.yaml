@@ -2,7 +2,7 @@ id: EDUCATION_UIS_SDG
 name: EDU - SDG Indicators (UIS Database)
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-09T01:19:34Z'
+synced_at: '2025-12-09T01:59:52Z'
 dimensions:
 - id: REF_AREA
   position: 1
@@ -44,9 +44,9 @@ dimensions:
   position: 3
   codelist: CL_SEX
   values:
-  - _T
   - F
   - M
+  - _T
   is_exhaustive: yes
   total_values_count: 3
 - id: RESIDENCE

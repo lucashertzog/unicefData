@@ -2,7 +2,7 @@ id: DM
 name: Demography
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-09T01:18:49Z'
+synced_at: '2025-12-09T01:59:09Z'
 dimensions:
 - id: REF_AREA
   position: 1
@@ -40,9 +40,9 @@ dimensions:
   position: 4
   codelist: CL_SEX
   values:
-  - _T
   - F
   - M
+  - _T
   is_exhaustive: yes
   total_values_count: 3
 - id: AGE

@@ -2,15 +2,13 @@ id: CME_SUBNAT_ETH
 name: CME Ethiopia
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-09T01:18:10Z'
+synced_at: '2025-12-09T01:58:29Z'
 dimensions:
 - id: REF_AREA
   position: 1
   codelist: CL_CME_REF_AREA_SUBNAT
   values:
   - ETH-1-1_1
-  - ETH-1_1
-  - ETH-10-1_1
   - ETH-10-10_1
   - ETH-10-11_1
   - ETH-10-12_1
@@ -18,6 +16,8 @@ dimensions:
   - ETH-10-14_1
   - ETH-10-15_1
   - ETH-10-16_1
+  - ETH-10-17_1
+  - ETH-10-18_1
   is_exhaustive: no
   total_values_count: 90
 - id: INDICATOR

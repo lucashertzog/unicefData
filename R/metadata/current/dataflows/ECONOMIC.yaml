@@ -2,7 +2,7 @@ id: ECONOMIC
 name: Economic
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-09T01:19:31Z'
+synced_at: '2025-12-09T01:59:48Z'
 dimensions:
 - id: REF_AREA
   position: 1
@@ -13,11 +13,11 @@ dimensions:
   - ALB
   - ARG
   - ARM
-  - AU_AFRICA
-  - AU_CENTRAL_AFRICA
-  - AU_EASTERN_AFRICA
-  - AU_SOUTHERN_AFRICA
   - AUREC_COMESA
+  - AUREC_EAC
+  - AUREC_ECCAS
+  - AUREC_IGAD
+  - AUREC_SADC
   is_exhaustive: no
   total_values_count: 270
 - id: INDICATOR

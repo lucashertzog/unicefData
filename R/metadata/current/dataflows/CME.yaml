@@ -2,7 +2,7 @@ id: CME
 name: Child Mortality
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-09T01:17:38Z'
+synced_at: '2025-12-09T01:57:55Z'
 dimensions:
 - id: REF_AREA
   position: 1
@@ -64,21 +64,21 @@ dimensions:
   position: 3
   codelist: CL_SEX
   values:
-  - _T
   - F
   - M
+  - _T
   is_exhaustive: yes
   total_values_count: 3
 - id: WEALTH_QUINTILE
   position: 4
   codelist: CL_WEALTH_QUINTILE
   values:
-  - _T
   - Q1
   - Q2
   - Q3
   - Q4
   - Q5
+  - _T
   is_exhaustive: yes
   total_values_count: 6
 time_dimension: TIME_PERIOD

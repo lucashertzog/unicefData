@@ -2,7 +2,7 @@ id: PT_CONFLICT
 name: Children Exposed to Conflict
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-09T01:20:35Z'
+synced_at: '2025-12-09T02:00:42Z'
 dimensions:
 - id: REF_AREA
   position: 1
@@ -31,20 +31,20 @@ dimensions:
   position: 3
   codelist: CL_SEX
   values:
-  - _T
   - F
   - M
+  - _T
   is_exhaustive: yes
   total_values_count: 3
 - id: AGE
   position: 4
   codelist: CL_AGE
   values:
-  - _T
   - Y0T4
   - Y10T14
   - Y15T17
   - Y5T9
+  - _T
   is_exhaustive: yes
   total_values_count: 5
 - id: ADMIN_LEVEL

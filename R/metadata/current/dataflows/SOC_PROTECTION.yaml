@@ -2,7 +2,7 @@ id: SOC_PROTECTION
 name: Social protection
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-09T01:20:49Z'
+synced_at: '2025-12-09T02:00:53Z'
 dimensions:
 - id: REF_AREA
   position: 1
@@ -53,10 +53,10 @@ dimensions:
   position: 5
   codelist: CL_WEALTH_QUINTILE
   values:
-  - _T
   - B40
   - Q1
   - Q5
+  - _T
   is_exhaustive: yes
   total_values_count: 4
 - id: POV_THRESHOLD

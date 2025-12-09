@@ -2,7 +2,7 @@ id: CME_SUBNAT_CMR
 name: CME Cameroon
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-09T01:18:09Z'
+synced_at: '2025-12-09T01:58:28Z'
 dimensions:
 - id: REF_AREA
   position: 1
@@ -13,11 +13,11 @@ dimensions:
   - CMR-1-3_1
   - CMR-1-4_1
   - CMR-1-5_1
-  - CMR-1_1
   - CMR-10-1_1
   - CMR-10-2_1
   - CMR-10-3_1
   - CMR-10-4_1
+  - CMR-10_1
   is_exhaustive: no
   total_values_count: 68
 - id: INDICATOR

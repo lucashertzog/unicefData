@@ -2,13 +2,12 @@ id: CME_SUBNAT_KEN
 name: CME Kenya
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-09T01:18:16Z'
+synced_at: '2025-12-09T01:58:35Z'
 dimensions:
 - id: REF_AREA
   position: 1
   codelist: CL_CME_REF_AREA_SUBNAT
   values:
-  - KEN-1_1
   - KEN-10_1
   - KEN-11_1
   - KEN-12_1
@@ -18,6 +17,7 @@ dimensions:
   - KEN-16_1
   - KEN-17_1
   - KEN-18_1
+  - KEN-19_1
   is_exhaustive: no
   total_values_count: 47
 - id: INDICATOR

@@ -2,7 +2,7 @@ id: GLOBAL_DATAFLOW
 name: Cross-sector indicators
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-09T01:19:38Z'
+synced_at: '2025-12-09T01:59:56Z'
 dimensions:
 - id: REF_AREA
   position: 1
@@ -72,10 +72,10 @@ dimensions:
   - DM_POP_CHILD_PROP
   - DM_POP_GRT
   - DM_POP_TOT
-  - DM_POP_U_GRT
   - DM_POP_U18
   - DM_POP_U5
   - DM_POP_URBN
+  - DM_POP_U_GRT
   - ECD_CHLD_24-59M_ADLT_SRC
   - ECD_CHLD_36-59M_EDU-PGM
   - ECD_CHLD_LMPSL
@@ -150,8 +150,8 @@ dimensions:
   - MG_INTNL_MG_CNTRY_DEST
   - MG_NEW_INTERNAL_DISP
   - MG_RFGS_CNTRY_ASYLM
-  - MG_RFGS_CNTRY_ASYLM_PER_USD_GNI
   - MG_RFGS_CNTRY_ASYLM_PER1000
+  - MG_RFGS_CNTRY_ASYLM_PER_USD_GNI
   - MG_RFGS_CNTRY_ORIGIN
   - MNCH_ABR
   - MNCH_ADO_TOBACCO
@@ -314,9 +314,9 @@ dimensions:
   position: 3
   codelist: CL_SEX
   values:
-  - _T
   - F
   - M
+  - _T
   is_exhaustive: yes
   total_values_count: 3
 time_dimension: TIME_PERIOD
@@ -334,6 +334,7 @@ attributes:
   - BINARY
   - BIRTHSPER1000WOMEN
   - D
+  - D_PER_100000_BIRTHS
   - D_PER_1000_1
   - D_PER_1000_10
   - D_PER_1000_15
@@ -341,7 +342,6 @@ attributes:
   - D_PER_1000_20
   - D_PER_1000_5
   - D_PER_1000_B
-  - D_PER_100000_BIRTHS
   - IDX
   - NUMBER
   - PCNT
@@ -509,7 +509,6 @@ attributes:
 - id: AGE
   codelist: CL_AGE
   values:
-  - _T
   - M0T5
   - M12T23
   - M24T59
@@ -518,7 +517,6 @@ attributes:
   - M6T59
   - M6T8
   - PRY_SCHOOL_AGE
-  - Y_GE15
   - Y0
   - Y02
   - Y0T14
@@ -540,6 +538,8 @@ attributes:
   - Y5T17
   - Y5T19
   - Y7T14
+  - Y_GE15
+  - _T
   is_exhaustive: yes
   total_values_count: 31
 primary_measure_summary:

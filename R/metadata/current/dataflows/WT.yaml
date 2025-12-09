@@ -2,7 +2,7 @@ id: WT
 name: Transition to Work
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-09T01:21:04Z'
+synced_at: '2025-12-09T02:01:07Z'
 dimensions:
 - id: REF_AREA
   position: 1
@@ -36,9 +36,9 @@ dimensions:
   position: 3
   codelist: CL_SEX
   values:
-  - _T
   - F
   - M
+  - _T
   is_exhaustive: yes
   total_values_count: 3
 - id: AGE

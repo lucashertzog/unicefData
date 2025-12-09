@@ -2,7 +2,7 @@ id: CCRI
 name: Children’s Climate and Environment Risk Index
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-09T01:17:35Z'
+synced_at: '2025-12-09T01:57:52Z'
 dimensions:
 - id: REF_AREA
   position: 1
@@ -92,10 +92,10 @@ attributes:
     Population Prospects - Messina et al., CIESIN | Gridded Population of the World,
     UN World Population Prospects - Kraemer et al., CIESIN | Gridded Population of
     the World, UN World Population Prospects
-  - UNDRR, CIESIN | Gridded Population of the World - UNDRR, CIESIN | Gridded Population
-    of the World, UN World Population Prospects
   - UNDRR, CIESIN | Gridded Population of the World (UN-Adjusted), UN World Population
     Prospects
+  - UNDRR, CIESIN | Gridded Population of the World - UNDRR, CIESIN | Gridded Population
+    of the World, UN World Population Prospects
   - 'World Bank, Global Poverty Working Group. Data are compiled from official government
     sources or are computed by World Bank staff using national (i.e. country–specific)
     poverty lines. - World Bank, Development Research Group. Data are based on primary

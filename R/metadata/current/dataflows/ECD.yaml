@@ -2,7 +2,7 @@ id: ECD
 name: Early Childhood Development
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-09T01:19:29Z'
+synced_at: '2025-12-09T01:59:47Z'
 dimensions:
 - id: REF_AREA
   position: 1
@@ -47,9 +47,9 @@ dimensions:
   position: 4
   codelist: CL_SEX
   values:
-  - _T
   - F
   - M
+  - _T
   is_exhaustive: yes
   total_values_count: 3
 - id: AGE
@@ -71,21 +71,21 @@ dimensions:
   position: 6
   codelist: CL_WEALTH_QUINTILE
   values:
-  - _T
   - Q1
   - Q2
   - Q3
   - Q4
   - Q5
+  - _T
   is_exhaustive: yes
   total_values_count: 6
 - id: RESIDENCE
   position: 7
   codelist: CL_RESIDENCE
   values:
-  - _T
   - R
   - U
+  - _T
   is_exhaustive: yes
   total_values_count: 3
 - id: MOTHER_EDUCATION
