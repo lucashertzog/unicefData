@@ -2,7 +2,7 @@ id: CME_SUBNAT_LBR
 name: CME Liberia
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-08T13:31:18Z'
+synced_at: '2025-12-09T02:26:27Z'
 dimensions:
 - id: REF_AREA
   position: 1
@@ -10,7 +10,6 @@ dimensions:
   values:
   - LBR-1-1_1
   - LBR-1-2_1
-  - LBR-1_1
   - LBR-10-1_1
   - LBR-10-2_1
   - LBR-10_1
@@ -18,6 +17,7 @@ dimensions:
   - LBR-11-2_1
   - LBR-11-3_1
   - LBR-11-4_1
+  - LBR-11_1
   is_exhaustive: no
   total_values_count: 81
 - id: INDICATOR

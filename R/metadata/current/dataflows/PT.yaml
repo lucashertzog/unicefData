@@ -2,7 +2,7 @@ id: PT
 name: Child Protection
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-08T13:30:39Z'
+synced_at: '2025-12-09T02:27:55Z'
 dimensions:
 - id: REF_AREA
   position: 1
@@ -44,24 +44,21 @@ dimensions:
   position: 3
   codelist: CL_SEX
   values:
-  - _T
   - F
   - M
+  - _T
   is_exhaustive: yes
   total_values_count: 3
 - id: AGE
   position: 4
   codelist: CL_AGE
   values:
-  - _T
   - JUVENILE_ADOLESCENT
   - M0T11
   - M12T23
   - M24T35
   - M36T47
   - M48T59
-  - Y_GE50
-  - Y_GE60
   - Y0T16
   - Y0T17
   - Y0T18
@@ -95,6 +92,9 @@ dimensions:
   - Y5T17
   - Y5T9
   - Y7T17
+  - Y_GE50
+  - Y_GE60
+  - _T
   is_exhaustive: yes
   total_values_count: 42
 - id: EDUCATION_LEVEL
@@ -113,7 +113,6 @@ dimensions:
   position: 6
   codelist: CL_WEALTH_QUINTILE
   values:
-  - _T
   - B40
   - Q1
   - Q2
@@ -121,15 +120,16 @@ dimensions:
   - Q4
   - Q5
   - R60
+  - _T
   is_exhaustive: yes
   total_values_count: 8
 - id: RESIDENCE
   position: 7
   codelist: CL_RESIDENCE
   values:
-  - _T
   - R
   - U
+  - _T
   is_exhaustive: yes
   total_values_count: 3
 - id: NUMBER_CHLD

@@ -2,14 +2,14 @@ id: CME_SUBNAT_GHA
 name: CME Ghana
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-08T13:31:12Z'
+synced_at: '2025-12-09T02:26:21Z'
 dimensions:
 - id: REF_AREA
   position: 1
   codelist: CL_CME_REF_AREA_SUBNAT
   values:
-  - GHA-1_1
   - GHA-10_1
+  - GHA-1_1
   - GHA-2_1
   - GHA-3_1
   - GHA-4_1

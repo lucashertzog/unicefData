@@ -1,17 +1,21 @@
 #!/usr/bin/env python3
 """
-Generate metadata status summary table for unicefData package.
+report_metadata_status.py - Generate metadata status summary for unicefData
+===========================================================================
 
 This script checks the metadata files across all four platforms (Python, R, 
 Stata with Python parser, Stata-only parser) and generates a markdown table 
 showing the status of each file. It can also compare record counts across platforms.
 
 Usage:
-    python generate_metadata_status.py
-    python generate_metadata_status.py --output markdown
-    python generate_metadata_status.py --output csv
-    python generate_metadata_status.py --detailed
-    python generate_metadata_status.py --compare
+    python tests/report_metadata_status.py
+    python tests/report_metadata_status.py --output markdown
+    python tests/report_metadata_status.py --output csv
+    python tests/report_metadata_status.py --detailed
+    python tests/report_metadata_status.py --compare
+
+Run from: C:\GitHub\others\unicefData
+Log output: tests/logs/report_metadata_status.log
 """
 
 import os

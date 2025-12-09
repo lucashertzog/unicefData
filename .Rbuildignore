@@ -43,3 +43,19 @@
 
 ^R/README\.md$
 ^R/tests/output/\.gitkeep$
+
+# Non-standard directories for multi-language repo
+^config$
+^metadata$
+^stata$
+^stataonly$
+^validation$
+
+# Stata files
+^.*\.do$
+
+# TODO/development files
+^TODO.*\.md$
+
+# Hidden files (.gitkeep)
+.*\.gitkeep$

@@ -1,21 +1,22 @@
 ﻿# ============================================================================
-# regenerate_metadata.ps1 - Regenerate all YAML metadata files
+# orchestrator_metadata.ps1 - Orchestrate metadata sync for all languages
 # ============================================================================
 #
-# This script regenerates metadata for all three languages:
-# - Python: Uses run_sync.py (core files) + schema_sync.py (dataflow schemas)
-# - R: Uses metadata_sync.R (core files) + schema_sync.R (dataflow schemas)
-# - Stata: Uses unicefdata_sync command
+# This script orchestrates metadata sync for all three languages by calling:
+# - sync_metadata_python.py (Python metadata)
+# - sync_metadata_r.R (R metadata)
+# - sync_metadata_stata.do (Stata metadata)
 #
 # Usage:
-#   .\tests\regenerate_metadata.ps1 [-Python] [-R] [-Stata] [-All] [-Verbose] [-Force]
+#   .\tests\orchestrator_metadata.ps1 [-Python] [-R] [-Stata] [-All] [-Verbose] [-Force]
 #
 # Examples:
-#   .\tests\regenerate_metadata.ps1 -All          # Regenerate all (prompts if files exist)
-#   .\tests\regenerate_metadata.ps1 -Python       # Python only
-#   .\tests\regenerate_metadata.ps1 -Stata        # Stata only
-#   .\tests\regenerate_metadata.ps1 -All -Force   # Overwrite without prompting
+#   .\tests\orchestrator_metadata.ps1 -All          # Sync all (prompts if files exist)
+#   .\tests\orchestrator_metadata.ps1 -Python       # Python only
+#   .\tests\orchestrator_metadata.ps1 -Stata        # Stata only
+#   .\tests\orchestrator_metadata.ps1 -All -Force   # Overwrite without prompting
 #
+# Log output: tests/logs/orchestrator_metadata.log
 # ============================================================================
 
 param(
@@ -103,10 +104,21 @@ function Check-ExistingFiles {
 
 $RepoRoot = Get-RepoRoot
 
+# Setup logging
+$LogDir = Join-Path $RepoRoot "tests\logs"
+if (-Not (Test-Path $LogDir)) {
+    New-Item -ItemType Directory -Path $LogDir -Force | Out-Null
+}
+$LogFile = Join-Path $LogDir "orchestrator_metadata.log"
+
+# Start transcript for logging
+Start-Transcript -Path $LogFile -Force | Out-Null
+
 Write-Host "============================================" -ForegroundColor Cyan
 Write-Host " unicefData Metadata Regeneration Script" -ForegroundColor Cyan
 Write-Host "============================================" -ForegroundColor Cyan
 Write-Host "Repository: $RepoRoot"
+Write-Host "Log file:   $LogFile"
 if ($Force) {
     Write-Host "Mode: Force overwrite (no prompts)" -ForegroundColor Yellow
 }
@@ -850,6 +862,10 @@ foreach ($result in $results.Values) {
         break
     }
 }
+
+# Stop transcript
+Stop-Transcript | Out-Null
+Write-Host "Log saved to: $LogFile" -ForegroundColor Gray
 
 if ($allPassed) {
     Write-Host "All metadata regeneration completed successfully!" -ForegroundColor Green

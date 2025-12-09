@@ -2,7 +2,7 @@ id: CME_SUBNAT_BGD
 name: CME Bangladesh
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-08T13:31:08Z'
+synced_at: '2025-12-09T02:26:18Z'
 dimensions:
 - id: REF_AREA
   position: 1
@@ -15,9 +15,9 @@ dimensions:
   - BGD-1-5_1
   - BGD-1-6_1
   - BGD-1_1
-  - BGD-2-1_1
   - BGD-2-10_1
   - BGD-2-11_1
+  - BGD-2-1_1
   is_exhaustive: no
   total_values_count: 72
 - id: INDICATOR

@@ -2,7 +2,7 @@ id: MG
 name: Migration
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-08T13:30:17Z'
+synced_at: '2025-12-09T02:27:41Z'
 dimensions:
 - id: REF_AREA
   position: 1
@@ -27,8 +27,8 @@ dimensions:
   - MG_INTERNAL_DISP_PERS
   - MG_INTNL_MG_CNTRY_DEST
   - MG_RFGS_CNTRY_ASYLM
-  - MG_RFGS_CNTRY_ASYLM_PER_USD_GNI
   - MG_RFGS_CNTRY_ASYLM_PER1000
+  - MG_RFGS_CNTRY_ASYLM_PER_USD_GNI
   - MG_RFGS_CNTRY_ORIGIN
   is_exhaustive: yes
   total_values_count: 6
@@ -36,8 +36,8 @@ dimensions:
   position: 3
   codelist: CL_AGE
   values:
-  - _T
   - Y0T17
+  - _T
   is_exhaustive: yes
   total_values_count: 2
 - id: STAT_POP

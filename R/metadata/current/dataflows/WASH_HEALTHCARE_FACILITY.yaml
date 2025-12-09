@@ -2,7 +2,7 @@ id: WASH_HEALTHCARE_FACILITY
 name: WASH Healthcare Facility
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-08T13:30:56Z'
+synced_at: '2025-12-09T02:28:13Z'
 dimensions:
 - id: REF_AREA
   position: 1
@@ -17,7 +17,7 @@ dimensions:
   - AUREC_COMESA
   - AU_AFRICA
   - AUREC_CEN_SAD
-  - AU_WESTERN_AFRICA
+  - AUREC_ECOWAS
   is_exhaustive: no
   total_values_count: 74
 - id: INDICATOR
@@ -67,9 +67,9 @@ dimensions:
   position: 5
   codelist: CL_RESIDENCE
   values:
-  - _T
   - R
   - U
+  - _T
   is_exhaustive: yes
   total_values_count: 3
 time_dimension: TIME_PERIOD

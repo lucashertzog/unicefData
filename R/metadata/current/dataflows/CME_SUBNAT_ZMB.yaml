@@ -2,15 +2,15 @@ id: CME_SUBNAT_ZMB
 name: CME Zambia
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-08T13:28:58Z'
+synced_at: '2025-12-09T02:26:47Z'
 dimensions:
 - id: REF_AREA
   position: 1
   codelist: CL_CME_REF_AREA_SUBNAT
   values:
-  - ZMB-1-1_2
   - ZMB-1-10_2
   - ZMB-1-11_2
+  - ZMB-1-1_2
   - ZMB-1-2_2
   - ZMB-1-3_2
   - ZMB-1-4_2

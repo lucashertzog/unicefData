@@ -2,7 +2,7 @@ id: CME_SUBNAT_SEN
 name: CME Senegal
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-08T13:28:48Z'
+synced_at: '2025-12-09T02:26:40Z'
 dimensions:
 - id: REF_AREA
   position: 1
@@ -12,12 +12,12 @@ dimensions:
   - SEN-1-2_1
   - SEN-1-3_1
   - SEN-1-4_1
-  - SEN-1_1
   - SEN-10-1_1
   - SEN-10-2_1
   - SEN-10-3_1
   - SEN-10_1
   - SEN-11-1_1
+  - SEN-11-2_1
   is_exhaustive: no
   total_values_count: 59
 - id: INDICATOR

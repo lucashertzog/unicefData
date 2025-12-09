@@ -373,6 +373,7 @@ The package automatically downloads the complete UNICEF indicator codelist (733 
 |----------|------------|
 | Python | `python/metadata/current/unicef_indicators_metadata.yaml` |
 | R | `R/metadata/current/unicef_indicators_metadata.yaml` |
+| Stata | `stata/metadata/current/unicef_indicators_metadata.yaml` |
 
 ### Manual cache refresh
 
@@ -557,7 +558,7 @@ All platforms should generate matching metadata with:
 Use the status script to verify consistency:
 
 ```bash
-python tests/generate_metadata_status.py --detailed
+python tests/report_metadata_status.py --detailed
 ```
 
 ---
@@ -625,7 +626,12 @@ unicefData/
 │   ├── metadata/current/   # Stata metadata files
 │   └── examples/           # Stata examples
 ├── tests/                  # Cross-platform test utilities
-│   └── generate_metadata_status.py  # Metadata consistency checker
+│   ├── orchestrator_metadata.py     # Master sync orchestrator
+│   ├── sync_metadata_python.py      # Python metadata sync
+│   ├── sync_metadata_r.R            # R metadata sync
+│   ├── sync_metadata_stata.do       # Stata metadata sync
+│   ├── report_metadata_status.py    # Metadata consistency checker
+│   └── README.md                    # Test documentation
 └── README.md
 ```
 

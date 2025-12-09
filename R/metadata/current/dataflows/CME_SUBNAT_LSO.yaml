@@ -2,14 +2,14 @@ id: CME_SUBNAT_LSO
 name: CME Lesotho
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-08T13:31:19Z'
+synced_at: '2025-12-09T02:26:28Z'
 dimensions:
 - id: REF_AREA
   position: 1
   codelist: CL_CME_REF_AREA_SUBNAT
   values:
-  - LSO-1_1
   - LSO-10_1
+  - LSO-1_1
   - LSO-2_1
   - LSO-3_1
   - LSO-4_1

@@ -2,7 +2,7 @@ id: CME_SUBNAT_NAM
 name: CME Namibia
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-08T13:29:43Z'
+synced_at: '2025-12-09T02:26:35Z'
 dimensions:
 - id: REF_AREA
   position: 1
@@ -14,10 +14,10 @@ dimensions:
   - NAM-1-4_1
   - NAM-1-5_1
   - NAM-1-6_1
-  - NAM-1_1
-  - NAM-10-1_1
   - NAM-10-10_1
+  - NAM-10-1_1
   - NAM-10-2_1
+  - NAM-10-3_1
   is_exhaustive: no
   total_values_count: 120
 - id: INDICATOR

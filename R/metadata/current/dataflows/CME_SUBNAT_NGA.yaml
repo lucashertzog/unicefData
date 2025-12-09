@@ -2,13 +2,12 @@ id: CME_SUBNAT_NGA
 name: CME Nigeria
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-08T13:29:44Z'
+synced_at: '2025-12-09T02:26:36Z'
 dimensions:
 - id: REF_AREA
   position: 1
   codelist: CL_CME_REF_AREA_SUBNAT
   values:
-  - NGA-1_1
   - NGA-10_1
   - NGA-11_1
   - NGA-12_1
@@ -18,6 +17,7 @@ dimensions:
   - NGA-16_1
   - NGA-17_1
   - NGA-18_1
+  - NGA-19_1
   is_exhaustive: no
   total_values_count: 37
 - id: INDICATOR

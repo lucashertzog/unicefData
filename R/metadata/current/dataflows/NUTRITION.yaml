@@ -2,7 +2,7 @@ id: NUTRITION
 name: Nutrition
 version: '1.0'
 agency: UNICEF
-synced_at: '2025-12-08T13:30:24Z'
+synced_at: '2025-12-09T02:27:46Z'
 dimensions:
 - id: REF_AREA
   position: 1
@@ -38,16 +38,15 @@ dimensions:
   position: 3
   codelist: CL_SEX
   values:
-  - _T
   - F
   - M
+  - _T
   is_exhaustive: yes
   total_values_count: 3
 - id: AGE
   position: 4
   codelist: CL_AGE
   values:
-  - _T
   - M0T11
   - M0T23
   - M0T5
@@ -67,13 +66,13 @@ dimensions:
   - M6T11
   - Y0T4
   - Y15T49
+  - _T
   is_exhaustive: yes
   total_values_count: 20
 - id: WEALTH_QUINTILE
   position: 5
   codelist: CL_WEALTH_QUINTILE
   values:
-  - _T
   - B20
   - B40
   - B60
@@ -87,28 +86,29 @@ dimensions:
   - R40
   - R60
   - R80
+  - _T
   is_exhaustive: yes
   total_values_count: 14
 - id: RESIDENCE
   position: 6
   codelist: CL_RESIDENCE
   values:
-  - _T
   - R
   - U
+  - _T
   is_exhaustive: yes
   total_values_count: 3
 - id: MATERNAL_EDU_LVL
   position: 7
   codelist: CL_EDU_LEVEL
   values:
-  - _T
   - AGG_0_1
   - AGG_2_3
   - AGG_3S_H
   - AGG_5T8
-  - ISCED11_1
   - ISCED11A_01
+  - ISCED11_1
+  - _T
   is_exhaustive: yes
   total_values_count: 7
 - id: HEAD_OF_HOUSE
