@@ -25,20 +25,20 @@ source("00_quick_start.R")
 ## Quick Reference
 
 ```r
-source("../get_unicef.R")
+source("../unicefData.R")
 
 # Basic fetch
-df <- get_unicef("CME_MRY0T4", countries = c("ALB", "USA"))
+df <- unicefData("CME_MRY0T4", countries = c("ALB", "USA"))
 
 # Multiple indicators
-df <- get_unicef(c("CME_MRY0T4", "CME_MRM0"), countries = c("ALB"))
+df <- unicefData(c("CME_MRY0T4", "CME_MRM0"), countries = c("ALB"))
 
 # Latest values only
-df <- get_unicef("CME_MRY0T4", countries = c("ALB"), latest = TRUE)
+df <- unicefData("CME_MRY0T4", countries = c("ALB"), latest = TRUE)
 
 # Wide format
-df <- get_unicef("CME_MRY0T4", countries = c("ALB"), output_format = "wide")
+df <- unicefData("CME_MRY0T4", countries = c("ALB"), output_format = "wide")
 
 # With metadata
-df <- get_unicef("CME_MRY0T4", countries = c("ALB"), add_metadata = c("region", "income_group"))
+df <- unicefData("CME_MRY0T4", countries = c("ALB"), add_metadata = c("region", "income_group"))
 ```

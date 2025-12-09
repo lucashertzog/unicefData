@@ -1,7 +1,7 @@
 # 00_quick_start.R - Quick Start Guide
 # ======================================
 #
-# Demonstrates the basic get_unicef() API with 5 simple examples.
+# Demonstrates the basic unicefData() API with 5 simple examples.
 # Matches: python/examples/00_quick_start.py
 #
 # Examples:
@@ -12,14 +12,14 @@
 #   5. All countries (large download)
 
 # Adjust path if running from examples directory
-if (file.exists("../unicef_api/get_unicef.R")) {
-  source("../unicef_api/get_unicef.R")
-} else if (file.exists("R/unicef_api/get_unicef.R")) {
-  source("R/unicef_api/get_unicef.R")
-} else if (file.exists("unicefData/R/unicef_api/get_unicef.R")) {
-  source("unicefData/R/unicef_api/get_unicef.R")
+if (file.exists("../unicef_api/unicefData.R")) {
+  source("../unicef_api/unicefData.R")
+} else if (file.exists("R/unicef_api/unicefData.R")) {
+  source("R/unicef_api/unicefData.R")
+} else if (file.exists("unicefData/R/unicef_api/unicefData.R")) {
+  source("unicefData/R/unicef_api/unicefData.R")
 } else {
-  stop("Could not find get_unicef.R")
+  stop("Could not find unicefData.R")
 }
 
 # Setup data directory
@@ -42,7 +42,7 @@ cat("Indicator: CME_MRY0T4\n")
 cat("Countries: Albania, USA, Brazil\n")
 cat("Years: 2015-2023\n\n")
 
-df <- get_unicef(
+df <- unicefData(
   indicator = "CME_MRY0T4",
   countries = c("ALB", "USA", "BRA"),
   start_year = 2015,
@@ -60,7 +60,7 @@ cat("\n--- Example 2: Multiple Indicators (Mortality) ---\n")
 cat("Indicators: CME_MRM0 (Neonatal), CME_MRY0T4 (Under-5)\n")
 cat("Years: 2020-2023\n\n")
 
-df <- get_unicef(
+df <- unicefData(
   indicator = c("CME_MRM0", "CME_MRY0T4"),
   countries = c("ALB", "USA", "BRA"),
   start_year = 2020,
@@ -78,7 +78,7 @@ cat("Indicator: NT_ANT_HAZ_NE2_MOD\n")
 cat("Countries: Afghanistan, India, Nigeria\n")
 cat("Years: 2015+\n\n")
 
-df <- get_unicef(
+df <- unicefData(
   indicator = "NT_ANT_HAZ_NE2_MOD",
   countries = c("AFG", "IND", "NGA"),
   start_year = 2015
@@ -94,7 +94,7 @@ cat("Indicator: IM_DTP3\n")
 cat("Countries: Albania, USA, Brazil\n")
 cat("Years: 2015-2023\n\n")
 
-df <- get_unicef(
+df <- unicefData(
   indicator = "IM_DTP3",
   countries = c("ALB", "USA", "BRA"),
   start_year = 2015,
@@ -111,7 +111,7 @@ cat("Indicator: CME_MRY0T4 (Under-5 mortality)\n")
 cat("Countries: ALL\n")
 cat("Years: 2020+\n\n")
 
-df <- get_unicef(
+df <- unicefData(
   indicator = "CME_MRY0T4",
   start_year = 2020
 )
@@ -128,7 +128,7 @@ cat("Indicator: CME_MRY0T4\n")
 cat("Result: All countries, all years, default filters (Totals)\n\n")
 
 # Note: This can be a large download!
-df <- get_unicef(indicator = "CME_MRY0T4")
+df <- unicefData(indicator = "CME_MRY0T4")
 
 cat(sprintf("Result: %d rows, %d countries\n", nrow(df), length(unique(df$iso3))))
 print(head(df))
@@ -140,7 +140,7 @@ cat("\n--- Example 7: Multiple Indicators Merged (Wide Format) ---\n")
 cat("Indicators: Under-5 (CME_MRY0T4) & Neonatal (CME_MRM0)\n")
 cat("Format: wide_indicators (Merged side-by-side)\n\n")
 
-df <- get_unicef(
+df <- unicefData(
   indicator = c("CME_MRY0T4", "CME_MRM0"),
   countries = c("ALB", "USA", "BRA"),
   start_year = 2015,

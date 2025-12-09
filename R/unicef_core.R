@@ -93,7 +93,7 @@ detect_dataflow <- function(indicator) {
 #' @param page_size Integer, number of rows per page.
 #' @param verbose Logical, print progress messages.
 #' @export
-get_unicef_raw <- function(
+unicefData_raw <- function(
     indicator = NULL,
     dataflow = NULL,
     countries = NULL,
@@ -140,7 +140,7 @@ get_unicef_raw <- function(
   if (!is.null(end_year_str)) full_url <- paste0(full_url, "&endPeriod=", end_year_str)
   
   # Paging
-  ua <- httr::user_agent("get_unicef/1.0")
+  ua <- httr::user_agent("unicefData/1.0")
   pages <- list()
   page <- 0L
   

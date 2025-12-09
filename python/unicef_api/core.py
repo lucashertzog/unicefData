@@ -34,7 +34,7 @@ from unicef_api.metadata import MetadataSync
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-__all__ = ['get_unicef']
+__all__ = ['unicefData', 'unicefdata']
 
 
 # =============================================================================
@@ -222,10 +222,10 @@ def _fetch_with_fallback(
 
 
 # =============================================================================
-# Unified get_unicef() function - Primary API
+# Unified unicefData() function - Primary API
 # =============================================================================
 
-def get_unicef(
+def unicefData(
     indicator: Union[str, List[str]],
     countries: Optional[List[str]] = None,
     start_year: Optional[int] = None,
@@ -249,7 +249,7 @@ def get_unicef(
     Fetch UNICEF indicator data from SDMX API.
     
     This is the primary function for downloading indicator data. It provides
-    a simple, consistent interface matching the R package's get_unicef().
+    a simple, consistent interface matching the R package's unicefData().
     
     Args:
         indicator: Indicator code(s). Single string or list of codes.
@@ -326,10 +326,10 @@ def get_unicef(
         SDMXServerError: API server error
     
     Examples:
-        >>> from unicef_api import get_unicef
+        >>> from unicef_api import unicefData
         >>> 
         >>> # Basic usage - under-5 mortality for specific countries
-        >>> df = get_unicef(
+        >>> df = unicefData(
         ...     indicator="CME_MRY0T4",
         ...     countries=["ALB", "USA", "BRA"],
         ...     start_year=2015,
@@ -337,27 +337,27 @@ def get_unicef(
         ... )
         >>> 
         >>> # Get raw SDMX data with all original columns
-        >>> df_raw = get_unicef(
+        >>> df_raw = unicefData(
         ...     indicator="CME_MRY0T4",
         ...     countries=["ALB", "USA"],
         ...     raw=True
         ... )
         >>> 
         >>> # Get latest value per country (cross-sectional)
-        >>> df = get_unicef(
+        >>> df = unicefData(
         ...     indicator="CME_MRY0T4",
         ...     latest=True
         ... )
         >>> 
         >>> # Wide format with region metadata
-        >>> df = get_unicef(
+        >>> df = unicefData(
         ...     indicator="CME_MRY0T4",
         ...     format="wide",
         ...     add_metadata=["region", "income_group"]
         ... )
         >>> 
         >>> # Multiple indicators merged automatically
-        >>> df = get_unicef(
+        >>> df = unicefData(
         ...     indicator=["CME_MRY0T4", "NT_ANT_HAZ_NE2_MOD"],
         ...     format="wide_indicators",
         ...     latest=True
@@ -638,6 +638,14 @@ def _simplify_columns(df: pd.DataFrame, format: str) -> pd.DataFrame:
     else:
         # For wide format, keep all pivoted columns
         return df
+
+
+# =============================================================================
+# Lowercase Alias (for consistency with Stata's case-insensitive commands)
+# =============================================================================
+
+# Alias for users accustomed to Stata's case-insensitive unicefdata command
+unicefdata = unicefData
 
 
 

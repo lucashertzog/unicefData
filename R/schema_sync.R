@@ -31,7 +31,7 @@ SDMX_BASE_URL <- "https://sdmx.data.unicef.org/ws/public/sdmxapi/rest"
 #' Get R package root directory
 #'
 #' Attempts to locate the root of the R package by checking for specific files
-#' (get_unicef.R or DESCRIPTION) in the current directory, R/ subdirectory,
+#' (unicefData.R or DESCRIPTION) in the current directory, R/ subdirectory,
 #' or parent directories.
 #'
 #' @return Character path to the package root.
@@ -46,7 +46,7 @@ get_package_root <- function() {
   )
   
   for (path in candidates) {
-    if (file.exists(file.path(path, "get_unicef.R")) || file.exists(file.path(path, "unicef_api", "get_unicef.R")) || file.exists(file.path(path, "DESCRIPTION"))) {
+    if (file.exists(file.path(path, "unicefData.R")) || file.exists(file.path(path, "unicef_api", "unicefData.R")) || file.exists(file.path(path, "DESCRIPTION"))) {
       return(normalizePath(path))
     }
   }
@@ -318,7 +318,7 @@ sync_dataflow_schemas <- function(output_dir = NULL, verbose = TRUE, dataflows =
     pkg_root <- get_package_root()
     
     # Check if pkg_root is the R directory or the project root
-    if (file.exists(file.path(pkg_root, "get_unicef.R")) || file.exists(file.path(pkg_root, "unicef_api", "get_unicef.R"))) {
+    if (file.exists(file.path(pkg_root, "unicefData.R")) || file.exists(file.path(pkg_root, "unicef_api", "unicefData.R"))) {
       # It is the R directory
       output_dir <- file.path(pkg_root, "metadata", "current")
     } else {
@@ -501,7 +501,7 @@ load_dataflow_schema <- function(dataflow_id, metadata_dir = NULL) {
     pkg_root <- get_package_root()
     
     # Check if pkg_root is the R directory or the project root
-    if (file.exists(file.path(pkg_root, "get_unicef.R"))) {
+    if (file.exists(file.path(pkg_root, "unicefData.R"))) {
       # It is the R directory
       metadata_dir <- file.path(pkg_root, "metadata", "current")
     } else {

@@ -9,7 +9,7 @@ __version__ = "0.3.0"
 __author__ = "Joao Pedro Azevedo"
 __email__ = "jazevedo@unicef.org"
 
-from unicef_api.core import get_unicef
+from unicef_api.core import unicefData, unicefdata
 from unicef_api.sdmx import get_sdmx
 from unicef_api.flows import list_dataflows
 from unicef_api.indicator_registry import (
@@ -43,7 +43,8 @@ from unicef_api.metadata import (
 
 __all__ = [
     # Primary functions
-    "get_unicef",
+    "unicefData",
+    "unicefdata",  # lowercase alias for Stata compatibility
     "get_sdmx",
     # Discovery functions
     "list_dataflows",

@@ -13,7 +13,7 @@ The **unicefData** repository provides consistent APIs in both R and Python:
 
 | Feature | R | Python |
 |---------|---|--------|
-| Unified API | `get_unicef()` | `get_unicef()` |
+| Unified API | `unicefData()` | `unicefData()` |
 | **Search indicators** | `search_indicators()` | `search_indicators()` |
 | **List categories** | `list_categories()` | `list_categories()` |
 | **Auto dataflow detection** | ✅ | ✅ |
@@ -60,7 +60,7 @@ This conversion:
 You can source the scripts directly from this repository:
 
 ```r
-source("R/get_unicef.R")
+source("R/unicefData.R")
 ```
 
 Dependencies:
@@ -79,11 +79,11 @@ Dependencies:
 ### Basic Usage
 
 ```r
-source("R/unicef_api/get_unicef.R")
+source("R/unicef_api/unicefData.R")
 
 # Fetch under-5 mortality for specific countries
 # Dataflow is auto-detected from indicator code!
-df <- get_unicef(
+df <- unicefData(
   indicator = "CME_MRY0T4",
   countries = c("ALB", "USA", "BRA"),
   start_year = 2015,
@@ -99,14 +99,14 @@ Pivot your data easily:
 
 ```r
 # Wide by Wealth Quintile
-df_wealth <- get_unicef(
+df_wealth <- unicefData(
   indicator = "CME_MRY0T4",
   countries = c("COL", "PER"),
   format = "wide_wealth"
 )
 
 # Wide by Sex
-df_sex <- get_unicef(
+df_sex <- unicefData(
   indicator = "HIV_AIDS_INDICATOR",
   format = "wide_sex"
 )

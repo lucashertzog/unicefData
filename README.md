@@ -19,7 +19,7 @@ All three languages use **the same functions** with nearly identical parameter n
 ### Python
 
 ```python
-from unicef_api import get_unicef, search_indicators, list_categories
+from unicef_api import unicefData, search_indicators, list_categories
 
 # Don't know the indicator code? Search for it!
 search_indicators("mortality")
@@ -27,7 +27,7 @@ list_categories()
 
 # Fetch under-5 mortality for specific countries
 # Dataflow is auto-detected from the indicator code!
-df = get_unicef(
+df = unicefData(
     indicator="CME_MRY0T4",
     countries=["ALB", "USA", "BRA"],
     start_year=2015,
@@ -40,7 +40,7 @@ print(df.head())
 ### R
 
 ```r
-source("R/get_unicef.R")
+source("R/unicefData.R")
 
 # Don't know the indicator code? Search for it!
 search_indicators("mortality")
@@ -48,7 +48,7 @@ list_categories()
 
 # Fetch under-5 mortality for specific countries
 # Dataflow is auto-detected from the indicator code!
-df <- get_unicef(
+df <- unicefData(
   indicator = "CME_MRY0T4",
   countries = c("ALB", "USA", "BRA"),
   start_year = 2015,
@@ -123,7 +123,7 @@ search_indicators("immunization")   # Find vaccine coverage indicators
 
 ```r
 # R
-source("R/get_unicef.R")
+source("R/unicefData.R")
 
 search_indicators("mortality")
 search_indicators("stunting")
@@ -201,7 +201,7 @@ search_indicators("rate", category = "CME")
 
 ## Post-Production Features
 
-The `get_unicef()` function includes powerful post-production options for data transformation and enrichment.
+The `unicefData()` function includes powerful post-production options for data transformation and enrichment.
 
 ### 📅 Time Period Handling
 
@@ -224,7 +224,7 @@ This conversion:
 
 ```python
 # Python: Data with monthly periods will have decimal years
-df = get_unicef(indicator="NT_ANT_HAZ_NE2", countries=["BGD"])
+df = unicefData(indicator="NT_ANT_HAZ_NE2", countries=["BGD"])
 print(df[["iso3", "period", "value"]].head())
 #   iso3       period  value
 # 0  BGD  2011.583333   40.0  # July 2011 (2011 + 7/12)
@@ -233,7 +233,7 @@ print(df[["iso3", "period", "value"]].head())
 
 ```r
 # R: Same decimal conversion
-df <- get_unicef(indicator = "NT_ANT_HAZ_NE2", countries = "BGD")
+df <- unicefData(indicator = "NT_ANT_HAZ_NE2", countries = "BGD")
 head(df[, c("iso3", "period", "value")])
 #   iso3       period  value
 # 1  BGD  2011.583333   40.0
@@ -244,14 +244,14 @@ head(df[, c("iso3", "period", "value")])
 
 ```python
 # Python: Long format (default) - one row per observation
-df = get_unicef(indicator="CME_MRY0T4", format="long")
+df = unicefData(indicator="CME_MRY0T4", format="long")
 
 # Wide format - years as columns
-df = get_unicef(indicator="CME_MRY0T4", format="wide")
+df = unicefData(indicator="CME_MRY0T4", format="wide")
 # Result: iso3 | country | y2015 | y2016 | y2017 | ...
 
 # Wide indicators format - indicators as columns (for multiple indicators)
-df = get_unicef(
+df = unicefData(
     indicator=["CME_MRY0T4", "NT_ANT_HAZ_NE2_MOD"],
     format="wide_indicators"
 )
@@ -260,8 +260,8 @@ df = get_unicef(
 
 ```r
 # R: Same options
-df <- get_unicef(indicator = "CME_MRY0T4", format = "wide")
-df <- get_unicef(
+df <- unicefData(indicator = "CME_MRY0T4", format = "wide")
+df <- unicefData(
   indicator = c("CME_MRY0T4", "NT_ANT_HAZ_NE2_MOD"),
   format = "wide_indicators"
 )
@@ -273,14 +273,14 @@ Get only the most recent non-missing observation per country (useful for cross-s
 
 ```python
 # Python
-df = get_unicef(indicator="CME_MRY0T4", latest=True)
+df = unicefData(indicator="CME_MRY0T4", latest=True)
 # Each country has one row with its most recent value
 # Note: The year may differ by country based on data availability
 ```
 
 ```r
 # R
-df <- get_unicef(indicator = "CME_MRY0T4", latest = TRUE)
+df <- unicefData(indicator = "CME_MRY0T4", latest = TRUE)
 ```
 
 ### Most Recent Values (MRV)
@@ -289,12 +289,12 @@ Keep the N most recent years per country:
 
 ```python
 # Python: Keep last 3 years per country
-df = get_unicef(indicator="CME_MRY0T4", mrv=3)
+df = unicefData(indicator="CME_MRY0T4", mrv=3)
 ```
 
 ```r
 # R
-df <- get_unicef(indicator = "CME_MRY0T4", mrv = 3)
+df <- unicefData(indicator = "CME_MRY0T4", mrv = 3)
 ```
 
 ### Add Country/Indicator Metadata
@@ -303,7 +303,7 @@ Enrich data with region, income group, and other metadata:
 
 ```python
 # Python
-df = get_unicef(
+df = unicefData(
     indicator="CME_MRY0T4",
     add_metadata=["region", "income_group", "continent"]
 )
@@ -312,7 +312,7 @@ df = get_unicef(
 
 ```r
 # R
-df <- get_unicef(
+df <- unicefData(
   indicator = "CME_MRY0T4",
   add_metadata = c("region", "income_group", "continent")
 )
@@ -334,7 +334,7 @@ Post-production options can be combined for powerful data transformations:
 
 ```python
 # Python: Cross-sectional analysis with metadata
-df = get_unicef(
+df = unicefData(
     indicator=["CME_MRY0T4", "NT_ANT_HAZ_NE2_MOD"],
     format="wide_indicators",
     latest=True,
@@ -347,7 +347,7 @@ df = get_unicef(
 
 ```r
 # R: Same approach
-df <- get_unicef(
+df <- unicefData(
   indicator = c("CME_MRY0T4", "NT_ANT_HAZ_NE2_MOD"),
   format = "wide_indicators",
   latest = TRUE,
@@ -395,7 +395,7 @@ info <- get_cache_info()
 
 ## Unified API Reference
 
-### get_unicef() Parameters
+### unicefData() Parameters
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
@@ -567,7 +567,7 @@ python tests/report_metadata_status.py --detailed
 
 | Feature | R | Python | Stata |
 |---------|---|--------|-------|
-| Unified `get_unicef()` / `unicefdata` API | ✅ | ✅ | ✅ |
+| Unified `unicefData()` / `unicefdata` API | ✅ | ✅ | ✅ |
 | **`search_indicators()`** | ✅ | ✅ | 🔜 |
 | **`list_categories()`** | ✅ | ✅ | 🔜 |
 | Auto dataflow detection | ✅ | ✅ | ✅ |

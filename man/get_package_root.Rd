@@ -11,7 +11,7 @@ Character path to the package root.
 }
 \description{
 Attempts to locate the root of the R package by checking for specific files
-(get_unicef.R or DESCRIPTION) in the current directory, R/ subdirectory,
+(unicefData.R or DESCRIPTION) in the current directory, R/ subdirectory,
 or parent directories.
 }
 \keyword{internal}
