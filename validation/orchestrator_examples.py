@@ -198,8 +198,10 @@ def run_stata_examples(examples=None, verbose=False):
         
         log(f"  Running {example}.do...")
         try:
+            # Stata batch mode: -e flag runs do-file and exits
+            # Just pass the script name - Stata will run it directly
             result = subprocess.run(
-                [stata_exe, "-e", f"do {script}"],
+                [stata_exe, "-e", str(script.name)],
                 cwd=str(examples_dir),
                 capture_output=not verbose,
                 text=True,
