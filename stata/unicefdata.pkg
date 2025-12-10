@@ -1,16 +1,62 @@
 v 3
-d unicefdata. Download indicators from UNICEF Data Warehouse
+d unicefData. Download indicators from UNICEF Data Warehouse
 d
 d Author: Joao Pedro Azevedo
 d Support: jazevedo@unicef.org
 d
-d unicefdata downloads indicator data from the UNICEF Data Warehouse
+d unicefData downloads indicator data from the UNICEF Data Warehouse
 d using the SDMX REST API. It provides access to hundreds of indicators
 d covering child health, nutrition, education, protection, HIV/AIDS, 
 d WASH, and more.
 d
-d Distribution-Date: 20251203
+d Features:
+d   - Download data by indicator, geography, and time period
+d   - Discovery functions: list dataflows, search indicators, get metadata
+d   - Multiple output formats: long, wide by indicator
+d   - Automatic dataflow detection from indicator codes
+d   - Geographic type classification (country vs aggregate)
+d   - YAML-based metadata system with sync capabilities
+d
+d Distribution-Date: 20251210
 d
 
-f unicefdata.ado
-f unicefdata.sthlp
+* Main command and help
+f u/unicefdata.ado
+f u/unicefdata.sthlp
+
+* Sync command and help
+f u/unicefdata_sync.ado
+f u/unicefdata_sync.sthlp
+
+* XML to YAML conversion
+f u/unicefdata_xmltoyaml.ado
+f u/unicefdata_xmltoyaml_py.ado
+
+* YAML command and help
+f y/yaml.ado
+f y/yaml.sthlp
+
+* Discovery helper programs
+f _/_unicef_list_dataflows.ado
+f _/_unicef_list_indicators.ado
+f _/_unicef_search_indicators.ado
+f _/_unicef_indicator_info.ado
+f _/_unicef_fetch_with_fallback.ado
+
+* Sync helper programs
+f _/_unicefdata_sync_dataflow_index.ado
+f _/_unicefdata_sync_df_schema.ado
+f _/_unicefdata_sync_ind_meta.ado
+f _/_unicefdata_update_sync_history.ado
+
+* XML parsing helper programs
+f _/_xmltoyaml_get_schema.ado
+f _/_xmltoyaml_parse.ado
+f _/_xmltoyaml_parse_lines.ado
+f _/_xmltoyaml_parse_python.ado
+f _/_xmltoyaml_parse_stata.ado
+
+* Python helper scripts
+f u/unicefdata_xml2yaml.py
+f u/stata_schema_sync.py
+f p/python_xml_helper.py

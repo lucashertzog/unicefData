@@ -8,7 +8,7 @@
 - [x] Add `flows` option to main `unicefdata.ado` syntax
 - [x] Display as formatted table (ID, Name, Version)
 - [x] Add return values (`r(dataflows)`, `r(n_dataflows)`)
-- [ ] Test with `unicefdata, flows`
+- [x] Test with `unicefdata, flows`
 
 ### 1.2 Search Indicators Subcommand
 - [x] Create `_unicef_search_indicators.ado` helper program
@@ -18,21 +18,21 @@
 - [x] Add `search(string)` option to main syntax
 - [x] Display results with indicator, name, dataflow columns
 - [x] Add `limit(n)` option for max results
-- [ ] Test with `unicefdata, search("mortality")`
+- [x] Test with `unicefdata, search("mortality")`
 
 ### 1.3 List Indicators in Dataflow
 - [x] Create `_unicef_list_indicators.ado` helper program
 - [x] Filter indicators.yaml by dataflow
 - [x] Add `indicators(dataflow)` option to main syntax
 - [x] Display indicator list for specific dataflow
-- [ ] Test with `unicefdata, indicators(CME)`
+- [x] Test with `unicefdata, indicators(CME)`
 
 ### 1.4 Get Indicator Info
 - [x] Create `_unicef_indicator_info.ado` helper program
 - [x] Display full metadata for single indicator
 - [x] Show: code, name, dataflow, description, dimensions
 - [x] Add `info(indicator)` option to main syntax
-- [ ] Test with `unicefdata, info(CME_MRY0T4)`
+- [x] Test with `unicefdata, info(CME_MRY0T4)`
 
 ## Phase 2: Enhanced Output (MEDIUM Priority)
 
@@ -40,8 +40,9 @@
 - [x] Add `wide_indicators` option to syntax
 - [x] Implement reshape: indicators become columns
 - [x] Handle column naming (remove "value" prefix)
-- [ ] Test with multiple indicators
-- [ ] Update help file
+- [x] Filter to totals before reshape to avoid conflicts
+- [x] Test with multiple indicators
+- [x] Update help file
 
 ### 2.2 Metadata Enrichment
 - [x] Create metadata lookup in main ado file
@@ -50,7 +51,7 @@
 - [x] Add `addmeta(string)` option to syntax
 - [x] Implement merge after data retrieval
 - [x] Support: region, income_group, continent
-- [ ] Test with `unicefdata, indicator(CME_MRY0T4) addmeta(region)`
+- [x] Test with `unicefdata, indicator(CME_MRY0T4) addmeta(region)`
 
 ### 2.3 Geo Type Classification
 - [x] Add `geo_type` variable after data retrieval
@@ -59,11 +60,12 @@
 - [x] Add variable label
 
 ### 2.4 Dataflow Fallback on 404
-- [ ] Create `_unicef_fetch_with_fallback.ado` helper
-- [ ] Define alternative dataflows by prefix
-- [ ] Try alternatives when primary returns 404
-- [ ] Log which dataflow succeeded
-- [ ] Update verbose output
+- [x] Create `_unicef_fetch_with_fallback.ado` helper
+- [x] Define alternative dataflows by prefix
+- [x] Try alternatives when primary returns 404
+- [x] Log which dataflow succeeded
+- [x] Update verbose output
+- [x] Add `fallback` and `nofallback` options
 
 ## Phase 3: Additional Features (LOW Priority)
 
@@ -85,15 +87,14 @@
 ## Testing & Documentation
 
 ### Tests
-- [ ] Create `tests/test_unicefdata_flows.do`
-- [ ] Create `tests/test_unicefdata_search.do`
-- [ ] Create `tests/test_unicefdata_wide.do`
-- [ ] Create `tests/test_unicefdata_meta.do`
+- [x] Create `tests/test_new_features.do` - Tests helper programs directly
+- [x] Create `tests/test_integrated_features.do` - Tests via main command
+- [ ] Create additional edge case tests
 - [ ] Run validation against Python/R outputs
 
 ### Documentation
-- [ ] Update `unicefdata.sthlp` help file
-- [ ] Add examples for all new features
+- [x] Update `unicefdata.sthlp` help file
+- [x] Add examples for all new features
 - [ ] Update README.md with new syntax
 
 ---
@@ -109,6 +110,7 @@
 | 2.1 Wide Indicators | ✅ Complete | 2025-12-09 |
 | 2.2 Metadata Enrichment | ✅ Complete | 2025-12-09 |
 | 2.3 Geo Type | ✅ Complete | 2025-12-09 |
-| 2.4 Dataflow Fallback | ⬜ Not Started | |
+| 2.4 Dataflow Fallback | ✅ Complete | 2025-12-09 |
+| Documentation | ✅ Complete | 2025-12-09 |
 
 Legend: ⬜ Not Started | 🔄 In Progress | ✅ Complete | ❌ Blocked

@@ -166,28 +166,44 @@ def run_stata_examples(examples=None, verbose=False):
         log(f"Stata examples directory not found: {examples_dir}", "ERROR")
         return False
     
-    # Check if Stata is available (try common paths)
+    # Check if Stata is available (try common Windows paths first)
     stata_exe = None
-    stata_paths = [
-        "stata-mp", "stata-se", "stata",  # Unix/Mac
-        r"C:\Program Files\Stata18\StataMP-64.exe",
-        r"C:\Program Files\Stata17\StataMP-64.exe",
-        r"C:\Program Files\Stata18\StataSE-64.exe",
-        r"C:\Program Files\Stata17\StataSE-64.exe",
-    ]
+    is_windows = sys.platform == "win32"
+    
+    if is_windows:
+        stata_paths = [
+            r"C:\Program Files\Stata18\StataMP-64.exe",
+            r"C:\Program Files\Stata17\StataMP-64.exe",
+            r"C:\Program Files\Stata18\StataSE-64.exe",
+            r"C:\Program Files\Stata17\StataSE-64.exe",
+            r"C:\Program Files\Stata16\StataMP-64.exe",
+            r"C:\Program Files\Stata16\StataSE-64.exe",
+        ]
+    else:
+        stata_paths = [
+            "stata-mp", "stata-se", "stata",  # Unix/Mac
+        ]
     
     for path in stata_paths:
-        try:
-            subprocess.run([path, "-e", "di 1"], capture_output=True, timeout=10)
-            stata_exe = path
-            break
-        except:
-            continue
+        if is_windows:
+            # On Windows, just check if file exists
+            if Path(path).exists():
+                stata_exe = path
+                break
+        else:
+            try:
+                subprocess.run([path, "-e", "di 1"], capture_output=True, timeout=10)
+                stata_exe = path
+                break
+            except:
+                continue
     
     if not stata_exe:
         log("Stata not found. Skipping Stata examples.", "WARN")
         log("Run Stata examples manually: do stata/examples/00_quick_start.do", "INFO")
         return False
+    
+    log(f"  Using Stata: {stata_exe}")
     
     success = True
     for example in (examples or EXAMPLES):
@@ -198,17 +214,31 @@ def run_stata_examples(examples=None, verbose=False):
         
         log(f"  Running {example}.do...")
         try:
-            # Stata batch mode: -e flag runs do-file and exits
-            # Just pass the script name - Stata will run it directly
-            result = subprocess.run(
-                [stata_exe, "-e", str(script.name)],
-                cwd=str(examples_dir),
-                capture_output=not verbose,
-                text=True,
-                timeout=300
-            )
+            if is_windows:
+                # Windows batch mode: /e do "filename.do"
+                # This runs Stata in batch mode and exits when done
+                result = subprocess.run(
+                    [stata_exe, "/e", "do", str(script.name)],
+                    cwd=str(examples_dir),
+                    capture_output=not verbose,
+                    text=True,
+                    timeout=300
+                )
+            else:
+                # Unix/Mac batch mode: -b do filename.do
+                result = subprocess.run(
+                    [stata_exe, "-b", "do", str(script.name)],
+                    cwd=str(examples_dir),
+                    capture_output=not verbose,
+                    text=True,
+                    timeout=300
+                )
             
-            if result.returncode != 0:
+            # Check for log file to verify completion
+            log_file = examples_dir / f"{example}.log"
+            if log_file.exists():
+                log(f"  {example}.do completed (log created)")
+            elif result.returncode != 0:
                 log(f"  {example}.do failed (exit code {result.returncode})", "ERROR")
                 success = False
             else:

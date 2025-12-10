@@ -17,11 +17,17 @@ program define unicefdata, rclass
     *---------------------------------------------------------------------------
     
     * Check for FLOWS subcommand
-    if (substr("`0'", 1, 6) == "flows" | substr("`0'", 1, 7) == ", flows") {
-        local 0 = subinstr("`0'", "flows", "", 1)
-        local 0 = subinstr("`0'", ",", "", 1)
-        syntax [, DETail VERBOSE]
-        _unicef_list_dataflows, `detail' `verbose'
+    if (strpos("`0'", "flows") > 0) {
+        * Parse options (detail, verbose)
+        local has_detail = (strpos("`0'", "detail") > 0)
+        local has_verbose = (strpos("`0'", "verbose") > 0)
+        
+        if (`has_detail') {
+            _unicef_list_dataflows, detail `=cond(`has_verbose', "verbose", "")'
+        }
+        else {
+            _unicef_list_dataflows `=cond(`has_verbose', ", verbose", "")'
+        }
         exit
     }
     
@@ -55,18 +61,10 @@ program define unicefdata, rclass
         local ind_end = strpos(substr("`0'", `ind_start', .), ")") + `ind_start' - 2
         local ind_dataflow = substr("`0'", `ind_start', `ind_end' - `ind_start' + 1)
         
-        * Extract other options
-        local remaining = subinstr("`0'", "indicators(`ind_dataflow')", "", 1)
+        * Check for verbose option
+        local has_verbose = (strpos("`0'", "verbose") > 0)
         
-        * Check for limit option
-        local limit_val = 50
-        if (strpos("`remaining'", "limit(") > 0) {
-            local limit_start = strpos("`remaining'", "limit(") + 6
-            local limit_end = strpos(substr("`remaining'", `limit_start', .), ")") + `limit_start' - 2
-            local limit_val = substr("`remaining'", `limit_start', `limit_end' - `limit_start' + 1)
-        }
-        
-        _unicef_list_indicators, dataflow("`ind_dataflow'") limit(`limit_val')
+        _unicef_list_indicators, dataflow("`ind_dataflow'") `=cond(`has_verbose', "verbose", "")'
         exit
     }
     
@@ -112,6 +110,8 @@ program define unicefdata, rclass
                         CLEAR                       /// Replace data in memory
                         VERBOSE                     /// Show progress
                         VALIDATE                    /// Validate inputs against codelists
+                        FALLBACK                    /// Try alternative dataflows on 404
+                        NOFallback                  /// Disable dataflow fallback
                         *                           /// Legacy options
                  ]
 
@@ -186,14 +186,166 @@ program define unicefdata, rclass
         * Auto-detect dataflow from indicator using YAML metadata
         *-----------------------------------------------------------------------
         
-        if ("`dataflow'" == "") & ("`indicator'" != "") {
-            _unicef_detect_dataflow_yaml "`indicator'" "`metadata_path'"
-            local dataflow "`s(dataflow)'"
-            local indicator_name "`s(indicator_name)'"
+        * Check for multiple indicators (space-separated)
+        local n_indicators : word count `indicator'
+        
+        if (`n_indicators' > 1) {
+            * Multiple indicators: fetch each separately and append
+            * (This matches Python/R behavior where each indicator is fetched individually)
+            
             if ("`verbose'" != "") {
-                noi di as text "Auto-detected dataflow: " as result "`dataflow'"
-                if ("`indicator_name'" != "") {
-                    noi di as text "Indicator: " as result "`indicator_name'"
+                noi di as text "Multiple indicators detected (`n_indicators'). Fetching each separately..."
+            }
+            
+            tempfile combined_data
+            local first_indicator = 1
+            
+            foreach ind of local indicator {
+                if ("`verbose'" != "") {
+                    noi di as text "  Fetching indicator: " as result "`ind'"
+                }
+                
+                * Detect dataflow for this indicator
+                _unicef_detect_dataflow_yaml "`ind'" "`metadata_path'"
+                local ind_dataflow "`s(dataflow)'"
+                
+                * Build URL for this indicator
+                local ind_key ".`ind'."
+                local ind_rel_path "data/UNICEF,`ind_dataflow',`version'/`ind_key'"
+                
+                local ind_query "format=csv&labels=both"
+                if (`start_year' > 0) {
+                    local ind_query "`ind_query'&startPeriod=`start_year'"
+                }
+                if (`end_year' > 0) {
+                    local ind_query "`ind_query'&endPeriod=`end_year'"
+                }
+                local ind_query "`ind_query'&startIndex=0&count=`page_size'"
+                
+                local ind_url "`base_url'/`ind_rel_path'?`ind_query'"
+                
+                * Try to fetch this indicator
+                tempfile ind_tempdata
+                local ind_success 0
+                forvalues attempt = 1/`max_retries' {
+                    capture copy "`ind_url'" "`ind_tempdata'", replace public
+                    if (_rc == 0) {
+                        local ind_success 1
+                        continue, break
+                    }
+                    sleep 1000
+                }
+                
+                * Try fallback if primary failed
+                if (`ind_success' == 0) {
+                    _unicef_fetch_with_fallback, indicator("`ind'") ///
+                        dataflow("`ind_dataflow'") ///
+                        base_url("`base_url'") ///
+                        version("`version'") ///
+                        start_year("`start_year'") ///
+                        end_year("`end_year'") ///
+                        page_size(`page_size') ///
+                        max_retries(`max_retries') ///
+                        `verbose'
+                    
+                    if ("`r(success)'" == "1") {
+                        local ind_success 1
+                        * Data is now in memory from fallback helper
+                        * Convert types for safe appending
+                        capture confirm variable time_period
+                        if (_rc == 0) {
+                            capture confirm string variable time_period
+                            if (_rc != 0) {
+                                tostring time_period, replace force
+                            }
+                        }
+                        capture confirm variable obs_value
+                        if (_rc == 0) {
+                            capture confirm string variable obs_value
+                            if (_rc != 0) {
+                                tostring obs_value, replace force
+                            }
+                        }
+                        
+                        if (`first_indicator' == 1) {
+                            save "`combined_data'", replace
+                            local first_indicator = 0
+                        }
+                        else {
+                            append using "`combined_data'", force
+                            save "`combined_data'", replace
+                        }
+                        continue
+                    }
+                }
+                
+                if (`ind_success' == 1) {
+                    * Import the data
+                    preserve
+                    import delimited using "`ind_tempdata'", clear varnames(1) encoding("utf-8")
+                    
+                    if (_N > 0) {
+                        * Convert time_period to string to avoid type mismatch when appending
+                        capture confirm variable time_period
+                        if (_rc == 0) {
+                            capture confirm string variable time_period
+                            if (_rc != 0) {
+                                tostring time_period, replace force
+                            }
+                        }
+                        
+                        * Convert obs_value to string initially for safe appending
+                        capture confirm variable obs_value
+                        if (_rc == 0) {
+                            capture confirm string variable obs_value
+                            if (_rc != 0) {
+                                tostring obs_value, replace force
+                            }
+                        }
+                        
+                        if (`first_indicator' == 1) {
+                            save "`combined_data'", replace
+                            local first_indicator = 0
+                        }
+                        else {
+                            append using "`combined_data'", force
+                            save "`combined_data'", replace
+                        }
+                    }
+                    restore
+                }
+                else {
+                    if ("`verbose'" != "") {
+                        noi di as text "  Warning: Could not fetch `ind'" as error " (skipped)"
+                    }
+                }
+            }
+            
+            * Load combined data
+            if (`first_indicator' == 0) {
+                use "`combined_data'", clear
+            }
+            else {
+                noi di as err "Could not fetch data for any of the specified indicators."
+                exit 677
+            }
+            
+            * Skip the single-indicator fetch logic below
+            local skip_single_fetch 1
+        }
+        else {
+            * Single indicator - use normal flow
+            local skip_single_fetch 0
+            
+            if ("`dataflow'" == "") & ("`indicator'" != "") {
+                _unicef_detect_dataflow_yaml "`indicator'" "`metadata_path'"
+                local dataflow "`s(dataflow)'"
+                local indicator_name "`s(indicator_name)'"
+                if ("`verbose'" != "") {
+                    noi di as text "Auto-detected dataflow: " as result "`dataflow'"
+                    if ("`indicator_name'" != "") {
+                        noi di as text "Indicator: " as result "`indicator_name'"
+                    }
                 }
             }
         }
@@ -207,8 +359,10 @@ program define unicefdata, rclass
         }
         
         *-----------------------------------------------------------------------
-        * Build the API query URL
+        * Build the API query URL (single indicator only)
         *-----------------------------------------------------------------------
+        
+        if (`skip_single_fetch' == 0) {
         
         * Base path: data/UNICEF,{dataflow},{version}/{indicator_key}
         local indicator_key = cond("`indicator'" != "", "." + "`indicator'" + ".", ".")
@@ -235,12 +389,15 @@ program define unicefdata, rclass
         }
         
         *-----------------------------------------------------------------------
-        * Download data
+        * Download data (with optional fallback)
         *-----------------------------------------------------------------------
         
         set checksum off
         
         tempfile tempdata
+        
+        * Determine if we should use fallback
+        local use_fallback = ("`fallback'" != "" | ("`nofallback'" == "" & "`indicator'" != ""))
         
         * Try to copy the file with retries
         local success 0
@@ -256,6 +413,32 @@ program define unicefdata, rclass
             sleep 1000
         }
         
+        * If primary download failed and fallback is enabled, try alternatives
+        if (`success' == 0 & `use_fallback' == 1 & "`indicator'" != "") {
+            if ("`verbose'" != "") {
+                noi di as text "Primary dataflow failed, trying alternatives..."
+            }
+            
+            _unicef_fetch_with_fallback, indicator("`indicator'") ///
+                dataflow("`dataflow'") ///
+                base_url("`base_url'") ///
+                version("`version'") ///
+                start_year("`start_year'") ///
+                end_year("`end_year'") ///
+                page_size(`page_size') ///
+                max_retries(`max_retries') ///
+                `verbose'
+            
+            if ("`r(success)'" == "1") {
+                local success 1
+                local dataflow "`r(dataflow)'"
+                local full_url "`r(url)'"
+                if ("`verbose'" != "") {
+                    noi di as text "Successfully used fallback dataflow: " as result "`dataflow'"
+                }
+            }
+        }
+        
         if (`success' == 0) {
             noi di ""
             noi di as err "{p 4 4 2}Could not download data from UNICEF SDMX API.{p_end}"
@@ -263,14 +446,22 @@ program define unicefdata, rclass
             noi di as text `"{p 4 4 2}(2) Please check if the indicator code is correct.{p_end}"'
             noi di as text `"{p 4 4 2}(3) Please check your firewall settings.{p_end}"'
             noi di as text `"{p 4 4 2}(4) Consider adjusting Stata timeout: {help netio}.{p_end}"'
+            if ("`indicator'" != "" & "`nofallback'" == "") {
+                noi di as text `"{p 4 4 2}(5) Try specifying a different dataflow().{p_end}"'
+            }
             exit 677
         }
         
         *-----------------------------------------------------------------------
-        * Import the CSV data
+        * Import the CSV data (if not already loaded by fallback)
         *-----------------------------------------------------------------------
         
-        import delimited using "`tempdata'", `clear' varnames(1) encoding("utf-8")
+        * Check if data is already loaded (from fallback helper)
+        if (_N == 0) {
+            import delimited using "`tempdata'", `clear' varnames(1) encoding("utf-8")
+        }
+        
+        } // end skip_single_fetch
         
         local obs_count = _N
         if ("`verbose'" != "") {
@@ -521,6 +712,7 @@ program define unicefdata, rclass
         
         capture confirm variable iso3
         if (_rc == 0) {
+            capture drop geo_type
             gen geo_type = ""
             * Mark known aggregates (regional and global)
             replace geo_type = "aggregate" if inlist(iso3, "WLD", "WORLD", "UNICEF", "WB")
@@ -541,6 +733,21 @@ program define unicefdata, rclass
             capture confirm variable indicator
             capture confirm variable value
             if (_rc == 0) {
+                * First, collapse to handle duplicate disaggregations
+                * Keep only the total/aggregate values where possible
+                capture confirm variable sex
+                if (_rc == 0) {
+                    keep if sex == "_T" | sex == "TOTAL" | sex == ""
+                }
+                capture confirm variable age
+                if (_rc == 0) {
+                    keep if age == "_T" | age == "TOTAL" | age == "" | age == "Y0T4" | age == "Y0T17"
+                }
+                capture confirm variable wealth
+                if (_rc == 0) {
+                    keep if wealth == "_T" | wealth == "TOTAL" | wealth == ""
+                }
+                
                 * Keep columns needed for reshape
                 local keep_vars "iso3 country period indicator value"
                 if ("`addmeta'" != "") {
@@ -550,6 +757,9 @@ program define unicefdata, rclass
                     }
                 }
                 keep `keep_vars'
+                
+                * Drop duplicates to ensure unique combinations
+                duplicates drop iso3 country period indicator, force
                 
                 * Reshape: indicators become columns
                 capture reshape wide value, i(iso3 country period) j(indicator) string
@@ -566,7 +776,7 @@ program define unicefdata, rclass
                     }
                 }
                 else {
-                    noi di as text "Note: Could not reshape to wide_indicators format."
+                    noi di as text "Note: Could not reshape to wide_indicators format (may have duplicate observations)."
                 }
             }
         }

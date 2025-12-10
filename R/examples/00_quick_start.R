@@ -62,6 +62,7 @@ df <- unicefData(
 
 cat(sprintf("Result: %d rows\n", nrow(df)))
 cat(sprintf("Indicators: %s\n", paste(unique(df$indicator), collapse = ", ")))
+write.csv(df, file.path(data_dir, "00_ex2_multi_indicators.csv"), row.names = FALSE)
 
 # =============================================================================
 # Example 3: Nutrition - Stunting Prevalence
@@ -78,23 +79,25 @@ df <- unicefData(
 )
 
 cat(sprintf("Result: %d rows, %d countries\n", nrow(df), length(unique(df$iso3))))
+write.csv(df, file.path(data_dir, "00_ex3_nutrition.csv"), row.names = FALSE)
 
 # =============================================================================
 # Example 4: Immunization - DTP3 Coverage
 # =============================================================================
 cat("\n--- Example 4: Immunization (DTP3) ---\n")
 cat("Indicator: IM_DTP3\n")
-cat("Countries: Albania, USA, Brazil\n")
+cat("Countries: Nigeria, Kenya, South Africa\n")
 cat("Years: 2015-2023\n\n")
 
 df <- unicefData(
   indicator = "IM_DTP3",
-  countries = c("ALB", "USA", "BRA"),
+  countries = c("NGA", "KEN", "ZAF"),
   start_year = 2015,
   end_year = 2023
 )
 
 cat(sprintf("Result: %d rows\n", nrow(df)))
+write.csv(df, file.path(data_dir, "00_ex4_immunization.csv"), row.names = FALSE)
 
 # =============================================================================
 # Example 5: All Countries (Large Download)
@@ -111,7 +114,7 @@ df <- unicefData(
 
 cat(sprintf("Result: %d rows, %d countries\n", nrow(df), length(unique(df$iso3))))
 cat(sprintf("Years: %d - %d\n", min(df$period), max(df$period)))
-write.csv(df, file.path(data_dir, "00_ex2_mult_mortality.csv"), row.names = FALSE)
+write.csv(df, file.path(data_dir, "00_ex5_all_countries.csv"), row.names = FALSE)
 
 cat("\n======================================================================\n")
 # Example 6: Minimal Call (Only Indicator)

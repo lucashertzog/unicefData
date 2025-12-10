@@ -1,10 +1,11 @@
 {smcl}
-{* *! version 1.2.1  07Dec2025}{...}
+{* *! version 1.3.0  09Dec2025}{...}
 {vieweralsosee "[R] import delimited" "help import delimited"}{...}
 {vieweralsosee "" "--"}{...}
 {vieweralsosee "wbopendata" "help wbopendata"}{...}
 {vieweralsosee "yaml" "help yaml"}{...}
 {viewerjumpto "Syntax" "unicefdata##syntax"}{...}
+{viewerjumpto "Discovery" "unicefdata##discovery"}{...}
 {viewerjumpto "Description" "unicefdata##description"}{...}
 {viewerjumpto "Options" "unicefdata##options"}{...}
 {viewerjumpto "Examples" "unicefdata##examples"}{...}
@@ -21,6 +22,9 @@
 {marker syntax}{...}
 {title:Syntax}
 
+{pstd}
+{ul:Data Retrieval}
+
 {p 8 16 2}
 {cmd:unicefdata}
 {cmd:,} {opt ind:icator(string)} [{it:options}]
@@ -30,7 +34,24 @@
 {cmd:,} {opt data:flow(string)} [{it:options}]
 
 
-{synoptset 25 tabbed}{...}
+{marker discovery}{...}
+{pstd}
+{ul:Discovery Commands} {it:(New in v1.3.0)}
+
+{p 8 16 2}
+{cmd:unicefdata, flows} [{opt detail} {opt verbose}]
+
+{p 8 16 2}
+{cmd:unicefdata, search(}{it:keyword}{cmd:)} [{opt limit(#)}]
+
+{p 8 16 2}
+{cmd:unicefdata, indicators(}{it:dataflow}{cmd:)}
+
+{p 8 16 2}
+{cmd:unicefdata, info(}{it:indicator}{cmd:)}
+
+
+{synoptset 28 tabbed}{...}
 {synopthdr}
 {synoptline}
 {syntab:Main}
@@ -39,6 +60,12 @@
 {synopt:{opt count:ries(string)}}ISO3 country codes, space or comma separated{p_end}
 {synopt:{opt start_year(#)}}start year for data range{p_end}
 {synopt:{opt end_year(#)}}end year for data range{p_end}
+
+{syntab:Discovery (v1.3.0)}
+{synopt:{opt flows}}list available UNICEF SDMX dataflows{p_end}
+{synopt:{opt search(string)}}search indicators by keyword{p_end}
+{synopt:{opt indicators(string)}}list indicators in a specific dataflow{p_end}
+{synopt:{opt info(string)}}display detailed info for an indicator{p_end}
 
 {syntab:Disaggregation Filters}
 {synopt:{opt sex(string)}}sex filter: _T (total), F (female), M (male), or ALL{p_end}
@@ -49,9 +76,11 @@
 
 {syntab:Output Options}
 {synopt:{opt long}}keep data in long format (default){p_end}
-{synopt:{opt wide}}reshape data to wide format (indicators as columns){p_end}
+{synopt:{opt wide}}reshape data to wide format (years as columns){p_end}
+{synopt:{opt wide_indicators}}reshape with indicators as columns {it:(v1.3.0)}{p_end}
+{synopt:{opt addmeta(string)}}add metadata: region, income_group, continent {it:(v1.3.0)}{p_end}
 {synopt:{opt dropna}}drop observations with missing values{p_end}
-{synopt:{opt simplify}}keep only essential columns (iso3, country, indicator, period, value, lb, ub){p_end}
+{synopt:{opt simplify}}keep only essential columns{p_end}
 {synopt:{opt latest}}keep only most recent value per country{p_end}
 {synopt:{opt mrv(#)}}keep N most recent values per country{p_end}
 {synopt:{opt raw}}return raw data without standardization{p_end}
@@ -60,6 +89,8 @@
 {synopt:{opt version(string)}}SDMX version (default: 1.0){p_end}
 {synopt:{opt page_size(#)}}rows per API request (default: 100000){p_end}
 {synopt:{opt max_retries(#)}}number of retry attempts (default: 3){p_end}
+{synopt:{opt fallback}}try alternative dataflows on 404 {it:(v1.3.0)}{p_end}
+{synopt:{opt nofallback}}disable automatic dataflow fallback{p_end}
 {synopt:{opt validate}}validate inputs against YAML codelists{p_end}
 {synopt:{opt clear}}replace data in memory{p_end}
 {synopt:{opt verbose}}display progress messages{p_end}
@@ -169,6 +200,29 @@ Multiple codes can be space or comma separated (e.g., {cmd:countries(ALB USA BRA
 {opt age(string)}, {opt wealth(string)}, {opt residence(string)}, and 
 {opt maternal_edu(string)} provide additional disaggregation filters.
 
+{dlgtab:Discovery Commands (v1.3.0)}
+
+{phang}
+{opt flows} lists all available UNICEF SDMX dataflows. Use {opt detail} for 
+extended information and {opt verbose} for metadata path.
+{p_end}
+
+{phang}
+{opt search(string)} searches for indicators by keyword. Searches both 
+indicator codes and names (case-insensitive). Use {opt limit(#)} to control
+maximum results.
+{p_end}
+
+{phang}
+{opt indicators(string)} lists all indicators available in a specific dataflow.
+For example, {cmd:unicefdata, indicators(CME)} shows all child mortality indicators.
+{p_end}
+
+{phang}
+{opt info(string)} displays detailed metadata for a specific indicator, including
+its name, dataflow, SDG target, unit, description, and data source.
+{p_end}
+
 {dlgtab:Output Options}
 
 {phang}
@@ -176,7 +230,22 @@ Multiple codes can be space or comma separated (e.g., {cmd:countries(ALB USA BRA
 This is the default format from the SDMX API.
 
 {phang}
-{opt wide} reshapes data to wide format with indicators as columns.
+{opt wide} reshapes data to wide format with years as columns.
+
+{phang}
+{opt wide_indicators} {it:(v1.3.0)} reshapes data so that different indicators 
+become separate columns. Useful for cross-indicator analysis. Automatically 
+filters to total values to avoid reshape conflicts.
+{p_end}
+
+{phang}
+{opt addmeta(string)} {it:(v1.3.0)} adds metadata columns to the output. 
+Available metadata includes:
+{p_end}
+{phang2}{cmd:region} - UNICEF regional classification{p_end}
+{phang2}{cmd:income_group} - World Bank income classification{p_end}
+{phang2}{cmd:continent} - Geographic continent{p_end}
+{phang2}Example: {cmd:addmeta(region income_group)}{p_end}
 
 {phang}
 {opt dropna} drops observations with missing values. Aligned with R/Python {cmd:dropna} parameter.
@@ -202,6 +271,16 @@ Useful for cross-sectional analysis.
 (Aligned with R/Python syntax.)
 
 {phang}
+{opt fallback} {it:(v1.3.0)} enables automatic fallback to alternative dataflows
+when the primary dataflow returns no data or a 404 error. This is enabled by
+default when specifying an indicator.
+{p_end}
+
+{phang}
+{opt nofallback} {it:(v1.3.0)} disables the automatic dataflow fallback mechanism.
+{p_end}
+
+{phang}
 {opt clear} allows the command to replace existing data in memory.
 
 {phang}
@@ -210,6 +289,28 @@ Useful for cross-sectional analysis.
 
 {marker examples}{...}
 {title:Examples}
+
+{pstd}
+{ul:Discovery Commands (v1.3.0)}
+
+{pstd}
+List available dataflows:{p_end}
+{phang2}{cmd:. unicefdata, flows}{p_end}
+
+{pstd}
+Search for mortality-related indicators:{p_end}
+{phang2}{cmd:. unicefdata, search(mortality)}{p_end}
+
+{pstd}
+List indicators in the CME (Child Mortality Estimates) dataflow:{p_end}
+{phang2}{cmd:. unicefdata, indicators(CME)}{p_end}
+
+{pstd}
+Get detailed info about an indicator:{p_end}
+{phang2}{cmd:. unicefdata, info(CME_MRY0T4)}{p_end}
+
+{pstd}
+{ul:Data Retrieval}
 
 {pstd}
 Download under-5 mortality rate for all countries:{p_end}
@@ -244,8 +345,24 @@ Simplify output to essential columns (like R/Python):{p_end}
 {phang2}{cmd:. unicefdata, indicator(CME_MRY0T4) simplify dropna clear}{p_end}
 
 {pstd}
-Wide format output:{p_end}
+Wide format output (years as columns):{p_end}
 {phang2}{cmd:. unicefdata, dataflow(CME) countries(BRA ARG) wide clear}{p_end}
+
+{pstd}
+{ul:New v1.3.0 Features}
+
+{pstd}
+Wide format with indicators as columns:{p_end}
+{phang2}{cmd:. unicefdata, dataflow(CME) countries(AFG BGD) wide_indicators clear}{p_end}
+
+{pstd}
+Add regional and income group metadata:{p_end}
+{phang2}{cmd:. unicefdata, indicator(CME_MRY0T4) addmeta(region income_group) clear}{p_end}
+
+{pstd}
+Analyze by geographic type (countries vs regional aggregates):{p_end}
+{phang2}{cmd:. unicefdata, indicator(CME_MRY0T4) start_year(2022) clear}{p_end}
+{phang2}{cmd:. tab geo_type}{p_end}
 
 
 {marker results}{...}
@@ -254,18 +371,46 @@ Wide format output:{p_end}
 {pstd}
 {cmd:unicefdata} stores the following in {cmd:r()}:
 
-{synoptset 20 tabbed}{...}
-{p2col 5 20 24 2: Scalars}{p_end}
+{synoptset 25 tabbed}{...}
+{p2col 5 25 29 2: Scalars}{p_end}
 {synopt:{cmd:r(obs_count)}}number of observations downloaded{p_end}
 
-{p2col 5 20 24 2: Macros}{p_end}
+{p2col 5 25 29 2: Macros}{p_end}
 {synopt:{cmd:r(indicator)}}indicator code(s) requested{p_end}
 {synopt:{cmd:r(dataflow)}}dataflow ID used{p_end}
 {synopt:{cmd:r(countries)}}countries requested (if specified){p_end}
 {synopt:{cmd:r(start_year)}}start year (if specified){p_end}
 {synopt:{cmd:r(end_year)}}end year (if specified){p_end}
 {synopt:{cmd:r(wide)}}wide format indicator{p_end}
+{synopt:{cmd:r(wide_indicators)}}wide_indicators format indicator {it:(v1.3.0)}{p_end}
+{synopt:{cmd:r(addmeta)}}metadata columns added {it:(v1.3.0)}{p_end}
 {synopt:{cmd:r(url)}}API URL used for download{p_end}
+
+{pstd}
+Discovery commands store additional results:
+
+{p2col 5 25 29 2: flows}{p_end}
+{synopt:{cmd:r(n_dataflows)}}number of dataflows found{p_end}
+{synopt:{cmd:r(dataflow_ids)}}list of dataflow IDs{p_end}
+
+{p2col 5 25 29 2: search}{p_end}
+{synopt:{cmd:r(n_matches)}}number of matching indicators{p_end}
+{synopt:{cmd:r(indicators)}}list of matching indicator codes{p_end}
+{synopt:{cmd:r(keyword)}}search keyword used{p_end}
+
+{p2col 5 25 29 2: indicators}{p_end}
+{synopt:{cmd:r(n_indicators)}}number of indicators in dataflow{p_end}
+{synopt:{cmd:r(indicators)}}list of indicator codes{p_end}
+{synopt:{cmd:r(dataflow)}}dataflow queried{p_end}
+
+{p2col 5 25 29 2: info}{p_end}
+{synopt:{cmd:r(indicator)}}indicator code{p_end}
+{synopt:{cmd:r(name)}}indicator name{p_end}
+{synopt:{cmd:r(dataflow)}}parent dataflow{p_end}
+{synopt:{cmd:r(sdg_target)}}SDG target (if applicable){p_end}
+{synopt:{cmd:r(unit)}}unit of measure{p_end}
+{synopt:{cmd:r(description)}}indicator description{p_end}
+{synopt:{cmd:r(source)}}data source{p_end}
 
 
 {marker metadata}{...}
