@@ -1,9 +1,13 @@
 *******************************************************************************
 * _unicef_indicator_info.ado
-*! v 1.3.0   17Dec2025               by Joao Pedro Azevedo (UNICEF)
+*! v 1.4.0   17Dec2025               by Joao Pedro Azevedo (UNICEF)
 * Display detailed info about a specific UNICEF indicator using YAML metadata
 * Uses yaml.ado for robust YAML parsing
 * Uses Stata frames (v16+) for better isolation when available
+*
+* v1.4.0: MAJOR REWRITE - Direct dataset query instead of yaml get calls
+*         - Much faster and more robust
+*         - Avoids frame context/return value issues
 *******************************************************************************
 
 program define _unicef_indicator_info, rclass
@@ -56,61 +60,93 @@ program define _unicef_indicator_info, rclass
         }
         
         *-----------------------------------------------------------------------
-        * Read YAML file and get indicator info (frames for Stata 16+)
+        * Read YAML and get indicator info using direct dataset operations
         *-----------------------------------------------------------------------
         
         local indicator_upper = upper("`indicator'")
         local found = 0
         local ind_name ""
         local ind_category ""
-        local ind_sdg ""
-        local ind_unit ""
         local ind_desc ""
-        local ind_source ""
         local ind_urn ""
         
         if (`use_frames') {
+            *-------------------------------------------------------------------
             * Stata 16+ - use frames for better isolation
-            * Note: yaml.ado prefixes frame names with "yaml_"
-            local yaml_frame_base "_unicef_yaml_temp"
+            *-------------------------------------------------------------------
+            local yaml_frame_base "_unicef_info_temp"
             local yaml_frame "yaml_`yaml_frame_base'"
             capture frame drop `yaml_frame'
             
-            * Read YAML into a frame (yaml.ado will prefix with "yaml_")
+            * Read YAML into a frame (yaml.ado stores as key/value dataset)
             yaml read using "`yaml_file'", frame(`yaml_frame_base')
             
-            * Use the actual frame name (with yaml_ prefix)
+            * Work directly with the dataset in the frame
             frame `yaml_frame' {
-                * Try to get indicator metadata
-                capture yaml get indicators:`indicator_upper' frame(`yaml_frame_base')
-                local found = (_rc == 0 & "`r(found)'" == "1")
+                * yaml.ado creates keys like: indicators_CME_MRY0T4_code, indicators_CME_MRY0T4_name
+                * Filter to rows for this specific indicator
+                keep if regexm(key, "^indicators_`indicator_upper'_(code|name|category|description|urn)$")
+                
+                local found = (_N > 0)
                 
                 if (`found') {
-                    local ind_name "`r(name)'"
-                    local ind_category "`r(category)'"
-                    local ind_desc "`r(description)'"
-                    local ind_urn "`r(urn)'"
+                    * Extract each attribute value
+                    forvalues i = 1/`=_N' {
+                        local k = key[`i']
+                        local v = value[`i']
+                        
+                        if (regexm("`k'", "_name$")) {
+                            local ind_name "`v'"
+                        }
+                        else if (regexm("`k'", "_category$")) {
+                            local ind_category "`v'"
+                        }
+                        else if (regexm("`k'", "_description$")) {
+                            local ind_desc "`v'"
+                        }
+                        else if (regexm("`k'", "_urn$")) {
+                            local ind_urn "`v'"
+                        }
+                    }
                 }
             }
             
-            * Clean up frame (use the actual prefixed name)
+            * Clean up frame
             capture frame drop `yaml_frame'
         }
         else {
+            *-------------------------------------------------------------------
             * Stata 14/15 - use preserve/restore
+            *-------------------------------------------------------------------
             preserve
             
+            * Read YAML (replaces current dataset)
             yaml read using "`yaml_file'", replace
             
-            * Try to get indicator metadata
-            capture yaml get indicators:`indicator_upper'
-            local found = (_rc == 0 & "`r(found)'" == "1")
+            * Filter to rows for this specific indicator
+            keep if regexm(key, "^indicators_`indicator_upper'_(code|name|category|description|urn)$")
+            
+            local found = (_N > 0)
             
             if (`found') {
-                local ind_name "`r(name)'"
-                local ind_category "`r(category)'"
-                local ind_desc "`r(description)'"
-                local ind_urn "`r(urn)'"
+                * Extract each attribute value
+                forvalues i = 1/`=_N' {
+                    local k = key[`i']
+                    local v = value[`i']
+                    
+                    if (regexm("`k'", "_name$")) {
+                        local ind_name "`v'"
+                    }
+                    else if (regexm("`k'", "_category$")) {
+                        local ind_category "`v'"
+                    }
+                    else if (regexm("`k'", "_description$")) {
+                        local ind_desc "`v'"
+                    }
+                    else if (regexm("`k'", "_urn$")) {
+                        local ind_urn "`v'"
+                    }
+                }
             }
             
             restore
