@@ -554,12 +554,19 @@ program define unicefdata, rclass
         if ("`raw'" == "") {
             
             * Rename core columns to standardized short names
-            * Note: import delimited converts column names to lowercase
+            * Note: import delimited converts column names to lowercase in Stata 14+
+            * Handle both lowercase and uppercase variants for robustness
             capture rename ref_area iso3
+            capture rename REF_AREA iso3
             capture rename indicator indicator
+            capture rename INDICATOR indicator
             capture rename time_period period
+            capture rename TIME_PERIOD period
             capture rename obs_value value
+            capture rename OBS_VALUE value
             capture rename geographicarea country
+            capture rename GEOGRAPHICAREA country
+            capture rename geographic_area country
             
             * Rename descriptive columns (from API's "label" columns)
             * API returns pairs like INDICATOR/Indicator - Stata creates v4, v6 for duplicates
@@ -569,16 +576,34 @@ program define unicefdata, rclass
             capture rename wealthquintile wealth_name
             capture rename observationstatus status_name
             
-            * Rename additional metadata columns (lowercase after import delimited)
+            * Rename additional metadata columns (handle both cases)
             capture rename unit_measure unit
+            capture rename UNIT_MEASURE unit
             capture rename wealth_quintile wealth
+            capture rename WEALTH_QUINTILE wealth
             capture rename lower_bound lb
+            capture rename LOWER_BOUND lb
             capture rename upper_bound ub
+            capture rename UPPER_BOUND ub
             capture rename obs_status status
+            capture rename OBS_STATUS status
             capture rename data_source source
+            capture rename DATA_SOURCE source
             capture rename ref_period refper
+            capture rename REF_PERIOD refper
             capture rename country_notes notes
+            capture rename COUNTRY_NOTES notes
             capture rename maternal_edu_lvl matedu
+            capture rename MATERNAL_EDU_LVL matedu
+            capture rename sex SEX_temp
+            capture rename SEX_temp sex
+            capture rename SEX sex
+            capture rename age AGE_temp
+            capture rename AGE_temp age
+            capture rename AGE age
+            capture rename residence RESIDENCE_temp
+            capture rename RESIDENCE_temp residence
+            capture rename RESIDENCE residence
             
             * Add descriptive variable labels
             capture label variable iso3       "ISO3 country code"
@@ -1025,7 +1050,22 @@ program define unicefdata, rclass
         }
         else {
             * Data is already in long format from SDMX CSV (default)
-            sort iso3 period
+            * Sort by available key variables
+            capture confirm variable iso3
+            local has_iso3 = (_rc == 0)
+            capture confirm variable period
+            local has_period = (_rc == 0)
+            
+            if (`has_iso3' & `has_period') {
+                sort iso3 period
+            }
+            else if (`has_iso3') {
+                sort iso3
+            }
+            else if (`has_period') {
+                sort period
+            }
+            * If neither exists, leave data unsorted
         }
         
         *-----------------------------------------------------------------------
