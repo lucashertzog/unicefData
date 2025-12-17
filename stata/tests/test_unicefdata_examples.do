@@ -36,10 +36,10 @@ capture program drop log_test_header
 program define log_test_header
     args test_name test_num
     di ""
-    di as text "=" * 80
+    di as text "{hline 80}"
     di as result "[`test_num'] `test_name'"
     di as text "Timestamp: " as result "`c(current_date)' `c(current_time)'"
-    di as text "=" * 80
+    di as text "{hline 80}"
 end
 
 capture program drop log_test_result
