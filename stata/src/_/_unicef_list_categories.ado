@@ -1,11 +1,15 @@
 *******************************************************************************
 * _unicef_list_categories.ado
-*! v 1.3.3   17Dec2025               by Joao Pedro Azevedo (UNICEF)
+*! v 1.4.0   17Dec2025               by Joao Pedro Azevedo (UNICEF)
 * List all available indicator categories with counts
 * Uses yaml.ado for robust YAML parsing
 * Uses Stata frames (v16+) for better isolation when available
+*
+* v1.4.0: MAJOR REWRITE - Direct dataset query instead of 733 yaml get calls
+*         - Much faster: single dataset filter vs 733 individual lookups
+*         - More robust: avoids frame context/return value issues
+*         - Idiomatic Stata: leverage dataset operations
 * v1.3.3: Remove redundant frame() option when already inside frame block
-*         to avoid nested frame re-entry issues with return values
 * v1.3.2: Use full indicator catalog (733 indicators) with category field
 * v1.3.1: Fixed frame naming (use explicit yaml_ prefix for clarity)
 * 
@@ -62,59 +66,61 @@ program define _unicef_list_categories, rclass
         }
         
         *-----------------------------------------------------------------------
-        * Read YAML file and count categories
+        * Read YAML and extract categories using direct dataset operations
+        * This is MUCH faster than calling yaml get 733 times
         *-----------------------------------------------------------------------
         
-        * Initialize category tracking
-        * We'll use locals to track categories and their counts
-        * Format: cat_<name> = count
-        local categories ""
-        local total_indicators = 0
-        
         if (`use_frames') {
+            *-------------------------------------------------------------------
             * Stata 16+ - use frames for better isolation
-            * Note: yaml.ado prefixes frame names with "yaml_"
+            *-------------------------------------------------------------------
             local yaml_frame_base "unicef_cat"
             local yaml_frame "yaml_`yaml_frame_base'"
             capture frame drop `yaml_frame'
             
-            * Read YAML into a frame (yaml.ado will prefix with "yaml_")
+            * Read YAML into a frame (yaml.ado stores as key/value dataset)
             yaml read using "`yaml_file'", frame(`yaml_frame_base')
             
-            * Use the actual frame name (with yaml_ prefix)
+            * Work directly with the dataset in the frame
             frame `yaml_frame' {
-                * Get all indicator codes under 'indicators' parent
-                * NOTE: Don't pass frame() option when already inside the frame
-                * as nested frame re-entry causes return value issues
-                yaml list indicators, keys children
-                local all_indicators "`r(keys)'"
+                * yaml.ado creates dataset with columns: key, value, level, parent, type
+                * Keys look like: indicators:HVA_EPI_LHIV:category
+                * We want all rows where key matches pattern: indicators:*:category
                 
-                foreach ind of local all_indicators {
-                    local ++total_indicators
-                    
-                    * Get category for this indicator (from full catalog)
-                    * NOTE: Don't pass frame() option when already inside the frame
-                    capture yaml get indicators:`ind', attributes(category) quiet
-                    if (_rc == 0 & "`r(category)'" != "") {
-                        local cat_name = "`r(category)'"
-                    }
-                    else {
-                        local cat_name = "UNKNOWN"
-                    }
-                    
-                    * Update category count
-                    local cat_clean = subinstr("`cat_name'", " ", "_", .)
-                    local cat_clean = subinstr("`cat_clean'", "-", "_", .)
-                    
-                    if (strpos("`categories'", "`cat_clean'") == 0) {
-                        * New category
-                        local categories "`categories' `cat_clean'"
-                        local count_`cat_clean' = 1
-                    }
-                    else {
-                        * Existing category - increment
-                        local count_`cat_clean' = `count_`cat_clean'' + 1
-                    }
+                * Keep only category rows (one per indicator)
+                keep if regexm(key, "^indicators:[^:]+:category$")
+                
+                * Count total indicators
+                local total_indicators = _N
+                
+                * Handle missing/empty categories
+                replace value = "UNKNOWN" if value == "" | missing(value)
+                
+                * Clean category names (replace spaces and hyphens with underscores)
+                replace value = subinstr(value, " ", "_", .)
+                replace value = subinstr(value, "-", "_", .)
+                
+                * Get unique categories and their counts
+                * Use collapse to count occurrences of each category
+                rename value category
+                gen count = 1
+                collapse (sum) count, by(category)
+                
+                * Sort by count descending, then category name
+                gsort -count category
+                
+                * Extract results into locals
+                local n_categories = _N
+                local sorted_categories ""
+                local sorted_counts ""
+                
+                forvalues i = 1/`n_categories' {
+                    local cat_val = category[`i']
+                    local count_val = count[`i']
+                    local sorted_categories "`sorted_categories' `cat_val'"
+                    local sorted_counts "`sorted_counts' `count_val'"
+                    * Store individual count for return values
+                    local count_`cat_val' = `count_val'
                 }
             }
             
@@ -122,80 +128,54 @@ program define _unicef_list_categories, rclass
             capture frame drop `yaml_frame'
         }
         else {
+            *-------------------------------------------------------------------
             * Stata 14/15 - use preserve/restore
+            *-------------------------------------------------------------------
             preserve
             
+            * Read YAML (replaces current dataset)
             yaml read using "`yaml_file'", replace
             
-            * Get all indicator codes under 'indicators' parent
-            yaml list indicators, keys children
-            local all_indicators "`r(keys)'"
+            * Keep only category rows (one per indicator)
+            keep if regexm(key, "^indicators:[^:]+:category$")
             
-            foreach ind of local all_indicators {
-                local ++total_indicators
-                
-                * Get category for this indicator (from full catalog)
-                capture yaml get indicators:`ind', attributes(category) quiet
-                if (_rc == 0 & "`r(category)'" != "") {
-                    local cat_name = "`r(category)'"
-                }
-                else {
-                    local cat_name = "UNKNOWN"
-                }
-                
-                * Update category count
-                local cat_clean = subinstr("`cat_name'", " ", "_", .)
-                local cat_clean = subinstr("`cat_clean'", "-", "_", .)
-                
-                if (strpos("`categories'", "`cat_clean'") == 0) {
-                    * New category
-                    local categories "`categories' `cat_clean'"
-                    local count_`cat_clean' = 1
-                }
-                else {
-                    * Existing category - increment
-                    local count_`cat_clean' = `count_`cat_clean'' + 1
-                }
+            * Count total indicators
+            local total_indicators = _N
+            
+            * Handle missing/empty categories
+            replace value = "UNKNOWN" if value == "" | missing(value)
+            
+            * Clean category names
+            replace value = subinstr(value, " ", "_", .)
+            replace value = subinstr(value, "-", "_", .)
+            
+            * Get unique categories and their counts
+            rename value category
+            gen count = 1
+            collapse (sum) count, by(category)
+            
+            * Sort by count descending, then category name
+            gsort -count category
+            
+            * Extract results into locals
+            local n_categories = _N
+            local sorted_categories ""
+            local sorted_counts ""
+            
+            forvalues i = 1/`n_categories' {
+                local cat_val = category[`i']
+                local count_val = count[`i']
+                local sorted_categories "`sorted_categories' `cat_val'"
+                local sorted_counts "`sorted_counts' `count_val'"
+                * Store individual count for return values
+                local count_`cat_val' = `count_val'
             }
             
             restore
         }
         
-        local categories = strtrim("`categories'")
-        local n_categories : word count `categories'
-        
-        *-----------------------------------------------------------------------
-        * Sort categories by count (descending)
-        *-----------------------------------------------------------------------
-        
-        * Create temporary dataset to sort
-        preserve
-        clear
-        local n_cat : word count `categories'
-        set obs `n_cat'
-        gen str50 category = ""
-        gen int count = .
-        
-        local i = 1
-        foreach cat of local categories {
-            replace category = "`cat'" in `i'
-            replace count = `count_`cat'' in `i'
-            local ++i
-        }
-        
-        gsort -count category
-        
-        * Store sorted order
-        local sorted_categories ""
-        local sorted_counts ""
-        forvalues i = 1/`n_cat' {
-            local cat_val = category[`i']
-            local count_val = count[`i']
-            local sorted_categories "`sorted_categories' `cat_val'"
-            local sorted_counts "`sorted_counts' `count_val'"
-        }
-        
-        restore
+        local sorted_categories = strtrim("`sorted_categories'")
+        local sorted_counts = strtrim("`sorted_counts'")
         
     } // end quietly
     
@@ -247,6 +227,15 @@ end
 *******************************************************************************
 * Version history
 *******************************************************************************
+* v 1.4.0   17Dec2025   by Joao Pedro Azevedo
+*   - MAJOR REWRITE: Direct dataset query instead of 733 yaml get calls
+*   - Performance: Single regexm filter + collapse vs 733 individual lookups
+*   - Robustness: Avoids frame context/return value propagation issues
+*   - Idiomatic: Leverages Stata's dataset manipulation strengths
+*
+* v 1.3.3   17Dec2025   by Joao Pedro Azevedo
+*   - Remove redundant frame() option when already inside frame block
+*
 * v 1.3.2   17Dec2025   by Joao Pedro Azevedo
 *   - Use full indicator catalog (unicef_indicators_metadata.yaml, 733 indicators)
 *   - Read 'category' field instead of 'dataflow' for category grouping
@@ -260,5 +249,4 @@ end
 *   - Aligned with Python list_categories() and R list_categories()
 *   - Uses frames for Stata 16+ for better isolation
 *   - Returns r(categories) list and r(n_categories), r(n_indicators) scalars
-*******************************************************************************
 *******************************************************************************
