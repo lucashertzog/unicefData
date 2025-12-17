@@ -1,14 +1,18 @@
 *******************************************************************************
 * _unicef_search_indicators.ado
-*! v 1.2.0   09Dec2025               by Joao Pedro Azevedo (UNICEF)
+*! v 1.3.0   17Dec2025               by Joao Pedro Azevedo (UNICEF)
 * Search UNICEF indicators by keyword using YAML metadata
 * Uses yaml.ado for robust YAML parsing
+* Uses Stata frames (v16+) for better isolation when available
 *******************************************************************************
 
 program define _unicef_search_indicators, rclass
     version 14.0
     
     syntax , Keyword(string) [Limit(integer 20) VERBOSE METApath(string)]
+    
+    * Check if frames are available (Stata 16+)
+    local use_frames = (c(stata_version) >= 16)
     
     quietly {
     
@@ -51,16 +55,8 @@ program define _unicef_search_indicators, rclass
         }
         
         *-----------------------------------------------------------------------
-        * Read YAML file and search
+        * Read YAML file and search (frames for Stata 16+)
         *-----------------------------------------------------------------------
-        
-        preserve
-        
-        yaml read using "`yaml_file'", replace
-        
-        * Get all indicator codes under 'indicators' parent
-        yaml list indicators, keys children
-        local all_indicators "`r(keys)'"
         
         * Search in both code and name
         local keyword_lower = lower("`keyword'")
@@ -69,50 +65,120 @@ program define _unicef_search_indicators, rclass
         local match_dataflows ""
         local n_matches = 0
         
-        foreach ind of local all_indicators {
-            * Check if keyword matches indicator code
-            local ind_lower = lower("`ind'")
-            local found = 0
+        if (`use_frames') {
+            * Stata 16+ - use frames for better isolation
+            local yaml_frame "_unicef_yaml_temp"
+            capture frame drop `yaml_frame'
             
-            if (strpos("`ind_lower'", "`keyword_lower'") > 0) {
-                local found = 1
-            }
+            * Read YAML into a frame
+            yaml read using "`yaml_file'", frame(`yaml_frame')
             
-            * Also check name
-            if (`found' == 0) {
-                capture yaml get indicators:`ind', attributes(name) quiet
-                if (_rc == 0 & "`r(name)'" != "") {
-                    local name_lower = lower("`r(name)'")
-                    if (strpos("`name_lower'", "`keyword_lower'") > 0) {
+            * Work within the frame
+            frame `yaml_frame' {
+                * Get all indicator codes under 'indicators' parent
+                yaml list indicators, keys children frame(`yaml_frame')
+                local all_indicators "`r(keys)'"
+                
+                foreach ind of local all_indicators {
+                    * Check if keyword matches indicator code
+                    local ind_lower = lower("`ind'")
+                    local found = 0
+                    
+                    if (strpos("`ind_lower'", "`keyword_lower'") > 0) {
                         local found = 1
+                    }
+                    
+                    * Also check name
+                    if (`found' == 0) {
+                        capture yaml get indicators:`ind', attributes(name) quiet frame(`yaml_frame')
+                        if (_rc == 0 & "`r(name)'" != "") {
+                            local name_lower = lower("`r(name)'")
+                            if (strpos("`name_lower'", "`keyword_lower'") > 0) {
+                                local found = 1
+                            }
+                        }
+                    }
+                    
+                    if (`found' == 1) {
+                        local ++n_matches
+                        local matches "`matches' `ind'"
+                        
+                        * Get name and dataflow for this indicator
+                        capture yaml get indicators:`ind', attributes(name dataflow) quiet frame(`yaml_frame')
+                        if (_rc == 0) {
+                            local match_names `"`match_names' "`r(name)'""'
+                            local match_dataflows "`match_dataflows' `r(dataflow)'"
+                        }
+                        else {
+                            local match_names `"`match_names' "N/A""'
+                            local match_dataflows "`match_dataflows' N/A"
+                        }
+                        
+                        if (`n_matches' >= `limit') {
+                            continue, break
+                        }
                     }
                 }
             }
             
-            if (`found' == 1) {
-                local ++n_matches
-                local matches "`matches' `ind'"
+            * Clean up frame
+            capture frame drop `yaml_frame'
+        }
+        else {
+            * Stata 14/15 - use preserve/restore
+            preserve
+            
+            yaml read using "`yaml_file'", replace
+            
+            * Get all indicator codes under 'indicators' parent
+            yaml list indicators, keys children
+            local all_indicators "`r(keys)'"
+            
+            foreach ind of local all_indicators {
+                * Check if keyword matches indicator code
+                local ind_lower = lower("`ind'")
+                local found = 0
                 
-                * Get name and dataflow for this indicator
-                capture yaml get indicators:`ind', attributes(name dataflow) quiet
-                if (_rc == 0) {
-                    local match_names `"`match_names' "`r(name)'""'
-                    local match_dataflows "`match_dataflows' `r(dataflow)'"
-                }
-                else {
-                    local match_names `"`match_names' "N/A""'
-                    local match_dataflows "`match_dataflows' N/A"
+                if (strpos("`ind_lower'", "`keyword_lower'") > 0) {
+                    local found = 1
                 }
                 
-                if (`n_matches' >= `limit') {
-                    continue, break
+                * Also check name
+                if (`found' == 0) {
+                    capture yaml get indicators:`ind', attributes(name) quiet
+                    if (_rc == 0 & "`r(name)'" != "") {
+                        local name_lower = lower("`r(name)'")
+                        if (strpos("`name_lower'", "`keyword_lower'") > 0) {
+                            local found = 1
+                        }
+                    }
+                }
+                
+                if (`found' == 1) {
+                    local ++n_matches
+                    local matches "`matches' `ind'"
+                    
+                    * Get name and dataflow for this indicator
+                    capture yaml get indicators:`ind', attributes(name dataflow) quiet
+                    if (_rc == 0) {
+                        local match_names `"`match_names' "`r(name)'""'
+                        local match_dataflows "`match_dataflows' `r(dataflow)'"
+                    }
+                    else {
+                        local match_names `"`match_names' "N/A""'
+                        local match_dataflows "`match_dataflows' N/A"
+                    }
+                    
+                    if (`n_matches' >= `limit') {
+                        continue, break
+                    }
                 }
             }
+            
+            restore
         }
         
         local matches = strtrim("`matches'")
-        
-        restore
         
     } // end quietly
     

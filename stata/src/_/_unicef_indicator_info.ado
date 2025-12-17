@@ -1,14 +1,18 @@
 *******************************************************************************
 * _unicef_indicator_info.ado
-*! v 1.2.0   09Dec2025               by Joao Pedro Azevedo (UNICEF)
+*! v 1.3.0   17Dec2025               by Joao Pedro Azevedo (UNICEF)
 * Display detailed info about a specific UNICEF indicator using YAML metadata
 * Uses yaml.ado for robust YAML parsing
+* Uses Stata frames (v16+) for better isolation when available
 *******************************************************************************
 
 program define _unicef_indicator_info, rclass
     version 14.0
     
     syntax , Indicator(string) [VERBOSE METApath(string)]
+    
+    * Check if frames are available (Stata 16+)
+    local use_frames = (c(stata_version) >= 16)
     
     quietly {
     
@@ -51,30 +55,66 @@ program define _unicef_indicator_info, rclass
         }
         
         *-----------------------------------------------------------------------
-        * Read YAML file and get indicator info
+        * Read YAML file and get indicator info (frames for Stata 16+)
         *-----------------------------------------------------------------------
         
-        preserve
-        
-        yaml read using "`yaml_file'", replace
-        
-        * Get all attributes for this indicator using yaml get
         local indicator_upper = upper("`indicator'")
+        local found = 0
+        local ind_name ""
+        local ind_dataflow ""
+        local ind_sdg ""
+        local ind_unit ""
+        local ind_desc ""
+        local ind_source ""
         
-        * Try to get indicator metadata
-        capture yaml get indicators:`indicator_upper'
-        local found = (_rc == 0 & "`r(found)'" == "1")
-        
-        if (`found') {
-            local ind_name "`r(name)'"
-            local ind_dataflow "`r(dataflow)'"
-            local ind_sdg "`r(sdg_target)'"
-            local ind_unit "`r(unit)'"
-            local ind_desc "`r(description)'"
-            local ind_source "`r(source)'"
+        if (`use_frames') {
+            * Stata 16+ - use frames for better isolation
+            local yaml_frame "_unicef_yaml_temp"
+            capture frame drop `yaml_frame'
+            
+            * Read YAML into a frame
+            yaml read using "`yaml_file'", frame(`yaml_frame')
+            
+            * Work within the frame
+            frame `yaml_frame' {
+                * Try to get indicator metadata
+                capture yaml get indicators:`indicator_upper' frame(`yaml_frame')
+                local found = (_rc == 0 & "`r(found)'" == "1")
+                
+                if (`found') {
+                    local ind_name "`r(name)'"
+                    local ind_dataflow "`r(dataflow)'"
+                    local ind_sdg "`r(sdg_target)'"
+                    local ind_unit "`r(unit)'"
+                    local ind_desc "`r(description)'"
+                    local ind_source "`r(source)'"
+                }
+            }
+            
+            * Clean up frame
+            capture frame drop `yaml_frame'
         }
-        
-        restore
+        else {
+            * Stata 14/15 - use preserve/restore
+            preserve
+            
+            yaml read using "`yaml_file'", replace
+            
+            * Try to get indicator metadata
+            capture yaml get indicators:`indicator_upper'
+            local found = (_rc == 0 & "`r(found)'" == "1")
+            
+            if (`found') {
+                local ind_name "`r(name)'"
+                local ind_dataflow "`r(dataflow)'"
+                local ind_sdg "`r(sdg_target)'"
+                local ind_unit "`r(unit)'"
+                local ind_desc "`r(description)'"
+                local ind_source "`r(source)'"
+            }
+            
+            restore
+        }
         
     } // end quietly
     

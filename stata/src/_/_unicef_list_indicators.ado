@@ -1,14 +1,18 @@
 *******************************************************************************
 * _unicef_list_indicators.ado
-*! v 1.2.0   09Dec2025               by Joao Pedro Azevedo (UNICEF)
+*! v 1.3.0   17Dec2025               by Joao Pedro Azevedo (UNICEF)
 * List UNICEF indicators for a specific dataflow using YAML metadata
 * Uses yaml.ado for robust YAML parsing
+* Uses Stata frames (v16+) for better isolation when available
 *******************************************************************************
 
 program define _unicef_list_indicators, rclass
     version 14.0
     
     syntax , Dataflow(string) [VERBOSE METApath(string)]
+    
+    * Check if frames are available (Stata 16+)
+    local use_frames = (c(stata_version) >= 16)
     
     quietly {
     
@@ -51,39 +55,72 @@ program define _unicef_list_indicators, rclass
         }
         
         *-----------------------------------------------------------------------
-        * Read YAML file and filter by dataflow
+        * Read YAML file and filter by dataflow (frames for Stata 16+)
         *-----------------------------------------------------------------------
         
-        preserve
-        
-        yaml read using "`yaml_file'", replace
-        
-        * Get all indicator codes under 'indicators' parent
-        yaml list indicators, keys children
-        local all_indicators "`r(keys)'"
-        
-        * Filter to those matching the specified dataflow
         local dataflow_upper = upper("`dataflow'")
         local matches ""
         local match_names ""
         local n_matches = 0
         
-        foreach ind of local all_indicators {
-            * Get dataflow attribute for this indicator
-            capture yaml get indicators:`ind', attributes(dataflow name) quiet
-            if (_rc == 0) {
-                local ind_df = upper("`r(dataflow)'")
-                if ("`ind_df'" == "`dataflow_upper'") {
-                    local ++n_matches
-                    local matches "`matches' `ind'"
-                    local match_names `"`match_names' "`r(name)'""'
+        if (`use_frames') {
+            * Stata 16+ - use frames for better isolation
+            local yaml_frame "_unicef_yaml_temp"
+            capture frame drop `yaml_frame'
+            
+            * Read YAML into a frame
+            yaml read using "`yaml_file'", frame(`yaml_frame')
+            
+            * Work within the frame
+            frame `yaml_frame' {
+                * Get all indicator codes under 'indicators' parent
+                yaml list indicators, keys children frame(`yaml_frame')
+                local all_indicators "`r(keys)'"
+                
+                foreach ind of local all_indicators {
+                    * Get dataflow attribute for this indicator
+                    capture yaml get indicators:`ind', attributes(dataflow name) quiet frame(`yaml_frame')
+                    if (_rc == 0) {
+                        local ind_df = upper("`r(dataflow)'")
+                        if ("`ind_df'" == "`dataflow_upper'") {
+                            local ++n_matches
+                            local matches "`matches' `ind'"
+                            local match_names `"`match_names' "`r(name)'""'
+                        }
+                    }
                 }
             }
+            
+            * Clean up frame
+            capture frame drop `yaml_frame'
+        }
+        else {
+            * Stata 14/15 - use preserve/restore
+            preserve
+            
+            yaml read using "`yaml_file'", replace
+            
+            * Get all indicator codes under 'indicators' parent
+            yaml list indicators, keys children
+            local all_indicators "`r(keys)'"
+            
+            foreach ind of local all_indicators {
+                * Get dataflow attribute for this indicator
+                capture yaml get indicators:`ind', attributes(dataflow name) quiet
+                if (_rc == 0) {
+                    local ind_df = upper("`r(dataflow)'")
+                    if ("`ind_df'" == "`dataflow_upper'") {
+                        local ++n_matches
+                        local matches "`matches' `ind'"
+                        local match_names `"`match_names' "`r(name)'""'
+                    }
+                }
+            }
+            
+            restore
         }
         
         local matches = strtrim("`matches'")
-        
-        restore
         
     } // end quietly
     
