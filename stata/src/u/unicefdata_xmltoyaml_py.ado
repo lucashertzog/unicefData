@@ -72,7 +72,7 @@ program define unicefdata_xmltoyaml_py, rclass
     local script_path ""
     
     * First try the location relative to the current working directory
-    foreach trypath in "stata/src/u/`script_name'" "stata/src/p/python_xml_helper.py" "`script_name'" {
+    foreach trypath in "stata/src/py/`script_name'" "`script_name'" {
         capture confirm file "`trypath'"
         if (_rc == 0) {
             local script_path "`trypath'"
@@ -83,15 +83,7 @@ program define unicefdata_xmltoyaml_py, rclass
     * Check adopath locations if not found yet
     if ("`script_path'" == "") {
         foreach path in `c(adopath)' {
-            local trypath = "`path'/`script_name'"
-            local trypath = subinstr("`trypath'", "\", "/", .)
-            capture confirm file "`trypath'"
-            if (_rc == 0) {
-                local script_path "`trypath'"
-                continue, break
-            }
-            * Also try in u subfolder
-            local trypath = "`path'/u/`script_name'"
+            local trypath = "`path'/py/`script_name'"
             local trypath = subinstr("`trypath'", "\", "/", .)
             capture confirm file "`trypath'"
             if (_rc == 0) {
@@ -103,7 +95,7 @@ program define unicefdata_xmltoyaml_py, rclass
     
     if ("`script_path'" == "") {
         di as err "Python script not found: `script_name'"
-        di as err "Please ensure unicefdata_xml2yaml.py is in your adopath"
+        di as err "Please ensure unicefdata_xml2yaml.py is in adopath/py/"
         error 601
     }
     

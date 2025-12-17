@@ -45,7 +45,7 @@ country codes, regional aggregates, and indicator mappings.
 {pstd}
 All generated YAML files follow the standardized {cmd:_unicefdata_<name>.yaml} 
 naming convention and include watermark headers matching the R and Python 
-implementations.
+implementations. Files are saved to {cmd:src/_/} alongside the helper ado files.
 
 {pstd}
 {bf:Note:} For complete metadata extraction, especially for large XML files 
@@ -57,7 +57,7 @@ Python library directly. See {help unicefdata_sync##limitations:Limitations} bel
 {title:Generated Files}
 
 {pstd}
-The following files are created in the metadata directory:
+The following files are created in the {cmd:src/_/} directory:
 
 {p2colset 8 40 42 2}{...}
 {p2col:{cmd:_unicefdata_dataflows.yaml}}SDMX dataflow definitions{p_end}

@@ -436,14 +436,13 @@ Discovery commands store additional results:
 aligned with the R {cmd:get_unicef()} and Python {cmd:unicef_api} implementations.
 
 {pstd}
-Metadata files are located in {cmd:stata/metadata/current/}:
+Metadata files are located in {cmd:src/_/} alongside the helper ado files:
 
 {phang2}{cmd:_unicefdata_dataflows.yaml} - 69 SDMX dataflow definitions{p_end}
 {phang2}{cmd:_unicefdata_indicators.yaml} - 25 common SDG indicators{p_end}
 {phang2}{cmd:_unicefdata_codelists.yaml} - Valid codes for sex, age, wealth, residence{p_end}
 {phang2}{cmd:_unicefdata_countries.yaml} - 453 country ISO3 codes{p_end}
 {phang2}{cmd:_unicefdata_regions.yaml} - 111 regional aggregate codes{p_end}
-{phang2}{cmd:unicef_indicators_metadata.yaml} - Full indicator catalog (733 indicators){p_end}
 
 {pstd}
 The {helpb yaml} command is used to parse these files. If {cmd:yaml} is not installed,

@@ -13,34 +13,27 @@ program define _unicef_list_dataflows, rclass
     quietly {
     
         *-----------------------------------------------------------------------
-        * Locate metadata directory
+        * Locate metadata directory (YAML files in src/_/ alongside this ado)
         *-----------------------------------------------------------------------
         
         if ("`metapath'" == "") {
-            * Find the package installation path from unicefdata.ado
-            capture findfile unicefdata.ado
+            * Find the helper program location (src/_/)
+            capture findfile _unicef_list_dataflows.ado
             if (_rc == 0) {
                 local ado_path "`r(fn)'"
-                * Go up from src/u/ to repo root, then to metadata/vintages/
-                * Handle both forward and back slashes
+                * Extract directory containing this ado file
                 local ado_dir = subinstr("`ado_path'", "\", "/", .)
-                local ado_dir = subinstr("`ado_dir'", "src/u/unicefdata.ado", "", .)
-                local metapath "`ado_dir'metadata/vintages/"
+                local ado_dir = subinstr("`ado_dir'", "_unicef_list_dataflows.ado", "", .)
+                local metapath "`ado_dir'"
             }
             
-            * Fallback to current working directory path
-            if ("`metapath'" == "") | (!fileexists("`metapath'dataflows.yaml")) {
-                * Try relative to current directory
-                local metapath "metadata/vintages/"
-            }
-            
-            * Fallback to PLUS directory
-            if ("`metapath'" == "") | (!fileexists("`metapath'dataflows.yaml")) {
-                local metapath "`c(sysdir_plus)'u/metadata/vintages/"
+            * Fallback to PLUS directory _/
+            if ("`metapath'" == "") | (!fileexists("`metapath'_unicefdata_dataflows.yaml")) {
+                local metapath "`c(sysdir_plus)'_/"
             }
         }
         
-        local yaml_file "`metapath'dataflows.yaml"
+        local yaml_file "`metapath'_unicefdata_dataflows.yaml"
         
         *-----------------------------------------------------------------------
         * Check YAML file exists

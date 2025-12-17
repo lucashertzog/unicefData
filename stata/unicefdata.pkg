@@ -56,7 +56,14 @@ f _/_xmltoyaml_parse_lines.ado
 f _/_xmltoyaml_parse_python.ado
 f _/_xmltoyaml_parse_stata.ado
 
+* YAML metadata files (API metadata)
+f _/_unicefdata_dataflows.yaml
+f _/_unicefdata_indicators.yaml
+f _/_unicefdata_codelists.yaml
+f _/_unicefdata_countries.yaml
+f _/_unicefdata_regions.yaml
+
 * Python helper scripts
-f u/unicefdata_xml2yaml.py
-f u/stata_schema_sync.py
-f p/python_xml_helper.py
+f py/unicefdata_xml2yaml.py
+f py/stata_schema_sync.py
+f py/python_xml_helper.py

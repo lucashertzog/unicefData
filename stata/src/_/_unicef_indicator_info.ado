@@ -13,28 +13,27 @@ program define _unicef_indicator_info, rclass
     quietly {
     
         *-----------------------------------------------------------------------
-        * Locate metadata directory
+        * Locate metadata directory (YAML files in src/_/ alongside this ado)
         *-----------------------------------------------------------------------
         
         if ("`metapath'" == "") {
-            capture findfile unicefdata.ado
+            * Find the helper program location (src/_/)
+            capture findfile _unicef_indicator_info.ado
             if (_rc == 0) {
                 local ado_path "`r(fn)'"
+                * Extract directory containing this ado file
                 local ado_dir = subinstr("`ado_path'", "\", "/", .)
-                local ado_dir = subinstr("`ado_dir'", "src/u/unicefdata.ado", "", .)
-                local metapath "`ado_dir'metadata/vintages/"
+                local ado_dir = subinstr("`ado_dir'", "_unicef_indicator_info.ado", "", .)
+                local metapath "`ado_dir'"
             }
             
-            if ("`metapath'" == "") | (!fileexists("`metapath'indicators.yaml")) {
-                local metapath "metadata/vintages/"
-            }
-            
-            if ("`metapath'" == "") | (!fileexists("`metapath'indicators.yaml")) {
-                local metapath "`c(sysdir_plus)'u/metadata/vintages/"
+            * Fallback to PLUS directory _/
+            if ("`metapath'" == "") | (!fileexists("`metapath'_unicefdata_indicators.yaml")) {
+                local metapath "`c(sysdir_plus)'_/"
             }
         }
         
-        local yaml_file "`metapath'indicators.yaml"
+        local yaml_file "`metapath'_unicefdata_indicators.yaml"
         
         *-----------------------------------------------------------------------
         * Check YAML file exists

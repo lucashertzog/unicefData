@@ -5,6 +5,8 @@
 *******************************************************************************
 
 program define _unicefdata_sync_dataflow_index, rclass
+    version 14.0
+    
     syntax, OUTDIR(string) AGENCY(string) [SUFFIX(string) FORCEPYTHON FORCESTATA]
     
     * Get timestamp
@@ -25,7 +27,7 @@ program define _unicefdata_sync_dataflow_index, rclass
         local script_path ""
         
         * Try common locations for the Python script
-        foreach trypath in "stata/src/u/`script_name'" "`script_name'" {
+        foreach trypath in "stata/src/py/`script_name'" "`script_name'" {
             capture confirm file "`trypath'"
             if (_rc == 0) {
                 local script_path "`trypath'"
@@ -36,7 +38,7 @@ program define _unicefdata_sync_dataflow_index, rclass
         * Check adopath locations if not found yet
         if ("`script_path'" == "") {
             foreach path in `c(adopath)' {
-                local trypath = "`path'/`script_name'"
+                local trypath = "`path'/py/`script_name'"
                 local trypath = subinstr("`trypath'", "\", "/", .)
                 capture confirm file "`trypath'"
                 if (_rc == 0) {
@@ -48,7 +50,7 @@ program define _unicefdata_sync_dataflow_index, rclass
         
         if ("`script_path'" == "") {
             di as err "     Python script not found: `script_name'"
-            di as err "     Ensure stata_schema_sync.py is in stata/src/u/ or adopath"
+            di as err "     Ensure stata_schema_sync.py is in stata/src/py/ or adopath/py/"
             return scalar count = 0
             error 601
         }

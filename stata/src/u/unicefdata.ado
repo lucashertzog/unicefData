@@ -205,25 +205,25 @@ program define unicefdata, rclass
         }
         
         *-----------------------------------------------------------------------
-        * Locate metadata directory
+        * Locate metadata directory (YAML files in src/_/ alongside helper ado)
         *-----------------------------------------------------------------------
         
-        * Find the package installation path
+        * Find the helper programs location (src/_/)
         local metadata_path ""
         
-        * Try to find metadata relative to this ado file
-        findfile unicefdata.ado
+        * Try to find metadata relative to helper ado files in src/_/
+        capture findfile _unicef_list_dataflows.ado
         if (_rc == 0) {
             local ado_path "`r(fn)'"
-            * Extract directory (go up from src/u/ to find metadata/)
-            local ado_dir = subinstr("`ado_path'", "src/u/unicefdata.ado", "", .)
-            local ado_dir = subinstr("`ado_dir'", "src\u\unicefdata.ado", "", .)
-            local metadata_path "`ado_dir'metadata/"
+            * Extract directory containing the helper ado file
+            local ado_dir = subinstr("`ado_path'", "\", "/", .)
+            local ado_dir = subinstr("`ado_dir'", "_unicef_list_dataflows.ado", "", .)
+            local metadata_path "`ado_dir'"
         }
         
-        * If not found, try PLUS directory
-        if ("`metadata_path'" == "") | (!fileexists("`metadata_path'indicators.yaml")) {
-            local metadata_path "`c(sysdir_plus)'u/metadata/"
+        * Fallback to PLUS directory _/
+        if ("`metadata_path'" == "") | (!fileexists("`metadata_path'_unicefdata_indicators.yaml")) {
+            local metadata_path "`c(sysdir_plus)'_/"
         }
         
         if ("`verbose'" != "") {
@@ -1252,8 +1252,8 @@ program define _unicef_detect_dataflow_yaml, sclass
     local dataflow ""
     local indicator_name ""
     
-    * Try to load from YAML metadata first
-    local yaml_file "`metadata_path'indicators.yaml"
+    * Try to load from YAML metadata first (files have _unicefdata_ prefix)
+    local yaml_file "`metadata_path'_unicefdata_indicators.yaml"
     
     capture confirm file "`yaml_file'"
     if (_rc == 0) {
@@ -1352,7 +1352,7 @@ end
 program define _unicef_validate_filters, sclass
     args sex age wealth residence maternal_edu metadata_path
     
-    local yaml_file "`metadata_path'codelists.yaml"
+    local yaml_file "`metadata_path'_unicefdata_codelists.yaml"
     local warnings ""
     
     capture confirm file "`yaml_file'"

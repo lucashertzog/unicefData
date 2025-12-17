@@ -119,28 +119,33 @@ help unicefdata_sync
 ```
 stata/
 ├── src/
-│   ├── u/                          # Main user-facing commands
-│   │   ├── unicefdata.ado          # Main data download command
-│   │   ├── unicefdata.sthlp        # Help file
-│   │   ├── unicefdata_sync.ado     # Metadata sync command
-│   │   ├── unicefdata_sync.sthlp   # Sync help file
-│   │   ├── unicefdata_xmltoyaml.ado # XML to YAML converter
-│   │   └── unicefdata_xml2yaml.py  # Python XML parser (optional)
-│   └── _/                          # Internal subroutines
-│       ├── _xmltoyaml_parse.ado    # Parser router
-│       ├── _xmltoyaml_parse_python.ado
-│       ├── _xmltoyaml_parse_stata.ado
-│       └── ...
-├── metadata/
-│   └── current/                    # Current YAML metadata files
-│       ├── _unicefdata_indicators.yaml
-│       ├── _unicefdata_countries.yaml
-│       ├── _unicefdata_regions.yaml
-│       └── _unicefdata_dataflows.yaml
-├── examples/                       # Example do-files
-├── tests/                          # Test suite
-├── unicefdata.pkg                  # Stata package file
-└── stata.toc                       # Table of contents
+│   ├── u/                              # Main user-facing commands
+│   │   ├── unicefdata.ado              # Main data download command
+│   │   ├── unicefdata.sthlp            # Help file
+│   │   ├── unicefdata_sync.ado         # Metadata sync command
+│   │   ├── unicefdata_sync.sthlp       # Sync help file
+│   │   ├── unicefdata_xmltoyaml.ado    # XML to YAML converter
+│   │   └── unicefdata_xml2yaml.py      # Python XML parser (optional)
+│   ├── _/                              # Internal subroutines + YAML metadata
+│   │   ├── _unicef_list_dataflows.ado  # Discovery: list dataflows
+│   │   ├── _unicef_search_indicators.ado # Discovery: search indicators
+│   │   ├── _unicef_list_indicators.ado # Discovery: list indicators
+│   │   ├── _unicef_indicator_info.ado  # Discovery: indicator info
+│   │   ├── _unicefdata_dataflows.yaml  # API metadata: 69 dataflows
+│   │   ├── _unicefdata_indicators.yaml # API metadata: indicators
+│   │   ├── _unicefdata_codelists.yaml  # API metadata: valid codes
+│   │   ├── _unicefdata_countries.yaml  # API metadata: 453 country codes
+│   │   ├── _unicefdata_regions.yaml    # API metadata: 111 regional codes
+│   │   └── ...
+│   ├── y/                              # YAML parser
+│   │   ├── yaml.ado
+│   │   └── yaml.sthlp
+│   └── p/                              # Python helpers
+│       └── python_xml_helper.py
+├── examples/                           # Example do-files
+├── tests/                              # Test suite
+├── unicefdata.pkg                      # Stata package file
+└── stata.toc                           # Table of contents
 ```
 
 ---
@@ -153,8 +158,8 @@ stata/
 * Download under-5 mortality for all countries
 unicefdata, indicator(CME_MRY0T4) clear
 
-* Filter by year range
-unicefdata, indicator(CME_MRY0T4) start_year(2010) end_year(2020) clear
+* Filter by year range (new unified syntax)
+unicefdata, indicator(CME_MRY0T4) year(2010:2020) clear
 
 * Filter by specific countries
 unicefdata, indicator(CME_MRY0T4) countries(AFG BGD IND PAK) clear

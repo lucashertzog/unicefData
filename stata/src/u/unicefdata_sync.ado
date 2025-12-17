@@ -107,21 +107,31 @@ program define unicefdata_sync, rclass
     local vintage_date = trim("`vintage_date'")
     
     *---------------------------------------------------------------------------
-    * Locate/create metadata directory
+    * Locate/create metadata directory (src/_/ alongside helper ado files)
     *---------------------------------------------------------------------------
     
     if ("`path'" == "") {
-        * Auto-detect: look relative to ado file location
-        findfile unicefdata.ado
+        * Auto-detect: look relative to helper ado file location (src/_/)
+        capture findfile _unicef_list_dataflows.ado
         if (_rc == 0) {
             local ado_path "`r(fn)'"
-            local ado_dir = subinstr("`ado_path'", "src/u/unicefdata.ado", "", .)
-            local ado_dir = subinstr("`ado_dir'", "src\u\unicefdata.ado", "", .)
-            local path "`ado_dir'metadata/"
+            local ado_dir = subinstr("`ado_path'", "\", "/", .)
+            local ado_dir = subinstr("`ado_dir'", "_unicef_list_dataflows.ado", "", .)
+            local path "`ado_dir'"
         }
         else {
-            * Fallback to current directory
-            local path "`c(pwd)'/metadata/"
+            * Fallback: look relative to main unicefdata.ado, go to src/_/
+            capture findfile unicefdata.ado
+            if (_rc == 0) {
+                local ado_path "`r(fn)'"
+                local ado_dir = subinstr("`ado_path'", "\", "/", .)
+                local ado_dir = subinstr("`ado_dir'", "u/unicefdata.ado", "", .)
+                local path "`ado_dir'_/"
+            }
+            else {
+                * Final fallback to PLUS directory
+                local path "`c(sysdir_plus)'_/"
+            }
         }
     }
     
@@ -130,11 +140,8 @@ program define unicefdata_sync, rclass
         local path "`path'/"
     }
     
-    * Create directories if needed
-    local current_dir "`path'current/"
-    capture mkdir "`path'"
-    capture mkdir "`current_dir'"
-    capture mkdir "`path'vintages/"
+    * Use the path directly for output (no subdirectories)
+    local current_dir "`path'"
     
     *---------------------------------------------------------------------------
     * Display header
@@ -1289,7 +1296,7 @@ program define _unicefdata_sync_dataflow_index, rclass
         local script_path ""
         
         * Try common locations for the Python script
-        foreach trypath in "stata/src/u/`script_name'" "`script_name'" {
+        foreach trypath in "stata/src/py/`script_name'" "`script_name'" {
             capture confirm file "`trypath'"
             if (_rc == 0) {
                 local script_path "`trypath'"
@@ -1300,7 +1307,7 @@ program define _unicefdata_sync_dataflow_index, rclass
         * Check adopath locations if not found yet
         if ("`script_path'" == "") {
             foreach path in `c(adopath)' {
-                local trypath = "`path'/`script_name'"
+                local trypath = "`path'/py/`script_name'"
                 local trypath = subinstr("`trypath'", "\", "/", .)
                 capture confirm file "`trypath'"
                 if (_rc == 0) {
@@ -1312,7 +1319,7 @@ program define _unicefdata_sync_dataflow_index, rclass
         
         if ("`script_path'" == "") {
             di as err "     Python script not found: `script_name'"
-            di as err "     Ensure stata_schema_sync.py is in stata/src/u/ or adopath"
+            di as err "     Ensure stata_schema_sync.py is in stata/src/py/ or adopath/py/"
             return scalar count = 0
             error 601
         }
