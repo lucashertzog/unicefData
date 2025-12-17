@@ -631,9 +631,9 @@ program define unicefdata, rclass
                 local varlabels `"`varlabels' "refper" "Reference period""'
                 local varlabels `"`varlabels' "notes" "Country notes""'
                 
-                * Apply labels only if variable exists
+                * Apply labels only if variable exists (22 pairs = 44 words)
                 local i = 1
-                while (`i' <= 22) {
+                while (`i' <= 44) {
                     local varname : word `i' of `varlabels'
                     local ++i
                     local varlbl : word `i' of `varlabels'
