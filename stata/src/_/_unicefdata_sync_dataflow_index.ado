@@ -1,7 +1,8 @@
 *******************************************************************************
 * _unicefdata_sync_dataflow_index
-*! v 1.0.0   08Dec2025               by Joao Pedro Azevedo (UNICEF)
+*! v 1.0.1   17Dec2025               by Joao Pedro Azevedo (UNICEF)
 * Helper program for unicefdata_sync: Sync dataflow schemas
+* v1.0.1: Fixed adopath search to use actual sysdir paths
 *******************************************************************************
 
 program define _unicefdata_sync_dataflow_index, rclass
@@ -35,22 +36,24 @@ program define _unicefdata_sync_dataflow_index, rclass
             }
         }
         
-        * Check adopath locations if not found yet
+        * Check Stata system directories for py/ subfolder
         if ("`script_path'" == "") {
-            foreach path in `c(adopath)' {
-                local trypath = "`path'/py/`script_name'"
-                local trypath = subinstr("`trypath'", "\", "/", .)
-                capture confirm file "`trypath'"
-                if (_rc == 0) {
-                    local script_path "`trypath'"
-                    continue, break
+            foreach sysdir in plus personal site base {
+                local basepath = subinstr("`c(sysdir_`sysdir')'", "\", "/", .)
+                if ("`basepath'" != "") {
+                    local trypath = "`basepath'py/`script_name'"
+                    capture confirm file "`trypath'"
+                    if (_rc == 0) {
+                        local script_path "`trypath'"
+                        continue, break
+                    }
                 }
             }
         }
         
         if ("`script_path'" == "") {
             di as err "     Python script not found: `script_name'"
-            di as err "     Ensure stata_schema_sync.py is in stata/src/py/ or adopath/py/"
+            di as err "     Ensure stata_schema_sync.py is in sysdir_plus/py/ or sysdir_personal/py/"
             return scalar count = 0
             error 601
         }
