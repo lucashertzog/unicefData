@@ -1,3 +1,4 @@
+discard
 ********************************************************************************
 * test_unicefdata_examples.do
 * 
@@ -106,9 +107,9 @@ local suite_start = clock("`c(current_date)' `c(current_time)'", "DMY hms")
 * =============================================================================
 
 di ""
-di as text "┌" "─" * 78 "┐"
-di as text "│" _col(5) as result "SECTION 1: DISCOVERY COMMANDS" _col(80) as text "│"
-di as text "└" "─" * 78 "┘"
+di as text "{hline 80}"
+di as text "|" _col(5) as result "SECTION 1: DISCOVERY COMMANDS" _col(80) as text "|"
+di as text "{hline 80}"
 
 * -----------------------------------------------------------------------------
 * Test 1.1: List available dataflows
@@ -276,9 +277,9 @@ else {
 * =============================================================================
 
 di ""
-di as text "┌" "─" * 78 "┐"
-di as text "│" _col(5) as result "SECTION 2: BASIC DATA RETRIEVAL" _col(80) as text "│"
-di as text "└" "─" * 78 "┘"
+di as text "{hline 80}"
+di as text "|" _col(5) as result "SECTION 2: BASIC DATA RETRIEVAL" _col(80) as text "|"
+di as text "{hline 80}"
 
 * -----------------------------------------------------------------------------
 * Test 2.1: Download under-5 mortality rate (all countries)
@@ -509,9 +510,9 @@ else {
 * =============================================================================
 
 di ""
-di as text "┌" "─" * 78 "┐"
-di as text "│" _col(5) as result "SECTION 3: NEW v1.3.0 FEATURES" _col(80) as text "│"
-di as text "└" "─" * 78 "┘"
+di as text "{hline 80}"
+di as text "|" _col(5) as result "SECTION 3: NEW v1.3.0 FEATURES" _col(80) as text "|"
+di as text "{hline 80}"
 
 * -----------------------------------------------------------------------------
 * Test 3.1: Wide format with indicators as columns
@@ -593,9 +594,9 @@ else {
 * =============================================================================
 
 di ""
-di as text "┌" "─" * 78 "┐"
-di as text "│" _col(5) as result "SECTION 4: NUTRITION INDICATORS" _col(80) as text "│"
-di as text "└" "─" * 78 "┘"
+di as text "{hline 80}"
+di as text "|" _col(5) as result "SECTION 4: NUTRITION INDICATORS" _col(80) as text "|"
+di as text "{hline 80}"
 
 * -----------------------------------------------------------------------------
 * Test 4.1: Stunting prevalence
@@ -674,9 +675,9 @@ else {
 * =============================================================================
 
 di ""
-di as text "┌" "─" * 78 "┐"
-di as text "│" _col(5) as result "SECTION 5: IMMUNIZATION INDICATORS" _col(80) as text "│"
-di as text "└" "─" * 78 "┘"
+di as text "{hline 80}"
+di as text "|" _col(5) as result "SECTION 5: IMMUNIZATION INDICATORS" _col(80) as text "|"
+di as text "{hline 80}"
 
 * -----------------------------------------------------------------------------
 * Test 5.1: DTP3 immunization coverage
@@ -731,9 +732,9 @@ else {
 * =============================================================================
 
 di ""
-di as text "┌" "─" * 78 "┐"
-di as text "│" _col(5) as result "SECTION 6: WASH INDICATORS" _col(80) as text "│"
-di as text "└" "─" * 78 "┘"
+di as text "{hline 80}"
+di as text "|" _col(5) as result "SECTION 6: WASH INDICATORS" _col(80) as text "|"
+di as text "{hline 80}"
 
 * -----------------------------------------------------------------------------
 * Test 6.1: Basic drinking water services
@@ -788,9 +789,9 @@ else {
 * =============================================================================
 
 di ""
-di as text "┌" "─" * 78 "┐"
-di as text "│" _col(5) as result "SECTION 7: EDUCATION INDICATORS" _col(80) as text "│"
-di as text "└" "─" * 78 "┘"
+di as text "{hline 80}"
+di as text "|" _col(5) as result "SECTION 7: EDUCATION INDICATORS" _col(80) as text "|"
+di as text "{hline 80}"
 
 * -----------------------------------------------------------------------------
 * Test 7.1: Out-of-school rate, primary
@@ -845,9 +846,9 @@ else {
 * =============================================================================
 
 di ""
-di as text "┌" "─" * 78 "┐"
-di as text "│" _col(5) as result "SECTION 8: EXPORT EXAMPLES" _col(80) as text "│"
-di as text "└" "─" * 78 "┘"
+di as text "{hline 80}"
+di as text "|" _col(5) as result "SECTION 8: EXPORT EXAMPLES" _col(80) as text "|"
+di as text "{hline 80}"
 
 * -----------------------------------------------------------------------------
 * Test 8.1: Download and export to Excel
@@ -908,9 +909,9 @@ else {
 * =============================================================================
 
 di ""
-di as text "┌" "─" * 78 "┐"
-di as text "│" _col(5) as result "SECTION 9: MULTIPLE INDICATORS" _col(80) as text "│"
-di as text "└" "─" * 78 "┘"
+di as text "{hline 80}"
+di as text "|" _col(5) as result "SECTION 9: MULTIPLE INDICATORS" _col(80) as text "|"
+di as text "{hline 80}"
 
 * -----------------------------------------------------------------------------
 * Test 9.1: Multiple mortality indicators
@@ -966,9 +967,9 @@ else {
 * =============================================================================
 
 di ""
-di as text "┌" "─" * 78 "┐"
-di as text "│" _col(5) as result "SECTION 10: STORED RESULTS VALIDATION" _col(80) as text "│"
-di as text "└" "─" * 78 "┘"
+di as text "{hline 80}"
+di as text "|" _col(5) as result "SECTION 10: STORED RESULTS VALIDATION" _col(80) as text "|"
+di as text "{hline 80}"
 
 * -----------------------------------------------------------------------------
 * Test 10.1: Verify stored results after data retrieval
