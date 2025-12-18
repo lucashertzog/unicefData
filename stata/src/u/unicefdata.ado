@@ -1034,6 +1034,10 @@ program define unicefdata, rclass
             if (_rc == 0) {
                 local pre_filter_n = _N
                 
+                if ("`verbose'" != "") {
+                    noi di as text "wide_indicators: Starting with `pre_filter_n' observations"
+                }
+                
                 * First, collapse to handle duplicate disaggregations
                 * Keep only the total/aggregate values where possible
                 * Use capture to avoid dropping all data if filter doesn't match
@@ -1042,39 +1046,76 @@ program define unicefdata, rclass
                     tempvar sex_match
                     gen `sex_match' = inlist(upper(sex), "_T", "T", "TOTAL", "BOTHSEX", "") | missing(sex)
                     count if `sex_match'
-                    if (r(N) > 0) {
+                    local sex_match_n = r(N)
+                    if (`sex_match_n' > 0) {
                         keep if `sex_match'
+                        if ("`verbose'" != "") {
+                            noi di as text "  sex filter: kept `sex_match_n' of `pre_filter_n' obs"
+                        }
+                    }
+                    else if ("`verbose'" != "") {
+                        noi di as text "  sex filter: no matches for _T/TOTAL/BOTHSEX, keeping all"
                     }
                     drop `sex_match'
+                    local pre_filter_n = _N
                 }
                 capture confirm variable age
                 if (_rc == 0) {
                     tempvar age_match
+                    * Expanded age filter to include CME-specific codes
+                    * CME uses detailed age codes like Y0T4 (0-4), Y5T14 (5-14), etc.
                     gen `age_match' = inlist(upper(age), "_T", "T", "TOTAL", "") | missing(age) | ///
-                                      inlist(upper(age), "Y0T4", "Y0T17", "LT5", "0-4", "Y00T04")
+                                      inlist(upper(age), "Y0T4", "Y0T17", "LT5", "0-4", "Y00T04") | ///
+                                      inlist(upper(age), "Y0T0", "Y1T4", "Y5T9", "Y5T14", "Y10T14") | ///
+                                      inlist(upper(age), "Y10T19", "Y15T24", "Y15T19", "Y20T24")
                     count if `age_match'
-                    if (r(N) > 0) {
+                    local age_match_n = r(N)
+                    if (`age_match_n' > 0) {
                         keep if `age_match'
+                        if ("`verbose'" != "") {
+                            noi di as text "  age filter: kept `age_match_n' of `pre_filter_n' obs"
+                        }
+                    }
+                    else if ("`verbose'" != "") {
+                        noi di as text "  age filter: no matches for standard/CME age codes, keeping all"
+                        noi di as text "  NOTE: Unique age values in data:"
+                        noi tab age, missing
                     }
                     drop `age_match'
+                    local pre_filter_n = _N
                 }
                 capture confirm variable wealth
                 if (_rc == 0) {
                     tempvar wealth_match
                     gen `wealth_match' = inlist(upper(wealth), "_T", "T", "TOTAL", "_Z", "") | missing(wealth)
                     count if `wealth_match'
-                    if (r(N) > 0) {
+                    local wealth_match_n = r(N)
+                    if (`wealth_match_n' > 0) {
                         keep if `wealth_match'
+                        if ("`verbose'" != "") {
+                            noi di as text "  wealth filter: kept `wealth_match_n' of `pre_filter_n' obs"
+                        }
+                    }
+                    else if ("`verbose'" != "") {
+                        noi di as text "  wealth filter: no matches for _T/TOTAL/_Z, keeping all"
                     }
                     drop `wealth_match'
+                    local pre_filter_n = _N
                 }
                 capture confirm variable residence
                 if (_rc == 0) {
                     tempvar res_match
                     gen `res_match' = inlist(upper(residence), "_T", "T", "TOTAL", "_Z", "") | missing(residence)
                     count if `res_match'
-                    if (r(N) > 0) {
+                    local res_match_n = r(N)
+                    if (`res_match_n' > 0) {
                         keep if `res_match'
+                        if ("`verbose'" != "") {
+                            noi di as text "  residence filter: kept `res_match_n' of `pre_filter_n' obs"
+                        }
+                    }
+                    else if ("`verbose'" != "") {
+                        noi di as text "  residence filter: no matches for _T/TOTAL/_Z, keeping all"
                     }
                     drop `res_match'
                 }

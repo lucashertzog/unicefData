@@ -534,7 +534,28 @@ log_test_header "Wide format (indicators as columns)" "`test_num'"
 
 timer clear 1
 timer on 1
-capture noisily unicefdata, dataflow(CME) countries(AFG BGD) wide_indicators clear
+
+* First fetch the data WITHOUT wide_indicators to capture diagnostics
+capture noisily {
+    unicefdata, dataflow(CME) countries(AFG BGD) clear
+    local initial_obs = _N
+    di as text "DEBUG: Initial fetch returned `initial_obs' observations"
+    
+    * Show disaggregation variables present
+    capture confirm variable age
+    if (_rc == 0) {
+        di as text "DEBUG: age variable values:"
+        tab age, missing
+    }
+    capture confirm variable sex  
+    if (_rc == 0) {
+        di as text "DEBUG: sex variable values:"
+        tab sex, missing
+    }
+}
+
+* Now test wide_indicators WITH VERBOSE to see filter diagnostics
+capture noisily unicefdata, dataflow(CME) countries(AFG BGD) wide_indicators verbose clear
 local rc = _rc
 timer off 1
 qui timer list 1
@@ -542,11 +563,19 @@ local elapsed = r(t1)
 
 if (`rc' == 0) {
     local obs = _N
-    log_test_result "unicefdata, dataflow(CME) countries(AFG BGD) wide_indicators clear" "PASS" "`elapsed'" "`obs'"
-    local ++pass_count
-    describe, short
+    if (`obs' > 0) {
+        log_test_result "unicefdata, dataflow(CME) countries(AFG BGD) wide_indicators clear" "PASS" "`elapsed'" "`obs'"
+        local ++pass_count
+        describe, short
+    }
+    else {
+        di as error "DEBUG: wide_indicators returned 0 observations (filter may be too strict)"
+        log_test_result "unicefdata, dataflow(CME) countries(AFG BGD) wide_indicators clear" "FAIL" "`elapsed'" "0"
+        local ++fail_count
+    }
 }
 else {
+    di as error "DEBUG: Command failed with error code `rc'"
     log_test_result "unicefdata, dataflow(CME) countries(AFG BGD) wide_indicators clear" "FAIL" "`elapsed'" ""
     local ++fail_count
 }
@@ -870,8 +899,24 @@ log_test_header "Export to Excel" "`test_num'"
 
 timer clear 1
 timer on 1
+
+* Ensure fresh data load - independent of previous tests
+local export_rc = 0
 capture noisily {
+    * Clear any existing data
+    clear
+    
+    * Fresh fetch
     unicefdata, indicator(CME_MRY0T4) countries(ALB USA BRA) clear
+    local fetch_obs = _N
+    di as text "DEBUG: Export test - fetched `fetch_obs' observations"
+    
+    if (`fetch_obs' == 0) {
+        di as error "DEBUG: No data fetched, export will fail"
+        error 2000
+    }
+    
+    * Attempt export
     export excel using "test_mortality_data.xlsx", firstrow(variables) replace
 }
 local rc = _rc
@@ -880,11 +925,13 @@ qui timer list 1
 local elapsed = r(t1)
 
 if (`rc' == 0) {
-    log_test_result "Export to Excel" "PASS" "`elapsed'" ""
+    log_test_result "Export to Excel" "PASS" "`elapsed'" "`fetch_obs'"
     local ++pass_count
     capture erase "test_mortality_data.xlsx"
 }
 else {
+    di as error "DEBUG: Export to Excel failed with rc=`rc'"
+    di as error "DEBUG: Current observation count: " _N
     log_test_result "Export to Excel" "FAIL" "`elapsed'" ""
     local ++fail_count
 }
