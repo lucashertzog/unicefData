@@ -146,6 +146,40 @@ sysdir  // Shows all directory mappings
 | YAML metadata | `stata/src/_/_unicefdata_*.yaml` | `plus/_/_unicefdata_*.yaml` |
 | Python scripts | `stata/src/py/*.py` | `plus/py/*.py` |
 
+**⚠️ CRITICAL: Copilot/AI Agent Workflow for Stata Files:**
+
+When editing Stata files (`.ado`, `.sthlp`, `.py` in `stata/src/`):
+
+1. **ALWAYS edit files in the repository source** (`stata/src/`), NOT in the installed location
+2. **After editing, copy files to the installed Stata paths** for testing/execution
+3. **Commit changes from the repository source**, not from the installed location
+
+Example workflow:
+```powershell
+# 1. Edit in source (Copilot does this automatically)
+# File: c:\GitHub\others\unicefData\stata\src\u\unicefdata.ado
+
+# 2. Copy to installed location for testing
+Copy-Item "c:\GitHub\others\unicefData\stata\src\u\unicefdata.ado" "c:\Users\jpazevedo\ado\plus\u\" -Force
+
+# 3. For helper files (starting with _)
+Copy-Item "c:\GitHub\others\unicefData\stata\src\_\_unicef_*.ado" "c:\Users\jpazevedo\ado\plus\_\" -Force
+
+# 4. For Python scripts
+Copy-Item "c:\GitHub\others\unicefData\stata\src\py\*.py" "c:\Users\jpazevedo\ado\plus\py\" -Force
+
+# 5. In Stata, reload the modified ado
+discard
+```
+
+**Typical copy commands by file type:**
+| File Pattern | Copy Command |
+|--------------|--------------|
+| `unicefdata*.ado` | `Copy-Item "stata\src\u\unicefdata*.ado" "$env:USERPROFILE\ado\plus\u\" -Force` |
+| `_unicef*.ado` | `Copy-Item "stata\src\_\_unicef*.ado" "$env:USERPROFILE\ado\plus\_\" -Force` |
+| `*.py` | `Copy-Item "stata\src\py\*.py" "$env:USERPROFILE\ado\plus\py\" -Force` |
+| `_unicefdata*.yaml` | `Copy-Item "stata\src\_\_unicefdata*.yaml" "$env:USERPROFILE\ado\plus\_\" -Force` |
+
 **Finding Files at Runtime:**
 ```stata
 * Find file anywhere in adopath
