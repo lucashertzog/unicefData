@@ -15,6 +15,18 @@ set more off
 capture log close _all
 
 * =============================================================================
+* DEBUG OPTIONS - Set to "on" for detailed trace output in log
+* =============================================================================
+local debug_mode "on"   // Change to "off" for production runs
+
+if ("`debug_mode'" == "on") {
+    set trace on
+    set tracedepth 2    // Limit depth to avoid excessive output
+    set traceexpand on  // Show macro expansion
+    set tracesep on     // Separator between trace lines
+}
+
+* =============================================================================
 * CONFIGURATION
 * =============================================================================
 
@@ -1032,6 +1044,9 @@ scalar passed = `pass_count'
 scalar failed = `fail_count'
 scalar skipped = `skip_count'
 scalar elapsed = `suite_elapsed'
+
+* Turn off trace before closing
+set trace off
 
 * Close log
 di ""
