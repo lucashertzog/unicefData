@@ -1003,19 +1003,51 @@ program define unicefdata, rclass
             capture confirm variable indicator
             capture confirm variable value
             if (_rc == 0) {
+                local pre_filter_n = _N
+                
                 * First, collapse to handle duplicate disaggregations
                 * Keep only the total/aggregate values where possible
+                * Use capture to avoid dropping all data if filter doesn't match
                 capture confirm variable sex
                 if (_rc == 0) {
-                    keep if sex == "_T" | sex == "TOTAL" | sex == ""
+                    tempvar sex_match
+                    gen `sex_match' = inlist(upper(sex), "_T", "T", "TOTAL", "BOTHSEX", "") | missing(sex)
+                    count if `sex_match'
+                    if (r(N) > 0) {
+                        keep if `sex_match'
+                    }
+                    drop `sex_match'
                 }
                 capture confirm variable age
                 if (_rc == 0) {
-                    keep if age == "_T" | age == "TOTAL" | age == "" | age == "Y0T4" | age == "Y0T17"
+                    tempvar age_match
+                    gen `age_match' = inlist(upper(age), "_T", "T", "TOTAL", "") | missing(age) | ///
+                                      inlist(upper(age), "Y0T4", "Y0T17", "LT5", "0-4", "Y00T04")
+                    count if `age_match'
+                    if (r(N) > 0) {
+                        keep if `age_match'
+                    }
+                    drop `age_match'
                 }
                 capture confirm variable wealth
                 if (_rc == 0) {
-                    keep if wealth == "_T" | wealth == "TOTAL" | wealth == ""
+                    tempvar wealth_match
+                    gen `wealth_match' = inlist(upper(wealth), "_T", "T", "TOTAL", "_Z", "") | missing(wealth)
+                    count if `wealth_match'
+                    if (r(N) > 0) {
+                        keep if `wealth_match'
+                    }
+                    drop `wealth_match'
+                }
+                capture confirm variable residence
+                if (_rc == 0) {
+                    tempvar res_match
+                    gen `res_match' = inlist(upper(residence), "_T", "T", "TOTAL", "_Z", "") | missing(residence)
+                    count if `res_match'
+                    if (r(N) > 0) {
+                        keep if `res_match'
+                    }
+                    drop `res_match'
                 }
                 
                 * Keep columns needed for reshape
@@ -1031,22 +1063,28 @@ program define unicefdata, rclass
                 * Drop duplicates to ensure unique combinations
                 duplicates drop iso3 country period indicator, force
                 
-                * Reshape: indicators become columns
-                capture reshape wide value, i(iso3 country period) j(indicator) string
-                if (_rc == 0) {
-                    * Clean up column names (remove "value" prefix)
-                    foreach v of varlist value* {
-                        local newname = subinstr("`v'", "value", "", 1)
-                        rename `v' `newname'
+                if (_N > 0) {
+                    * Reshape: indicators become columns
+                    capture reshape wide value, i(iso3 country period) j(indicator) string
+                    if (_rc == 0) {
+                        * Clean up column names (remove "value" prefix)
+                        foreach v of varlist value* {
+                            local newname = subinstr("`v'", "value", "", 1)
+                            rename `v' `newname'
+                        }
+                        sort iso3 period
+                        
+                        if ("`verbose'" != "") {
+                            noi di as text "Reshaped to wide_indicators format."
+                        }
                     }
-                    sort iso3 period
-                    
-                    if ("`verbose'" != "") {
-                        noi di as text "Reshaped to wide_indicators format."
+                    else {
+                        noi di as text "Note: Could not reshape to wide_indicators format (may have duplicate observations)."
                     }
                 }
                 else {
-                    noi di as text "Note: Could not reshape to wide_indicators format (may have duplicate observations)."
+                    noi di as error "Warning: No data remaining after applying disaggregation filters for wide_indicators."
+                    noi di as text "Try without wide_indicators option or check data disaggregations."
                 }
             }
         }
