@@ -1,10 +1,11 @@
 *******************************************************************************
 * unicefdata
-*! v 1.3.2   17Dec2025               by Joao Pedro Azevedo (UNICEF)
+*! v 1.4.0   17Dec2025               by Joao Pedro Azevedo (UNICEF)
 * Download indicators from UNICEF Data Warehouse via SDMX API
 * Aligned with R get_unicef() and Python unicef_api
 * Uses YAML metadata for dataflow detection and validation
 *
+* NEW in v1.4.0: sync subcommand (routes to unicefdata_sync)
 * NEW in v1.3.1: categories subcommand, dataflow() filter in search
 * NEW in v1.3.0: Discovery subcommands (flows, search, indicators, info)
 *******************************************************************************
@@ -98,6 +99,34 @@ program define unicefdata, rclass
         local info_indicator = substr("`0'", `info_start', `info_end' - `info_start' + 1)
         
         _unicef_indicator_info, indicator("`info_indicator'")
+        exit
+    }
+    
+    * Check for SYNC subcommand (route to unicefdata_sync)
+    if (strpos("`0'", "sync") > 0) {
+        * Parse sync options: sync(all), sync(indicators), sync(dataflows), etc.
+        local sync_target = "all"  // default
+        if (strpos("`0'", "sync(") > 0) {
+            local sync_start = strpos("`0'", "sync(") + 5
+            local sync_end = strpos(substr("`0'", `sync_start', .), ")") + `sync_start' - 2
+            local sync_target = substr("`0'", `sync_start', `sync_end' - `sync_start' + 1)
+        }
+        
+        * Check for other options
+        local has_verbose = (strpos("`0'", "verbose") > 0)
+        local has_force = (strpos("`0'", "force") > 0)
+        local has_forcepython = (strpos("`0'", "forcepython") > 0)
+        local has_forcestata = (strpos("`0'", "forcestata") > 0)
+        
+        * Build option string
+        local sync_opts ""
+        if (`has_verbose') local sync_opts "`sync_opts' verbose"
+        if (`has_force') local sync_opts "`sync_opts' force"
+        if (`has_forcepython') local sync_opts "`sync_opts' forcepython"
+        if (`has_forcestata') local sync_opts "`sync_opts' forcestata"
+        
+        * Route to unicefdata_sync
+        unicefdata_sync, `sync_target' `sync_opts'
         exit
     }
 
