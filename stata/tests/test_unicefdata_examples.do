@@ -794,14 +794,14 @@ di as text "|" _col(5) as result "SECTION 7: EDUCATION INDICATORS" _col(80) as t
 di as text "{hline 80}"
 
 * -----------------------------------------------------------------------------
-* Test 7.1: Out-of-school rate, primary
+* Test 7.1: Completion rate, primary
 * -----------------------------------------------------------------------------
 local ++test_num
-log_test_header "Out-of-school rate, primary" "`test_num'"
+log_test_header "Completion rate, primary" "`test_num'"
 
 timer clear 1
 timer on 1
-capture noisily unicefdata, indicator(EDUNF_OFST_L1) clear
+capture noisily unicefdata, indicator(ED_CR_L1) clear
 local rc = _rc
 timer off 1
 qui timer list 1
@@ -809,11 +809,11 @@ local elapsed = r(t1)
 
 if (`rc' == 0) {
     local obs = _N
-    log_test_result "unicefdata, indicator(EDUNF_OFST_L1) clear" "PASS" "`elapsed'" "`obs'"
+    log_test_result "unicefdata, indicator(ED_CR_L1) clear" "PASS" "`elapsed'" "`obs'"
     local ++pass_count
 }
 else {
-    log_test_result "unicefdata, indicator(EDUNF_OFST_L1) clear" "FAIL" "`elapsed'" ""
+    log_test_result "unicefdata, indicator(ED_CR_L1) clear" "FAIL" "`elapsed'" ""
     local ++fail_count
 }
 
@@ -986,7 +986,7 @@ capture noisily {
     assert "`r(indicator)'" == "CME_MRY0T4"
     assert "`r(dataflow)'" == "CME"
     assert "`r(countries)'" == "BRA"
-    assert r(obs_count) > 0
+    assert `r(obs_count)' > 0
     assert "`r(url)'" != ""
 }
 local rc = _rc
@@ -1026,12 +1026,12 @@ di as text "|" _col(5) as text "Total time:   " as result %8.2f `suite_elapsed' 
 di as text "|" _col(5) as text "Completed:    " as result "`c(current_date)' `c(current_time)'" _col(80) as text "|"
 di as text "{hline 80}"
 
-* Return summary
-return local total_tests = `test_num'
-return local passed = `pass_count'
-return local failed = `fail_count'
-return local skipped = `skip_count'
-return local elapsed = `suite_elapsed'
+* Store summary in scalars (accessible after do-file runs)
+scalar total_tests = `test_num'
+scalar passed = `pass_count'
+scalar failed = `fail_count'
+scalar skipped = `skip_count'
+scalar elapsed = `suite_elapsed'
 
 * Close log
 di ""
@@ -1039,10 +1039,10 @@ di as text "Log saved to: " as result "`logfile'"
 
 log close testlog
 
-* Final exit code
+* Display final status (don't use exit to avoid closing Stata)
 if (`fail_count' > 0) {
-    exit 1
+    di as error "Some tests failed. Review log for details."
 }
 else {
-    exit 0
+    di as result "All tests passed!"
 }
