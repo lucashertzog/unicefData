@@ -1197,9 +1197,23 @@ program define _unicefdata_sync_dataflow_index, rclass
     local sfx "`suffix'"
     
     *---------------------------------------------------------------------------
-    * Use Python helper if forcepython is specified
+    * Auto-detect Python and use it by default (Stata hits macro length limits)
+    * Only use Stata if forcestata is explicitly specified
     *---------------------------------------------------------------------------
+    local use_python = 0
+    if ("`forcestata'" == "") {
+        * Check if Python is available
+        tempfile pycheck
+        capture shell python --version > "`pycheck'" 2>&1
+        if (_rc == 0) {
+            local use_python = 1
+        }
+    }
     if ("`forcepython'" != "") {
+        local use_python = 1
+    }
+    
+    if (`use_python') {
         * Find Python script location
         local script_name "stata_schema_sync.py"
         local script_path ""
@@ -1289,9 +1303,11 @@ program define _unicefdata_sync_dataflow_index, rclass
     }
     
     *---------------------------------------------------------------------------
-    * Native Stata parsing (default or forcestata)
-    * NOTE: This may fail on large XML responses due to macro length limits
+    * Native Stata parsing (only if forcestata or Python unavailable)
+    * WARNING: Will fail on large XML responses due to macro length limits
     *---------------------------------------------------------------------------
+    
+    di as text "  Note: Using Stata parser (may hit macro length limits with many dataflows)"
     
     * First get list of all dataflows
     local df_url "`base_url'/dataflow/`agency'?references=none&detail=full"
