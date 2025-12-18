@@ -334,20 +334,21 @@ program define unicefdata_sync, rclass
     } // end do_regions
     
     *---------------------------------------------------------------------------
-    * 5. Sync Indicators (from hardcoded catalog)
+    * 5. Sync Indicators (from SDMX API - CL_UNICEF_INDICATOR codelist)
     *---------------------------------------------------------------------------
     
     if (`do_indicators') {
     
     if ("`verbose'" != "") {
-        di as text "  📁 Building indicator catalog..."
+        di as text "  📁 Syncing indicator catalog from API..."
     }
     
-    capture {
+    capture noisily {
         _unicefdata_sync_indicators, ///
             outfile("`current_dir'`FILE_INDICATORS'") ///
             version("`metadata_version'") ///
-            agency("`agency'")
+            agency("`agency'") ///
+            `parser_opt'
         local n_indicators = r(count)
         local files_created "`files_created' `FILE_INDICATORS'"
     }
