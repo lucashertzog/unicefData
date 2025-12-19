@@ -1,9 +1,15 @@
 *******************************************************************************
 * _unicef_list_dataflows.ado
-*! v 1.3.0   17Dec2025               by Joao Pedro Azevedo (UNICEF)
+*! v 1.4.0   19Dec2025               by Joao Pedro Azevedo (UNICEF)
 * List available UNICEF SDMX dataflows from YAML metadata
 * Uses yaml.ado for robust YAML parsing
 * Uses Stata frames (v16+) for better isolation when available
+*
+* v1.4.0: MAJOR REWRITE - Direct dataset query instead of yaml get loop
+*         - Much faster: single dataset operations vs N individual lookups
+*         - More robust: avoids frame context/return value issues
+*         - Consistent with _unicef_search_indicators.ado pattern
+* v1.3.0: Initial version using yaml list + yaml get loop
 *******************************************************************************
 
 program define _unicef_list_dataflows, rclass
@@ -55,51 +61,64 @@ program define _unicef_list_dataflows, rclass
         }
         
         *-----------------------------------------------------------------------
-        * Read YAML file using yaml.ado (frames for Stata 16+)
+        * Read YAML and extract dataflows using direct dataset operations
+        * This is MUCH faster than calling yaml get for each dataflow
         *-----------------------------------------------------------------------
         
+        local dataflow_ids ""
+        local n_flows = 0
+        
         if (`use_frames') {
+            *-------------------------------------------------------------------
             * Stata 16+ - use frames for better isolation
-            * Note: yaml.ado prefixes frame names with "yaml_"
-            local yaml_frame_base "_unicef_yaml_temp"
+            *-------------------------------------------------------------------
+            local yaml_frame_base "_unicef_df_temp"
             local yaml_frame "yaml_`yaml_frame_base'"
             capture frame drop `yaml_frame'
             
-            * Read YAML into a frame (yaml.ado will prefix with "yaml_")
+            * Read YAML into a frame (yaml.ado stores as key/value dataset)
             yaml read using "`yaml_file'", frame(`yaml_frame_base')
             
-            * Use the actual frame name (with yaml_ prefix)
+            * Work directly with the dataset in the frame
             frame `yaml_frame' {
-                * Get immediate children under 'dataflows' parent
-                yaml list dataflows, keys children frame(`yaml_frame_base')
-                local dataflow_ids "`r(keys)'"
+                * yaml.ado creates keys like: dataflows_CME_code, dataflows_CME_name, etc.
+                * Keep only code and name rows under dataflows
+                keep if regexm(key, "^dataflows_[A-Za-z0-9_]+_(code|name)$")
                 
-                * Count dataflows
-                local n_flows : word count `dataflow_ids'
+                * Extract dataflow ID and attribute type from key
+                * Key format: dataflows_<DATAFLOW_ID>_<attribute>
+                gen attribute = ""
+                replace attribute = "code" if regexm(key, "_code$")
+                replace attribute = "name" if regexm(key, "_name$")
                 
-                * Now build results dataset
-                clear
-                gen str50 dataflow_id = ""
-                gen str100 name = ""
+                * Extract dataflow ID (between "dataflows_" and "_code/_name")
+                gen df_id = regexs(1) if regexm(key, "^dataflows_(.+)_(code|name)$")
                 
-                local obs = 0
-                foreach id of local dataflow_ids {
-                    local ++obs
-                    set obs `obs'
-                    replace dataflow_id = "`id'" in `obs'
-                    
-                    * Get name attribute for this dataflow
-                    capture yaml get dataflows:`id', attributes(name) quiet frame(`yaml_frame_base')
-                    if (_rc == 0 & "`r(name)'" != "") {
-                        replace name = "`r(name)'" in `obs'
-                    }
-                    else {
-                        replace name = "`id'" in `obs'
-                    }
+                * Reshape to wide: one row per dataflow with code and name columns
+                keep df_id attribute value
+                reshape wide value, i(df_id) j(attribute) string
+                
+                * Rename for clarity
+                capture rename valuecode dataflow_id
+                capture rename valuename name
+                
+                * Handle missing values - use df_id as fallback
+                capture replace dataflow_id = df_id if missing(dataflow_id) | dataflow_id == ""
+                capture replace name = dataflow_id if missing(name) | name == ""
+                
+                * Sort by dataflow_id for consistent output
+                sort dataflow_id
+                
+                * Count dataflows and build ID list
+                local n_flows = _N
+                forvalues i = 1/`n_flows' {
+                    local id = dataflow_id[`i']
+                    local dataflow_ids "`dataflow_ids' `id'"
                 }
                 
-                * Sort
-                sort dataflow_id
+                * Keep only final columns
+                keep dataflow_id name
+                order dataflow_id name
             }
             
             * Copy results to tempfile for display
@@ -110,42 +129,50 @@ program define _unicef_list_dataflows, rclass
             capture frame drop `yaml_frame'
         }
         else {
+            *-------------------------------------------------------------------
             * Stata 14/15 - use preserve/restore
+            *-------------------------------------------------------------------
             preserve
             
-            * Use yaml read command (loads into current dataset)
+            * Read YAML (replaces current dataset)
             yaml read using "`yaml_file'", replace
             
-            * Get immediate children under 'dataflows' parent
-            yaml list dataflows, keys children
-            local dataflow_ids "`r(keys)'"
+            * Keep only code and name rows under dataflows
+            keep if regexm(key, "^dataflows_[A-Za-z0-9_]+_(code|name)$")
             
-            * Count dataflows
-            local n_flows : word count `dataflow_ids'
+            * Extract attribute type from key
+            gen attribute = ""
+            replace attribute = "code" if regexm(key, "_code$")
+            replace attribute = "name" if regexm(key, "_name$")
             
-            * Now build results dataset
-            clear
-            gen str50 dataflow_id = ""
-            gen str100 name = ""
+            * Extract dataflow ID
+            gen df_id = regexs(1) if regexm(key, "^dataflows_(.+)_(code|name)$")
             
-            local obs = 0
-            foreach id of local dataflow_ids {
-                local ++obs
-                set obs `obs'
-                replace dataflow_id = "`id'" in `obs'
-                
-                * Get name attribute for this dataflow
-                capture yaml get dataflows:`id', attributes(name) quiet
-                if (_rc == 0 & "`r(name)'" != "") {
-                    replace name = "`r(name)'" in `obs'
-                }
-                else {
-                    replace name = "`id'" in `obs'
-                }
-            }
+            * Reshape to wide
+            keep df_id attribute value
+            reshape wide value, i(df_id) j(attribute) string
+            
+            * Rename for clarity
+            capture rename valuecode dataflow_id
+            capture rename valuename name
+            
+            * Handle missing values
+            capture replace dataflow_id = df_id if missing(dataflow_id) | dataflow_id == ""
+            capture replace name = dataflow_id if missing(name) | name == ""
             
             * Sort
             sort dataflow_id
+            
+            * Count dataflows and build ID list
+            local n_flows = _N
+            forvalues i = 1/`n_flows' {
+                local id = dataflow_id[`i']
+                local dataflow_ids "`dataflow_ids' `id'"
+            }
+            
+            * Keep only final columns
+            keep dataflow_id name
+            order dataflow_id name
             
             * Store data for display
             tempfile flowdata
@@ -153,6 +180,8 @@ program define _unicef_list_dataflows, rclass
             
             restore
         }
+        
+        local dataflow_ids = strtrim("`dataflow_ids'")
         
     } // end quietly
     
