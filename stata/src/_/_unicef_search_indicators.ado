@@ -119,10 +119,12 @@ program define _unicef_search_indicators, rclass
                 * Create lowercase versions for case-insensitive search
                 gen code_lower = lower(code)
                 gen name_lower = lower(name)
+                gen cat_lower = lower(category)
                 
-                * Search for keyword in code or name
+                * Search for keyword in code, name, or category
                 gen found = (strpos(code_lower, "`keyword_lower'") > 0) | ///
-                            (strpos(name_lower, "`keyword_lower'") > 0)
+                            (strpos(name_lower, "`keyword_lower'") > 0) | ///
+                            (strpos(cat_lower, "`keyword_lower'") > 0)
                 
                 * Apply dataflow filter if specified
                 if ("`dataflow'" != "") {
@@ -198,8 +200,10 @@ program define _unicef_search_indicators, rclass
             * Search
             gen code_lower = lower(code)
             gen name_lower = lower(name)
+            gen cat_lower = lower(category)
             gen found = (strpos(code_lower, "`keyword_lower'") > 0) | ///
-                        (strpos(name_lower, "`keyword_lower'") > 0)
+                        (strpos(name_lower, "`keyword_lower'") > 0) | ///
+                        (strpos(cat_lower, "`keyword_lower'") > 0)
             
             * Apply dataflow filter if specified
             if ("`dataflow'" != "") {
