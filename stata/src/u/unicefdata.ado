@@ -658,6 +658,7 @@ program define unicefdata, rclass
             if ("`indicator'" != "" & "`nofallback'" == "") {
                 noi di as text `"{p 4 4 2}(5) Try specifying a different dataflow().{p_end}"'
             }
+            noi di as text `"{p 4 4 2}(6) {browse "https://github.com/unicef-drp/unicefData/issues/new":Report an issue on GitHub} with a detailed description and, if possible, a log with {bf:set trace on} enabled.{p_end}"'
             exit 677
         }
         
