@@ -19,8 +19,10 @@ Display the dimensions and attributes for a UNICEF dataflow.
 Reads from local YAML schema files in metadata/current/dataflows/.
 }
 \examples{
+\dontrun{
 # Get schema for Child Mortality dataflow
 schema <- dataflow_schema("CME")
 print(schema$dimensions)
 print(schema$attributes)
+}
 }
