@@ -62,6 +62,7 @@ print(head(df))
 * Don't know the indicator code? Search for it!
 unicefdata, categories        // List all categories
 unicefdata, search(mortality)  // Search by keyword
+unicefdata, dataflow(CME)     // Show dataflow schema (dimensions, attributes)
 
 * Fetch under-5 mortality for specific countries
 unicefdata, indicator(CME_MRY0T4) countries(ALB USA BRA) ///
@@ -728,6 +729,7 @@ python tests/report_metadata_status.py --detailed
 | Unified `unicefData()` / `unicefdata` API | ✅ | ✅ | ✅ |
 | **`search_indicators()`** | ✅ | ✅ | ✅ |
 | **`list_categories()`** | ✅ | ✅ | ✅ |
+| **Dataflow schema display** | 🔜 | 🔜 | ✅ |
 | Auto dataflow detection | ✅ | ✅ | ✅ |
 | Filter by country, year, sex | ✅ | ✅ | ✅ |
 | Unified `year` parameter | ✅ | ✅ | ✅ |

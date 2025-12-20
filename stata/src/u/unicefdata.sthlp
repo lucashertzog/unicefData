@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.5.0  20Dec2025}{...}
+{* *! version 1.5.1  20Dec2025}{...}
 {vieweralsosee "[R] import delimited" "help import delimited"}{...}
 {vieweralsosee "" "--"}{...}
 {vieweralsosee "unicefdata_sync" "help unicefdata_sync"}{...}
@@ -37,10 +37,16 @@
 
 {marker discovery}{...}
 {pstd}
-{ul:Discovery Commands} {it:(New in v1.3.0)}
+{ul:Discovery Commands} {it:(New in v1.3.0, enhanced v1.5.1)}
 
 {p 8 16 2}
 {cmd:unicefdata, flows} [{opt detail} {opt verbose}]
+
+{p 8 16 2}
+{cmd:unicefdata, dataflows} - alias for flows
+
+{p 8 16 2}
+{cmd:unicefdata, dataflow(}{it:dataflow}{cmd:)} - show dataflow schema {it:(v1.5.1)}
 
 {p 8 16 2}
 {cmd:unicefdata, search(}{it:keyword}{cmd:)} [{opt limit(#)}]
@@ -64,6 +70,8 @@
 
 {syntab:Discovery (v1.3.0)}
 {synopt:{opt flows}}list available UNICEF SDMX dataflows{p_end}
+{synopt:{opt dataflows}}alias for flows{p_end}
+{synopt:{opt dataflow(string)}}show dataflow schema (dimensions, attributes) {it:(v1.5.1)}{p_end}
 {synopt:{opt search(string)}}search indicators by keyword{p_end}
 {synopt:{opt indicators(string)}}list indicators in a specific dataflow{p_end}
 {synopt:{opt info(string)}}display detailed info for an indicator{p_end}
@@ -238,7 +246,15 @@ is shown indicating the requested value was not found.
 
 {phang}
 {opt flows} lists all available UNICEF SDMX dataflows. Use {opt detail} for 
-extended information and {opt verbose} for metadata path.
+extended information and {opt verbose} for metadata path. {opt dataflows} is 
+an alias for {opt flows}.
+{p_end}
+
+{phang}
+{opt dataflow(string)} {it:(v1.5.1)} displays the schema for a specific dataflow,
+including its dimensions (REF_AREA, INDICATOR, SEX, etc.) and attributes
+(DATA_SOURCE, OBS_STATUS, etc.). This helps understand the structure of
+the data and which filter options are available.
 {p_end}
 
 {phang}
@@ -343,6 +359,14 @@ List available dataflows:{p_end}
 {pstd}
 List dataflows with names:{p_end}
 {p 8 12}{stata "unicefdata, flows detail" :. unicefdata, flows detail}{p_end}
+
+{pstd}
+Show dataflow schema (dimensions and attributes):{p_end}
+{p 8 12}{stata "unicefdata, dataflow(EDUCATION)" :. unicefdata, dataflow(EDUCATION)}{p_end}
+
+{pstd}
+Show CME dataflow schema:{p_end}
+{p 8 12}{stata "unicefdata, dataflow(CME)" :. unicefdata, dataflow(CME)}{p_end}
 
 {pstd}
 List all indicator categories with counts:{p_end}
