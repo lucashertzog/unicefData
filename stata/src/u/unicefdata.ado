@@ -1,6 +1,6 @@
 *******************************************************************************
 * unicefdata
-*! v 1.4.0   17Dec2025               by Joao Pedro Azevedo (UNICEF)
+*! v 1.5.0   19Dec2025               by Joao Pedro Azevedo (UNICEF)
 * Download indicators from UNICEF Data Warehouse via SDMX API
 * Aligned with R get_unicef() and Python unicef_api
 * Uses YAML metadata for dataflow detection and validation
@@ -201,6 +201,18 @@ program define unicefdata, rclass
         
         if ("`sex'" == "") {
             local sex "_T"
+        }
+        if ("`age'" == "") {
+            local age "_T"
+        }
+        if ("`wealth'" == "") {
+            local wealth "_T"
+        }
+        if ("`residence'" == "") {
+            local residence "_T"
+        }
+        if ("`maternal_edu'" == "") {
+            local maternal_edu "_T"
         }
         
         if ("`version'" == "") {
@@ -802,25 +814,56 @@ program define unicefdata, rclass
                 }
             }
             
+            * Check maternal education disaggregation
+            capture confirm variable matedu
+            if (_rc == 0) {
+                quietly levelsof matedu, local(matedu_vals) clean
+                local n_matedu : word count `matedu_vals'
+                if (`n_matedu' > 1) {
+                    local avail_disagg "`avail_disagg'maternal_edu: `matedu_vals'; "
+                }
+            }
+            
             * Show note if disaggregations are available
             if ("`avail_disagg'" != "") {
                 noi di as text "Note: Disaggregated data available: " as result "`avail_disagg'"
                 
-                * Show applied filters
+                * Show applied filters (only for dimensions present in data)
                 local applied_filters ""
-                if ("`sex'" != "" & "`sex'" != "ALL") {
-                    local is_default = cond("`sex'" == "_T", " (Default)", "")
-                    local applied_filters "`applied_filters'sex: `sex'`is_default'; "
+                capture confirm variable sex
+                if (_rc == 0) {
+                    if ("`sex'" != "" & "`sex'" != "ALL") {
+                        local is_default = cond("`sex'" == "_T", " (Default)", "")
+                        local applied_filters "`applied_filters'sex: `sex'`is_default'; "
+                    }
                 }
-                if ("`wealth'" != "" & "`wealth'" != "ALL") {
-                    local is_default = cond("`wealth'" == "_T", " (Default)", "")
-                    local applied_filters "`applied_filters'wealth_quintile: `wealth'`is_default'; "
+                capture confirm variable wealth
+                if (_rc == 0) {
+                    if ("`wealth'" != "" & "`wealth'" != "ALL") {
+                        local is_default = cond("`wealth'" == "_T", " (Default)", "")
+                        local applied_filters "`applied_filters'wealth_quintile: `wealth'`is_default'; "
+                    }
                 }
-                if ("`age'" != "" & "`age'" != "ALL") {
-                    local applied_filters "`applied_filters'age: `age'; "
+                capture confirm variable age
+                if (_rc == 0) {
+                    if ("`age'" != "" & "`age'" != "ALL") {
+                        local is_default = cond("`age'" == "_T", " (Default)", "")
+                        local applied_filters "`applied_filters'age: `age'`is_default'; "
+                    }
                 }
-                if ("`residence'" != "" & "`residence'" != "ALL") {
-                    local applied_filters "`applied_filters'residence: `residence'; "
+                capture confirm variable residence
+                if (_rc == 0) {
+                    if ("`residence'" != "" & "`residence'" != "ALL") {
+                        local is_default = cond("`residence'" == "_T", " (Default)", "")
+                        local applied_filters "`applied_filters'residence: `residence'`is_default'; "
+                    }
+                }
+                capture confirm variable matedu
+                if (_rc == 0) {
+                    if ("`maternal_edu'" != "" & "`maternal_edu'" != "ALL") {
+                        local is_default = cond("`maternal_edu'" == "_T", " (Default)", "")
+                        local applied_filters "`applied_filters'maternal_edu: `maternal_edu'`is_default'; "
+                    }
                 }
                 
                 if ("`applied_filters'" != "") {
@@ -832,7 +875,14 @@ program define unicefdata, rclass
             if ("`sex'" != "" & "`sex'" != "ALL") {
                 capture confirm variable sex
                 if (_rc == 0) {
-                    keep if sex == "`sex'"
+                    quietly count if sex == "`sex'"
+                    local sex_keep = r(N)
+                    if (`sex_keep' > 0) {
+                        keep if sex == "`sex'"
+                    }
+                    else if ("`verbose'" != "") {
+                        noi di as text "  sex filter: value `sex' not found; keeping all"
+                    }
                 }
             }
             
@@ -840,7 +890,14 @@ program define unicefdata, rclass
             if ("`age'" != "" & "`age'" != "ALL") {
                 capture confirm variable age
                 if (_rc == 0) {
-                    keep if age == "`age'"
+                    quietly count if age == "`age'"
+                    local age_keep = r(N)
+                    if (`age_keep' > 0) {
+                        keep if age == "`age'"
+                    }
+                    else if ("`verbose'" != "") {
+                        noi di as text "  age filter: value `age' not found; keeping all"
+                    }
                 }
             }
             
@@ -848,7 +905,14 @@ program define unicefdata, rclass
             if ("`wealth'" != "" & "`wealth'" != "ALL") {
                 capture confirm variable wealth
                 if (_rc == 0) {
-                    keep if wealth == "`wealth'"
+                    quietly count if wealth == "`wealth'"
+                    local wealth_keep = r(N)
+                    if (`wealth_keep' > 0) {
+                        keep if wealth == "`wealth'"
+                    }
+                    else if ("`verbose'" != "") {
+                        noi di as text "  wealth filter: value `wealth' not found; keeping all"
+                    }
                 }
             }
             
@@ -856,7 +920,14 @@ program define unicefdata, rclass
             if ("`residence'" != "" & "`residence'" != "ALL") {
                 capture confirm variable residence
                 if (_rc == 0) {
-                    keep if residence == "`residence'"
+                    quietly count if residence == "`residence'"
+                    local residence_keep = r(N)
+                    if (`residence_keep' > 0) {
+                        keep if residence == "`residence'"
+                    }
+                    else if ("`verbose'" != "") {
+                        noi di as text "  residence filter: value `residence' not found; keeping all"
+                    }
                 }
             }
             
@@ -864,7 +935,14 @@ program define unicefdata, rclass
             if ("`maternal_edu'" != "" & "`maternal_edu'" != "ALL") {
                 capture confirm variable matedu
                 if (_rc == 0) {
-                    keep if matedu == "`maternal_edu'"
+                    quietly count if matedu == "`maternal_edu'"
+                    local matedu_keep = r(N)
+                    if (`matedu_keep' > 0) {
+                        keep if matedu == "`maternal_edu'"
+                    }
+                    else if ("`verbose'" != "") {
+                        noi di as text "  maternal_edu filter: value `maternal_edu' not found; keeping all"
+                    }
                 }
             }
             
