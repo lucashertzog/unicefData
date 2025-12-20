@@ -179,7 +179,7 @@ list_categories()
 list_categories()
 ```
 
-**Output (current, 2025-12-19):**
+**Output (current, 2025-12-20):**
 ```
 ==================================================
   Available Indicator Categories
@@ -187,25 +187,28 @@ list_categories()
 
   CATEGORY                       COUNT
 --------------------------------------------------
-  GLOBAL_DATAFLOW                  183
   NUTRITION                        112
+  CAUSE_OF_DEATH                    83
+  CHILD_RELATED_SDG                 77
   WASH_HOUSEHOLDS                   57
+  PT                                43
   CHLD_PVTY                         43
-  PT                                42
-  EDUCATION                         41
   CME                               39
+  EDUCATION                         38
   HIV_AIDS                          38
   MNCH                              38
   DM                                26
   MIGRATION                         26
   IMMUNISATION                      18
+  EDUCATION_UIS_SDG                 16
   GENDER                            16
   ECON                              13
-  EDUCATION_UIS_SDG                 13
   FUNCTIONAL_DIFF                   12
+  SOC_PROTECTION                    10
   ECD                                8
+  PT_CM                              8
+  GLOBAL_DATAFLOW                    6
   PT_FGM                             6
-  PT_CM                              2
 --------------------------------------------------
   TOTAL                            733
 
@@ -493,25 +496,28 @@ No parameters. Displays all available categories with indicator counts.
 
 | Category | Count | Description |
 |----------|-------|-------------|
-| `GLOBAL_DATAFLOW` | 183 | General indicators |
 | `NUTRITION` | 112 | Nutrition (stunting, wasting, etc.) |
+| `CAUSE_OF_DEATH` | 83 | Causes of death |
+| `CHILD_RELATED_SDG` | 77 | SDG targets and goals |
 | `WASH_HOUSEHOLDS` | 57 | Water and Sanitation |
+| `PT` | 43 | Child Protection |
 | `CHLD_PVTY` | 43 | Child Poverty |
-| `PT` | 42 | Child Protection |
-| `EDUCATION` | 41 | Education indicators |
 | `CME` | 39 | Child Mortality Estimates |
+| `EDUCATION` | 38 | Education indicators |
 | `HIV_AIDS` | 38 | HIV/AIDS indicators |
 | `MNCH` | 38 | Maternal and Child Health |
 | `DM` | 26 | Demographics |
 | `MIGRATION` | 26 | Migration |
 | `IMMUNISATION` | 18 | Immunization coverage |
+| `EDUCATION_UIS_SDG` | 16 | UNESCO Education SDG indicators |
 | `GENDER` | 16 | Gender indicators |
 | `ECON` | 13 | Economic indicators |
-| `EDUCATION_UIS_SDG` | 13 | UNESCO Education SDG indicators |
 | `FUNCTIONAL_DIFF` | 12 | Functional difficulties |
+| `SOC_PROTECTION` | 10 | Social protection programs |
 | `ECD` | 8 | Early Childhood Development |
+| `PT_CM` | 8 | Child Marriage |
+| `GLOBAL_DATAFLOW` | 6 | General/uncategorized indicators |
 | `PT_FGM` | 6 | Female Genital Mutilation |
-| `PT_CM` | 2 | Child Marriage |
 
 Use `list_categories()` for the complete list.
 
