@@ -258,7 +258,16 @@ program define _unicef_search_indicators, rclass
     else {
         noi di as text "Search Results for: " as result "`keyword'"
     }
-    noi di as text "{hline 70}"
+    
+    * Dynamic column widths based on screen size
+    local linesize = c(linesize)
+    local col_ind = 2
+    local col_df = 28
+    local col_name = 48
+    local name_width = `linesize' - `col_name' - 2
+    if (`name_width' < 20) local name_width = 20
+    
+    noi di as text "{hline `linesize'}"
     noi di ""
     
     if (`n_matches' == 0) {
@@ -275,7 +284,7 @@ program define _unicef_search_indicators, rclass
         noi di as text "  - Use {bf:unicefdata, search(keyword)} without dataflow filter"
     }
     else {
-        noi di as text _col(2) "{ul:Indicator}" _col(28) "{ul:Dataflow}" _col(48) "{ul:Name}"
+        noi di as text _col(`col_ind') "{ul:Indicator}" _col(`col_df') "{ul:Dataflow}" _col(`col_name') "{ul:Name}"
         noi di ""
         
         forvalues i = 1/`n_matches' {
@@ -283,17 +292,17 @@ program define _unicef_search_indicators, rclass
             local df : word `i' of `match_dataflows'
             local nm : word `i' of `match_names'
             
-            * Truncate name if too long
-            if (length("`nm'") > 25) {
-                local nm = substr("`nm'", 1, 22) + "..."
+            * Truncate name based on available width
+            if (length("`nm'") > `name_width') {
+                local nm = substr("`nm'", 1, `name_width' - 3) + "..."
             }
             
             * Make indicator and dataflow clickable
             if ("`df'" != "" & "`df'" != "N/A") {
-                noi di as text _col(2) "{stata unicefdata, indicator(`ind') dataflow(`df') clear:`ind'}" as text _col(28) "{stata unicefdata, indicators(`df'):`df'}" _col(48) "`nm'"
+                noi di as text _col(`col_ind') "{stata unicefdata, indicator(`ind') dataflow(`df') clear:`ind'}" as text _col(`col_df') "{stata unicefdata, indicators(`df'):`df'}" _col(`col_name') "`nm'"
             }
             else {
-                noi di as text _col(2) "{stata unicefdata, indicator(`ind') clear:`ind'}" as text _col(28) "`df'" _col(48) "`nm'"
+                noi di as text _col(`col_ind') "{stata unicefdata, indicator(`ind') clear:`ind'}" as text _col(`col_df') "`df'" _col(`col_name') "`nm'"
             }
         }
         
@@ -304,9 +313,9 @@ program define _unicef_search_indicators, rclass
     }
     
     noi di ""
-    noi di as text "{hline 70}"
+    noi di as text "{hline `linesize'}"
     noi di as text "Found: " as result `n_matches' as text " indicator(s)"
-    noi di as text "{hline 70}"
+    noi di as text "{hline `linesize'}"
     
     *---------------------------------------------------------------------------
     * Return values

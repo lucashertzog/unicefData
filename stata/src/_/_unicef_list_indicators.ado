@@ -144,10 +144,17 @@ program define _unicef_list_indicators, rclass
     * Display results
     *---------------------------------------------------------------------------
     
+    * Dynamic column widths based on screen size
+    local linesize = c(linesize)
+    local col_ind = 2
+    local col_name = 27
+    local name_width = `linesize' - `col_name' - 2
+    if (`name_width' < 30) local name_width = 30
+    
     noi di ""
-    noi di as text "{hline 70}"
+    noi di as text "{hline `linesize'}"
     noi di as text "Indicators in Dataflow: " as result "`dataflow_upper'"
-    noi di as text "{hline 70}"
+    noi di as text "{hline `linesize'}"
     noi di ""
     
     if (`n_matches' == 0) {
@@ -155,26 +162,26 @@ program define _unicef_list_indicators, rclass
         noi di as text "  Use {stata unicefdata, flows:unicefdata, flows} to see available dataflows."
     }
     else {
-        noi di as text _col(2) "{ul:Indicator}" _col(25) "{ul:Name}"
+        noi di as text _col(`col_ind') "{ul:Indicator}" _col(`col_name') "{ul:Name}"
         noi di ""
         
         forvalues i = 1/`n_matches' {
             local ind : word `i' of `matches'
             local nm : word `i' of `match_names'
             
-            * Truncate name if too long
-            if (length("`nm'") > 45) {
-                local nm = substr("`nm'", 1, 42) + "..."
+            * Truncate name based on available width
+            if (length("`nm'") > `name_width') {
+                local nm = substr("`nm'", 1, `name_width' - 3) + "..."
             }
             
-            noi di as text _col(2) "{stata unicefdata, indicator(`ind') dataflow(`dataflow_upper') clear:`ind'}" as text _col(25) "`nm'"
+            noi di as text _col(`col_ind') "{stata unicefdata, indicator(`ind') dataflow(`dataflow_upper') clear:`ind'}" as text _col(`col_name') "`nm'"
         }
     }
     
     noi di ""
-    noi di as text "{hline 70}"
+    noi di as text "{hline `linesize'}"
     noi di as text "Total: " as result `n_matches' as text " indicator(s) in `dataflow_upper'"
-    noi di as text "{hline 70}"
+    noi di as text "{hline `linesize'}"
     
     *---------------------------------------------------------------------------
     * Return values
