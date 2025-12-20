@@ -801,6 +801,13 @@ unicefData/
 
 ---
 
+## Author
+
+**Joao Pedro Azevedo** ([@jpazvd](https://github.com/jpazvd))  
+Chief Statistician, UNICEF Data and Analytics Section
+
+---
+
 ## Links
 
 - UNICEF Data Portal: <https://data.unicef.org/>
