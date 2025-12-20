@@ -17,6 +17,7 @@ The **unicefData** repository provides consistent APIs in both R and Python:
 | **Search indicators** | `search_indicators()` | `search_indicators()` |
 | **List categories** | `list_categories()` | `list_categories()` |
 | **Auto dataflow detection** | ✅ | ✅ |
+| **Dataflow schema** | `dataflow_schema()` | `dataflow_schema()` |
 | List dataflows | `list_dataflows()` | `list_dataflows()` |
 | 733 indicators | ✅ | ✅ |
 | Automatic retries | ✅ | ✅ |
@@ -120,6 +121,20 @@ search_indicators("mortality")
 
 # List all available categories
 list_categories()
+```
+
+### Dataflow Schema
+
+View the dimensions and attributes available for a dataflow:
+
+```r
+# Get schema for Child Mortality dataflow
+schema <- dataflow_schema("CME")
+print(schema)
+
+# Access components
+schema$dimensions  # REF_AREA, INDICATOR, SEX, WEALTH_QUINTILE
+schema$attributes  # DATA_SOURCE, COUNTRY_NOTES, REF_PERIOD, ...
 ```
 
 ## 📂 Directory Structure
