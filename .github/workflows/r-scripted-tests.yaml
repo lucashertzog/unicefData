@@ -33,6 +33,7 @@ jobs:
 
       - name: Run scripted tests
         env:
+          CI: true
           UNICEF_API_TIMEOUT: 30
         run: |
-          Rscript -e "source('R/utils.R'); source('R/aliases_devtests.R'); source('R/tests/run_tests.R')"
+          Rscript -e "setwd('.'); source('R/tests/run_tests.R')"
