@@ -111,11 +111,10 @@ def parse_code(element: ET.Element, include_category: bool = False, codelist_id:
         'description': escape_yaml_string(get_text(element, 'com:Description', NAMESPACES))
     }
     
-    # Add category for indicators - map prefix to dataflow name
-    # Aligned with Python/R indicator_registry.py prefix mappings
+    # Add category for indicators - use full code for dynamic pattern matching
+    # Aligned with Python/R indicator_registry.py mappings
     if include_category and code_id:
-        prefix = code_id.split('_')[0] if '_' in code_id else code_id
-        result['category'] = _map_prefix_to_dataflow(prefix)
+        result['category'] = _map_prefix_to_dataflow(code_id)
         
         # Add URN for indicators
         if codelist_id:
@@ -154,8 +153,33 @@ PREFIX_TO_DATAFLOW = {
 }
 
 
-def _map_prefix_to_dataflow(prefix: str) -> str:
-    """Map an indicator code prefix to its SDMX dataflow name."""
+def _map_prefix_to_dataflow(indicator_code: str) -> str:
+    """Map an indicator code to its SDMX dataflow name.
+    
+    Uses dynamic pattern matching for sub-dataflows (FGM, CM, UIS)
+    before falling back to prefix-based mapping.
+    """
+    # =========================================================================
+    # DYNAMIC PATTERN-BASED OVERRIDES
+    # =========================================================================
+    # These patterns catch indicators that belong to specific sub-dataflows
+    # based on content in their code, not just the prefix.
+    # =========================================================================
+    
+    # FGM indicators: PT_*_FGM* -> PT_FGM
+    if indicator_code.startswith('PT_') and '_FGM' in indicator_code:
+        return 'PT_FGM'
+    
+    # Child Marriage indicators: PT_*_MRD_* -> PT_CM
+    if indicator_code.startswith('PT_') and '_MRD_' in indicator_code:
+        return 'PT_CM'
+    
+    # UIS SDG Education indicators: ED_*_UIS* -> EDUCATION_UIS_SDG
+    if indicator_code.startswith('ED_') and '_UIS' in indicator_code:
+        return 'EDUCATION_UIS_SDG'
+    
+    # Fall back to prefix-based mapping
+    prefix = indicator_code.split('_')[0] if '_' in indicator_code else indicator_code
     return PREFIX_TO_DATAFLOW.get(prefix, 'GLOBAL_DATAFLOW')
 
 

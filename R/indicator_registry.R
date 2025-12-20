@@ -149,6 +149,31 @@ CACHE_MAX_AGE_DAYS <- 30
     return(indicator_overrides[[indicator_code]])
   }
   
+
+  # ===========================================================================
+  # DYNAMIC PATTERN-BASED OVERRIDES
+  # ===========================================================================
+  # These patterns catch indicators that belong to specific sub-dataflows
+
+  # based on content in their code, not just the prefix.
+  # More maintainable than hardcoding each indicator.
+  # ===========================================================================
+  
+  # FGM indicators: PT_*_FGM* -> PT_FGM
+  if (startsWith(indicator_code, "PT_") && grepl("_FGM", indicator_code)) {
+    return("PT_FGM")
+  }
+  
+  # Child Marriage indicators: PT_*_MRD_* -> PT_CM
+  if (startsWith(indicator_code, "PT_") && grepl("_MRD_", indicator_code)) {
+    return("PT_CM")
+  }
+  
+  # UIS SDG Education indicators: ED_*_UIS* -> EDUCATION_UIS_SDG
+  if (startsWith(indicator_code, "ED_") && grepl("_UIS", indicator_code)) {
+    return("EDUCATION_UIS_SDG")
+  }
+  
   # Mapping of prefixes to dataflows
   prefix_map <- list(
     CME = "CME",

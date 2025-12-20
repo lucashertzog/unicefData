@@ -199,6 +199,26 @@ def _infer_category(indicator_code: str) -> str:
     if indicator_code in INDICATOR_DATAFLOW_OVERRIDES:
         return INDICATOR_DATAFLOW_OVERRIDES[indicator_code]
     
+    # =========================================================================
+    # DYNAMIC PATTERN-BASED OVERRIDES
+    # =========================================================================
+    # These patterns catch indicators that belong to specific sub-dataflows
+    # based on content in their code, not just the prefix.
+    # More maintainable than hardcoding each indicator.
+    # =========================================================================
+    
+    # FGM indicators: PT_*_FGM* -> PT_FGM
+    if indicator_code.startswith('PT_') and '_FGM' in indicator_code:
+        return 'PT_FGM'
+    
+    # Child Marriage indicators: PT_*_MRD_* -> PT_CM
+    if indicator_code.startswith('PT_') and '_MRD_' in indicator_code:
+        return 'PT_CM'
+    
+    # UIS SDG Education indicators: ED_*_UIS* -> EDUCATION_UIS_SDG
+    if indicator_code.startswith('ED_') and '_UIS' in indicator_code:
+        return 'EDUCATION_UIS_SDG'
+    
     # Mapping of prefixes to dataflows
     PREFIX_TO_DATAFLOW = {
         'CME': 'CME',
