@@ -1178,7 +1178,7 @@ end
 
 *******************************************************************************
 * Extended Sync: Dataflow Index with dimension/attribute counts
-* Generates _dataflow_index.yaml and dataflows/*.yaml matching Python/R format
+* Generates _dataflow_index.yaml and _dataflows_{ID}.yaml files
 * 
 * Uses Python helper (stata_schema_sync.py) when forcepython is specified
 * to avoid Stata's macro length limitations on large XML responses.
@@ -1382,14 +1382,9 @@ program define _unicefdata_sync_dataflow_index, rclass
         file close `infh'
     }
     
-    * Create dataflows subdirectory (with suffix if provided)
-    if ("`sfx'" != "") {
-        local dataflows_dir "`outdir'dataflows`sfx'/"
-    }
-    else {
-        local dataflows_dir "`outdir'dataflows/"
-    }
-    capture mkdir "`dataflows_dir'"
+    * Individual dataflow schema files will be created with flat naming:
+    * _dataflows_{DATAFLOW_ID}.yaml
+    local dataflows_prefix "`outdir'_dataflows_"
     
     * Open index file
     local index_file "`outdir'_dataflow_index`sfx'.yaml"
@@ -1456,15 +1451,19 @@ program define _unicefdata_sync_dataflow_index, rclass
             file write `fh' "  dimensions_count: `n_dims'" _n
             file write `fh' "  attributes_count: `n_attrs'" _n
             
-            * Write individual dataflow schema file
+            * Write individual dataflow schema file (flat naming: _dataflows_{ID}.yaml)
             _unicefdata_sync_df_schema, ///
                 dsdxml("`dsd_xml'") ///
-                outfile("`dataflows_dir'`df_id'.yaml") ///
+                outfile("`dataflows_prefix'`df_id'.yaml") ///
                 dfid("`df_id'") ///
                 dfname("`df_name'") ///
                 dfver("`df_ver'") ///
                 agency("`agency'") ///
                 syncedat("`synced_at'")
+            
+            if ("`verbose'" != "") {
+                di as text "       ✓ _dataflows_`df_id'.yaml"
+            }
             
             local success_count = `success_count' + 1
         }

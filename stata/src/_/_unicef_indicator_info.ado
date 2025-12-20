@@ -165,11 +165,16 @@ program define _unicef_indicator_info, rclass
         local has_maternal_edu = 0
         
         if ("`ind_category'" != "" & "`ind_category'" != ".") {
-            * Try to find dataflow schema file
-            local schema_file "`metapath'../metadata/current/dataflows/`ind_category'.yaml"
+            * Try to find dataflow schema file (flat naming: _dataflows_{DATAFLOW}.yaml)
+            local schema_file "`metapath'_dataflows_`ind_category'.yaml"
             capture confirm file "`schema_file'"
             if (_rc != 0) {
-                * Try alternative path
+                * Try repo path (development)
+                local schema_file "`metapath'../metadata/current/dataflows/`ind_category'.yaml"
+                capture confirm file "`schema_file'"
+            }
+            if (_rc != 0) {
+                * Try alternative repo path
                 local schema_file "`metapath'../../metadata/current/dataflows/`ind_category'.yaml"
                 capture confirm file "`schema_file'"
             }

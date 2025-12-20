@@ -189,14 +189,9 @@ program define _unicefdata_sync_dataflow_index, rclass
         file close `infh'
     }
     
-    * Create dataflows subdirectory (with suffix if provided)
-    if ("`sfx'" != "") {
-        local dataflows_dir "`outdir'dataflows`sfx'/"
-    }
-    else {
-        local dataflows_dir "`outdir'dataflows/"
-    }
-    capture mkdir "`dataflows_dir'"
+    * Individual dataflow schema files will be created in same directory
+    * with naming: _dataflows_{DATAFLOW_ID}.yaml
+    local dataflows_prefix "`outdir'_dataflows_"
     
     * Open index file
     local index_file "`outdir'dataflow_index`sfx'.yaml"
@@ -263,10 +258,10 @@ program define _unicefdata_sync_dataflow_index, rclass
             file write `fh' "  dimensions_count: `n_dims'" _n
             file write `fh' "  attributes_count: `n_attrs'" _n
             
-            * Write individual dataflow schema file
+            * Write individual dataflow schema file (flat naming: _dataflows_{ID}.yaml)
             _unicefdata_sync_df_schema, ///
                 dsdxml("`dsd_xml'") ///
-                outfile("`dataflows_dir'`df_id'.yaml") ///
+                outfile("`dataflows_prefix'`df_id'.yaml") ///
                 dfid("`df_id'") ///
                 dfname("`df_name'") ///
                 dfver("`df_ver'") ///

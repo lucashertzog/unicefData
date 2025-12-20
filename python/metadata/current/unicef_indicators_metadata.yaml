@@ -2,7 +2,7 @@ metadata:
   version: '1.0'
   source: UNICEF SDMX Codelist CL_UNICEF_INDICATOR
   url: https://sdmx.data.unicef.org/ws/public/sdmxapi/rest/codelist/UNICEF/CL_UNICEF_INDICATOR/1.0
-  last_updated: '2025-12-20T00:04:45.283722'
+  last_updated: '2025-12-20T00:16:03.577667'
   description: Comprehensive UNICEF indicator codelist with metadata (auto-generated)
   indicator_count: 733
 indicators:
@@ -2813,7 +2813,7 @@ indicators:
     name: Percentage of adolescent girls aged 15 to 17 years who are currently married or in union, by schooling status
     description: ''
     urn: urn:sdmx:org.sdmx.infomodel.codelist.Code=UNICEF:CL_UNICEF_INDICATOR(1.0).PT_CM_MRD_SCHOOL
-    category: PT
+    category: PT_CM
   PT_CM_NM_SCHOOL:
     code: PT_CM_NM_SCHOOL
     name: Percentage of adolescent girls aged 15 to 17 years who were never married or in union, by schooling status
@@ -2891,25 +2891,25 @@ indicators:
     name: Projected percentage of women aged 20 to 24 years who were first married or in union before age 15
     description: ''
     urn: urn:sdmx:org.sdmx.infomodel.codelist.Code=UNICEF:CL_UNICEF_INDICATOR(1.0).PT_F_20-24_MRD_U15_PRJ
-    category: PT
+    category: PT_CM
   PT_F_20-24_MRD_U15_TND:
     code: PT_F_20-24_MRD_U15_TND
     name: Percentage of women aged 20 to 24 years who were first married or in union before age 15 (UNICEF analysis, trend)
     description: ''
     urn: urn:sdmx:org.sdmx.infomodel.codelist.Code=UNICEF:CL_UNICEF_INDICATOR(1.0).PT_F_20-24_MRD_U15_TND
-    category: PT
+    category: PT_CM
   PT_F_20-24_MRD_U18:
     code: PT_F_20-24_MRD_U18
     name: Percentage of women (aged 20-24 years) married or in union before age 18
     description: Percentage of women (aged 20-24 years) married or in union before age 18
     urn: urn:sdmx:org.sdmx.infomodel.codelist.Code=UNICEF:CL_UNICEF_INDICATOR(1.0).PT_F_20-24_MRD_U18
-    category: PT
+    category: PT_CM
   PT_F_20-24_MRD_U18_PRJ:
     code: PT_F_20-24_MRD_U18_PRJ
     name: Projected percentage of women aged 20 to 24 years who were first married or in union before age 18
     description: ''
     urn: urn:sdmx:org.sdmx.infomodel.codelist.Code=UNICEF:CL_UNICEF_INDICATOR(1.0).PT_F_20-24_MRD_U18_PRJ
-    category: PT
+    category: PT_CM
   PT_F_20-24_MRD_U18_TND:
     code: PT_F_20-24_MRD_U18_TND
     name: Percentage of women aged 20 to 24 years who were first married or in union before age 18 (UNICEF analysis, trend)
@@ -2981,7 +2981,7 @@ indicators:
     name: Percentage of men (aged 20-24 years) married or in union before age 18
     description: Percentage of men (aged 20-24 years) married or in union before age 18
     urn: urn:sdmx:org.sdmx.infomodel.codelist.Code=UNICEF:CL_UNICEF_INDICATOR(1.0).PT_M_20-24_MRD_U18
-    category: PT
+    category: PT_CM
   PT_ST_13-15_BUL_30-DYS:
     code: PT_ST_13-15_BUL_30-DYS
     name: Percentage of students (aged 13-15 years) who reported being bullied on 1 or more days in the past 30 days
@@ -4271,7 +4271,7 @@ indicators:
     name: Out-of-school rate for youth of upper secondary school age (Modeled)
     description: ''
     urn: urn:sdmx:org.sdmx.infomodel.codelist.Code=UNICEF:CL_UNICEF_INDICATOR(1.0).ED_ROFST_L3_UIS
-    category: EDUCATION
+    category: EDUCATION_UIS_SDG
   ED_SE_LPV_PRIM:
     code: ED_SE_LPV_PRIM
     name: Learning Poverty Rate
@@ -4283,13 +4283,13 @@ indicators:
     name: Out-of-school rate for children of primary school age (Modeled)
     description: ''
     urn: urn:sdmx:org.sdmx.infomodel.codelist.Code=UNICEF:CL_UNICEF_INDICATOR(1.0).ED_ROFST_L1_UIS
-    category: EDUCATION
+    category: EDUCATION_UIS_SDG
   ED_ROFST_L2_UIS:
     code: ED_ROFST_L2_UIS
     name: Out-of-school rate for adolescents of lower secondary school age (Modeled)
     description: ''
     urn: urn:sdmx:org.sdmx.infomodel.codelist.Code=UNICEF:CL_UNICEF_INDICATOR(1.0).ED_ROFST_L2_UIS
-    category: EDUCATION
+    category: EDUCATION_UIS_SDG
   ED_ANAR_L01:
     code: ED_ANAR_L01
     name: Net enrolment rate, early childhood education
