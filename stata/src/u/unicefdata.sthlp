@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.3.0  09Dec2025}{...}
+{* *! version 1.5.0  19Dec2025}{...}
 {vieweralsosee "[R] import delimited" "help import delimited"}{...}
 {vieweralsosee "" "--"}{...}
 {vieweralsosee "unicefdata_sync" "help unicefdata_sync"}{...}
@@ -215,6 +215,16 @@ Example: {cmd:year(2015), circa} might return 2014 data for Country A and
 {phang}
 {opt age(string)}, {opt wealth(string)}, {opt residence(string)}, and 
 {opt maternal_edu(string)} provide additional disaggregation filters.
+
+{pstd}
+{it:Default behavior:} If you omit a disaggregation option, {cmd:unicefdata} defaults
+to totals ({cmd:_T}) for sex, age, wealth, residence, and maternal_edu. Specify
+{cmd:ALL} to keep all available categories instead of the total-only default.
+
+{pstd}
+{it:Missing filter values:} If you request a disaggregation value that is not present
+in the data, {cmd:unicefdata} leaves the dataset unchanged. With {opt verbose}, a note
+is shown indicating the requested value was not found.
 
 {dlgtab:Discovery Commands (v1.3.0)}
 

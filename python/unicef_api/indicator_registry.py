@@ -50,28 +50,35 @@ CACHE_MAX_AGE_DAYS = 30  # Refresh cache if older than this
 def _get_cache_path() -> Path:
     """Get path to the indicator cache file.
     
-    Saves to Python-specific metadata directory:
-    1. python/metadata/current/ (relative to package)
-    2. Fallback: User's home directory (~/.unicef_api/)
+    Resolution order (non-dev friendly):
+    1. Env override: UNICEF_DATA_HOME/metadata/current
+    2. Repo/dev path: python/metadata/current/
+    3. Cross-language user cache: ~/.unicef_data/metadata/current
+    4. Fallback: ~/.unicef_api
     
     Returns:
         Path to cache file
     """
-    # Primary location: python/metadata/current/ directory
+    # 1. Environment overrides (prefer Python-specific, then unified)
+    env_home_py = os.getenv("UNICEF_DATA_HOME_PY", "").strip()
+    env_home = env_home_py or os.getenv("UNICEF_DATA_HOME", "").strip()
+    if env_home:
+        metadata_dir = Path(env_home) / "metadata" / "current"
+        metadata_dir.mkdir(parents=True, exist_ok=True)
+        return metadata_dir / CACHE_FILENAME
+
+    # 2. Repo/dev path (when working in source tree)
     package_dir = Path(__file__).parent  # unicef_api/
     python_dir = package_dir.parent  # python/
     metadata_dir = python_dir / "metadata" / "current"
-    
-    # Create directory if it doesn't exist (should already exist from other metadata)
     if metadata_dir.exists() or python_dir.exists():
         metadata_dir.mkdir(parents=True, exist_ok=True)
         return metadata_dir / CACHE_FILENAME
-    
-    # Fallback to user home directory (for installed packages)
-    home_cache = Path.home() / ".unicef_api"
-    home_cache.mkdir(parents=True, exist_ok=True)
-    
-    return home_cache / CACHE_FILENAME
+
+    # 3. Python-specific user cache (no repo clone required)
+    user_cache = Path.home() / ".unicef_data" / "python" / "metadata" / "current"
+    user_cache.mkdir(parents=True, exist_ok=True)
+    return user_cache / CACHE_FILENAME
 
 
 def _parse_codelist_xml(xml_content: str) -> Dict[str, dict]:

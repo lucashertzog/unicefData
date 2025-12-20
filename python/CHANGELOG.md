@@ -2,6 +2,18 @@
 
 All notable changes to the unicef-api Python library will be documented in this file.
 
+
+## [1.5.0] - 2025-12-19
+
+### Changed
+
+- Bumped package version to 1.5.0 for the unified multi-language release.
+- Separated metadata cache roots by language with the `UNICEF_DATA_HOME_PY` override to keep Python YAML files out of R/Stata caches.
+
+### Fixed
+
+- Documentation refreshed to reflect current discovery outputs and default `_T` disaggregation behavior.
+
 ## [0.1.0] - 2025-12-01
 
 ### Added
@@ -20,9 +32,11 @@ All notable changes to the unicef-api Python library will be documented in this 
   - Pivoting data from long to wide format
   - Calculating growth rates
   - Merging with country names
+
   - Data cleaning and deduplication
 - Batch download support (`fetch_multiple_indicators`)
 - SDG indicator discovery functions
+
 - Complete documentation and README
 - Four comprehensive usage examples
 - Unit tests with pytest
@@ -32,6 +46,7 @@ All notable changes to the unicef-api Python library will be documented in this 
 ### Features
 
 #### Core Client
+
 - `UNICEFSDMXClient()` - Main API client
 - `fetch_indicator()` - Download single indicator
 - `fetch_multiple_indicators()` - Batch download
@@ -41,6 +56,7 @@ All notable changes to the unicef-api Python library will be documented in this 
 - Raw data option (no cleaning)
 
 #### Configuration
+
 - `COMMON_INDICATORS` - 40+ pre-configured indicators with metadata
 - `UNICEF_DATAFLOWS` - All available dataflow configurations
 - `get_dataflow_for_indicator()` - Auto-detect dataflow
@@ -50,6 +66,7 @@ All notable changes to the unicef-api Python library will be documented in this 
 - `get_all_sdg_targets()` - List all covered SDG targets
 
 #### Utilities
+
 - `validate_country_codes()` - ISO3 country code validation
 - `validate_year_range()` - Year range validation
 - `validate_indicator_code()` - Indicator code validation
@@ -60,6 +77,7 @@ All notable changes to the unicef-api Python library will be documented in this 
 - `load_country_codes()` - Load valid country codes
 
 #### Examples
+
 - `01_basic_usage.py` - Basic data download
 - `02_multiple_indicators.py` - Batch downloads
 - `03_sdg_indicators.py` - Working with SDG indicators
@@ -88,6 +106,7 @@ All notable changes to the unicef-api Python library will be documented in this 
 ### Acknowledgments
 
 Based on code from:
+
 - `unicef-sdg-llm-benchmark` repository (sdmx_client.py)
 - `PROD-SDG-REP-2025` production pipeline (0121_get_data_api.R)
 - `oda_baselines_repo` SDMX tools (fetch_sdmx_structure_yaml.py)
@@ -108,9 +127,11 @@ Based on code from:
 - Rate limiting configuration
 - Proxy support
 
+
 ---
 
 **Version Format**: [Major.Minor.Patch]
+
 - **Major**: Breaking changes
 - **Minor**: New features, backward compatible
 - **Patch**: Bug fixes, backward compatible

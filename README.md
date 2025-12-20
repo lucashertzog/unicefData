@@ -139,22 +139,32 @@ search_indicators("stunting")
 search_indicators("immunization")
 ```
 
-**Output:**
+**Output (current, 2025-12-19):**
 ```
-====================================================================================================
-  UNICEF Indicators matching 'mortality'
-====================================================================================================
+----------------------------------------------------------------------
+Search Results for: mortality
+----------------------------------------------------------------------
 
-  Found 24 indicator(s) (showing first 10)
-----------------------------------------------------------------------------------------------------
-  CODE             CATEGORY    NAME                                 DESCRIPTION
-----------------------------------------------------------------------------------------------------
-  CME_MRM0         CME         Neonatal mortality rate              Probability of dying during..
-  CME_MRY0         CME         Infant mortality rate                Probability of dying between..
-  CME_MRY0T4       CME         Under-five mortality rate            Probability of dying between..
-  ...
-----------------------------------------------------------------------------------------------------
+ Indicator         Dataflow       Name
+
+ CME               CME            Child mortality
+ CME_ARR_10T19     N/A            Annual Rate of Reduction in Mort...
+ CME_MRM0          CME            Neonatal mortality rate
+ CME_MRM1T11       N/A            Mortality rate age 1-11 months
+ CME_MRM1T59       N/A            Mortality rate 1-59 months
+ CME_MRY0          CME            Infant mortality rate
+ CME_MRY0T4        CME            Under-five mortality rate
+ CME_MRY10T14      CME            Mortality rate age 10-14
+ CME_MRY10T19      CME            Mortality rate age 10-19
+ CME_MRY15T19      CME            Mortality rate age 15-19
+
+  (Showing first 10 matches. Use limit() option for more.)
+
+----------------------------------------------------------------------
+Found: 10 indicator(s)
+----------------------------------------------------------------------
 ```
+Note: Results may vary by API updates and sync date.
 
 ### List Categories
 
@@ -169,26 +179,50 @@ list_categories()
 list_categories()
 ```
 
-**Output:**
+**Output (current, 2025-12-19):**
 ```
-==================================================
+--------------------------------------------------
   Available Indicator Categories
-==================================================
+--------------------------------------------------
 
-  CATEGORY                       COUNT
+  Category                        Count
 --------------------------------------------------
-  GLOBAL_DATAFLOW                  226
-  NUTRITION                        112
-  WASH_HOUSEHOLDS                   57
-  EDUCATION                         54
-  PT                                50
-  CME                               39
-  HIV_AIDS                          38
-  MNCH                              38
-  ...
+  NT                                 112
+  COD                                 83
+  TRGT                                77
+  WS                                  57
+  ED                                  54
+  PT                                  50
+  PV                                  43
+  CME                                 39
+  HVA                                 38
+  MNCH                                38
+  DM                                  26
+  MG                                  26
+  IM                                  18
+  GN                                  16
+  ECON                                13
+  FD                                  12
+  SPP                                 10
+  ECD                                  8
+  WT                                   7
+  EDUCATION                            1
+  FUNCTIONAL                           1
+  GENDER                               1
+  HIV                                  1
+  IMMUNISATION                         1
+  NUTRITION                            1
 --------------------------------------------------
-  TOTAL                            733
+  TOTAL                              733
+--------------------------------------------------
+
+  Use unicefdata, search(keyword) dataflow(CATEGORY)
+  to search indicators within a specific category.
+
+  Use unicefdata, indicators(CATEGORY) to list all
+  indicators in a specific category.
 ```
+Note: Counts may vary by sync date. Use `list_categories()` for current totals.
 
 ### Search by Category
 
@@ -391,7 +425,7 @@ df <- unicefData(
 
 ## Automatic Dataflow Detection
 
-The package automatically downloads the complete UNICEF indicator codelist (733 indicators across 15 categories) on first use and caches it locally. This enables:
+The package automatically downloads the complete UNICEF indicator codelist (700+ indicators across multiple categories) on first use and caches it locally. This enables:
 
 1. **No need to specify dataflow** - Just provide the indicator code
 2. **Accurate mapping** - Each indicator maps to its correct dataflow
@@ -402,9 +436,9 @@ The package automatically downloads the complete UNICEF indicator codelist (733 
 
 | Language | Cache Path |
 |----------|------------|
-| Python | `python/metadata/current/unicef_indicators_metadata.yaml` |
-| R | `R/metadata/current/unicef_indicators_metadata.yaml` |
-| Stata | `stata/metadata/current/unicef_indicators_metadata.yaml` |
+| Python | `~/.unicef_data/python/metadata/current/unicef_indicators_metadata.yaml` (env overrides: `UNICEF_DATA_HOME_PY`, `UNICEF_DATA_HOME`); dev: `python/metadata/current/` |
+| R | `tools::R_user_dir("unicefdata", "cache")/metadata/current/unicef_indicators_metadata.yaml` (fallback: `~/.unicef_data/r/metadata/current/...`; env overrides: `UNICEF_DATA_HOME_R`, `UNICEF_DATA_HOME`); dev: `R/metadata/current/` |
+| Stata | Installed under `PLUS` (`plus/_` for YAML helpers); dev: `stata/metadata/current/` |
 
 ### Manual cache refresh
 
@@ -511,19 +545,20 @@ ms.sync_all(verbose=True)
 # Generate dataflow schemas (dataflows/*.yaml)
 sync_dataflow_schemas(output_dir='python/metadata/current')
 
-# Generate full indicator catalog (733 indicators)
+# Generate full indicator catalog (counts vary)
 refresh_indicator_cache()
 ```
 
 **Generated files:** `python/metadata/current/`
-- `_unicefdata_dataflows.yaml` - 69 dataflows
-- `_unicefdata_indicators.yaml` - 25 common SDG indicators
-- `_unicefdata_codelists.yaml` - 5 dimension codelists
-- `_unicefdata_countries.yaml` - 453 country codes
-- `_unicefdata_regions.yaml` - 111 regional codes
-- `unicef_indicators_metadata.yaml` - 733 indicators (full catalog)
+- `_unicefdata_dataflows.yaml` - dataflow catalog
+- `_unicefdata_indicators.yaml` - common SDG indicators (subset)
+- `_unicefdata_codelists.yaml` - dimension codelists
+- `_unicefdata_countries.yaml` - country codes
+- `_unicefdata_regions.yaml` - regional codes
+- `unicef_indicators_metadata.yaml` - full indicator catalog
 - `dataflow_index.yaml` - Dataflow schema index
-- `dataflows/*.yaml` - 69 individual dataflow schemas
+- `dataflows/*.yaml` - individual dataflow schemas
+Counts vary by API updates and sync date.
 
 ### R
 
@@ -606,7 +641,7 @@ python tests/report_metadata_status.py --detailed
 | Unified `year` parameter | ✅ | ✅ | ✅ |
 | **`circa` nearest year matching** | ✅ | ✅ | ✅ |
 | Automatic retries | ✅ | ✅ | ✅ |
-| 733 indicators supported | ✅ | ✅ | ✅ |
+| 700+ indicators supported | ✅ | ✅ | ✅ |
 | **Post-production: `format`** | ✅ | ✅ | ✅ |
 | **Post-production: `latest`** | ✅ | ✅ | ✅ |
 | **Post-production: `mrv`** | ✅ | ✅ | ✅ |

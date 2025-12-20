@@ -22,7 +22,7 @@ The **unicefData** repository provides consistent APIs in R, Python, and Stata:
 | **List dataflows** | `list_sdmx_flows()` | `list_dataflows()` | `unicefdata, flows` |
 | **Indicator info** | `get_indicator_info()` | `get_indicator_info()` | `unicefdata, info()` |
 | Auto dataflow detection | ✅ | ✅ | ✅ |
-| 733+ indicators | ✅ | ✅ | ✅ |
+| 700+ indicators | ✅ | ✅ | ✅ |
 | Frames support (v16+) | N/A | N/A | ✅ |
 
 ---
@@ -211,10 +211,10 @@ stata/
 │   │   ├── _unicef_list_indicators.ado # Discovery: list indicators
 │   │   ├── _unicef_indicator_info.ado  # Discovery: indicator info
 │   │   ├── _unicefdata_dataflows.yaml  # Metadata: 69 dataflows
-│   │   ├── _unicefdata_indicators.yaml # Metadata: 733+ indicators
+│   │   ├── _unicefdata_indicators.yaml # Metadata: full indicator catalog
 │   │   ├── _unicefdata_codelists.yaml  # Metadata: valid codes
-│   │   ├── _unicefdata_countries.yaml  # Metadata: 453 country codes
-│   │   └── _unicefdata_regions.yaml    # Metadata: 111 regional codes
+│   │   ├── _unicefdata_countries.yaml  # Metadata: country codes
+│   │   └── _unicefdata_regions.yaml    # Metadata: regional codes
 │   ├── y/                              # YAML parser dependency
 │   │   ├── yaml.ado
 │   │   └── yaml.sthlp

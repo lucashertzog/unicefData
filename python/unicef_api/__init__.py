@@ -5,7 +5,7 @@ This library provides a simplified interface for fetching child welfare and deve
 indicators from UNICEF's SDMX data repository.
 """
 
-__version__ = "0.3.0"
+__version__ = "1.5.0"
 __author__ = "Joao Pedro Azevedo"
 __email__ = "jazevedo@unicef.org"
 
