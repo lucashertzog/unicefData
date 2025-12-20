@@ -167,7 +167,7 @@ program define _unicef_list_indicators, rclass
                 local nm = substr("`nm'", 1, 42) + "..."
             }
             
-            noi di as result _col(2) "`ind'" as text _col(25) "`nm'"
+            noi di as text _col(2) "{stata unicefdata, indicator(`ind') dataflow(`dataflow_upper') clear:`ind'}" as text _col(25) "`nm'"
         }
     }
     

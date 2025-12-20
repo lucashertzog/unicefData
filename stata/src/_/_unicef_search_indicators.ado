@@ -280,7 +280,13 @@ program define _unicef_search_indicators, rclass
                 local nm = substr("`nm'", 1, 32) + "..."
             }
             
-            noi di as result _col(2) "`ind'" as text _col(20) "`df'" _col(35) "`nm'"
+            * Make indicator clickable - use dataflow if available
+            if ("`df'" != "" & "`df'" != "N/A") {
+                noi di as text _col(2) "{stata unicefdata, indicator(`ind') dataflow(`df') clear:`ind'}" as text _col(20) "`df'" _col(35) "`nm'"
+            }
+            else {
+                noi di as text _col(2) "{stata unicefdata, indicator(`ind') clear:`ind'}" as text _col(20) "`df'" _col(35) "`nm'"
+            }
         }
         
         if (`n_matches' >= `limit') {
