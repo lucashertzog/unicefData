@@ -189,10 +189,17 @@ program define _unicef_list_dataflows, rclass
     * Display results
     *---------------------------------------------------------------------------
     
+    * Dynamic column widths based on screen size
+    local linesize = c(linesize)
+    local col_id = 2
+    local col_name = 27
+    local name_width = `linesize' - `col_name' - 2
+    if (`name_width' < 30) local name_width = 30
+    
     noi di ""
-    noi di as text "{hline 70}"
+    noi di as text "{hline `linesize'}"
     noi di as text "Available UNICEF SDMX Dataflows"
-    noi di as text "{hline 70}"
+    noi di as text "{hline `linesize'}"
     noi di ""
     
     * Re-load for display
@@ -201,33 +208,37 @@ program define _unicef_list_dataflows, rclass
     local n_flows = _N
     
     if ("`detail'" != "") {
-        noi di as text _col(2) "{ul:Dataflow ID}" _col(25) "{ul:Name}"
+        noi di as text _col(`col_id') "{ul:Dataflow ID}" _col(`col_name') "{ul:Name}"
         noi di ""
         
         forvalues i = 1/`n_flows' {
             local id = dataflow_id[`i']
             local nm = name[`i']
-            * Truncate name if too long
-            if (length("`nm'") > 45) {
-                local nm = substr("`nm'", 1, 42) + "..."
+            * Truncate name based on available width
+            if (length("`nm'") > `name_width') {
+                local nm = substr("`nm'", 1, `name_width' - 3) + "..."
             }
-            noi di as result _col(2) "`id'" as text _col(25) "`nm'"
+            noi di as text _col(`col_id') "{stata unicefdata, indicators(`id'):`id'}" as text _col(`col_name') "`nm'"
         }
     }
     else {
-        * Compact display - 3 columns
-        noi di as text _col(2) "Dataflow IDs:"
+        * Compact display - dynamic columns with clickable links
+        noi di as text _col(2) "Dataflow IDs (click to list indicators):"
         noi di ""
+        
+        * Calculate columns per row based on screen width
+        local col_width = 24
+        local max_col = `linesize' - `col_width'
         
         local col = 2
         forvalues i = 1/`n_flows' {
             local id = dataflow_id[`i']
-            if (`col' > 60) {
+            if (`col' > `max_col') {
                 noi di ""
                 local col = 2
             }
-            noi di as result _col(`col') "`id'" _continue
-            local col = `col' + 22
+            noi di as text _col(`col') "{stata unicefdata, indicators(`id'):`id'}" _continue
+            local col = `col' + `col_width'
         }
         noi di ""
     }
@@ -235,12 +246,9 @@ program define _unicef_list_dataflows, rclass
     restore
     
     noi di ""
-    noi di as text "{hline 70}"
+    noi di as text "{hline `linesize'}"
     noi di as text "Total: " as result `n_flows' as text " dataflows available"
-    noi di as text "{hline 70}"
-    noi di ""
-    noi di as text "Usage: " as result "unicefdata, indicator(<code>) dataflow(<ID>)"
-    noi di as text "   or: " as result "unicefdata, indicators(<ID>)" as text " to list indicators in a dataflow"
+    noi di as text "{hline `linesize'}"
     
     *---------------------------------------------------------------------------
     * Return values

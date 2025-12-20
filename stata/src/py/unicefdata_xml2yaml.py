@@ -111,18 +111,76 @@ def parse_code(element: ET.Element, include_category: bool = False, codelist_id:
         'description': escape_yaml_string(get_text(element, 'com:Description', NAMESPACES))
     }
     
-    # Add category for indicators (prefix before first underscore)
+    # Add category for indicators - use full code for dynamic pattern matching
+    # Aligned with Python/R indicator_registry.py mappings
     if include_category and code_id:
-        if '_' in code_id:
-            result['category'] = code_id.split('_')[0]
-        else:
-            result['category'] = code_id
+        result['category'] = _map_prefix_to_dataflow(code_id)
         
         # Add URN for indicators
         if codelist_id:
             result['urn'] = f"urn:sdmx:org.sdmx.infomodel.codelist.Code=UNICEF:{codelist_id}(1.0).{code_id}"
     
     return result
+
+
+# Mapping of indicator code prefixes to SDMX dataflow names
+# This ensures consistency across Python, R, and Stata
+PREFIX_TO_DATAFLOW = {
+    'CME': 'CME',
+    'NT': 'NUTRITION',
+    'IM': 'IMMUNISATION',
+    'ED': 'EDUCATION',
+    'WS': 'WASH_HOUSEHOLDS',
+    'HVA': 'HIV_AIDS',
+    'MNCH': 'MNCH',
+    'PT': 'PT',
+    'ECD': 'ECD',
+    'DM': 'DM',
+    'ECON': 'ECON',
+    'GN': 'GENDER',
+    'MG': 'MIGRATION',
+    'FD': 'FUNCTIONAL_DIFF',
+    'PP': 'POPULATION',
+    'EMPH': 'EMPH',
+    'EDUN': 'EDUCATION',
+    'SDG4': 'EDUCATION_UIS_SDG',
+    'PV': 'CHLD_PVTY',
+    # Added mappings to reduce GLOBAL_DATAFLOW catch-all
+    'COD': 'CAUSE_OF_DEATH',      # Cause of death indicators (83)
+    'TRGT': 'CHILD_RELATED_SDG',  # SDG/National targets (77)
+    'SPP': 'SOC_PROTECTION',      # Social protection programs (10)
+    'WT': 'PT',                   # Child labour/adolescent indicators (7)
+}
+
+
+def _map_prefix_to_dataflow(indicator_code: str) -> str:
+    """Map an indicator code to its SDMX dataflow name.
+    
+    Uses dynamic pattern matching for sub-dataflows (FGM, CM, UIS)
+    before falling back to prefix-based mapping.
+    """
+    # =========================================================================
+    # DYNAMIC PATTERN-BASED OVERRIDES
+    # =========================================================================
+    # These patterns catch indicators that belong to specific sub-dataflows
+    # based on content in their code, not just the prefix.
+    # =========================================================================
+    
+    # FGM indicators: PT_*_FGM* -> PT_FGM
+    if indicator_code.startswith('PT_') and '_FGM' in indicator_code:
+        return 'PT_FGM'
+    
+    # Child Marriage indicators: PT_*_MRD_* -> PT_CM
+    if indicator_code.startswith('PT_') and '_MRD_' in indicator_code:
+        return 'PT_CM'
+    
+    # UIS SDG Education indicators: ED_*_UIS* -> EDUCATION_UIS_SDG
+    if indicator_code.startswith('ED_') and '_UIS' in indicator_code:
+        return 'EDUCATION_UIS_SDG'
+    
+    # Fall back to prefix-based mapping
+    prefix = indicator_code.split('_')[0] if '_' in indicator_code else indicator_code
+    return PREFIX_TO_DATAFLOW.get(prefix, 'GLOBAL_DATAFLOW')
 
 
 def parse_dimension(element: ET.Element) -> Dict[str, Any]:

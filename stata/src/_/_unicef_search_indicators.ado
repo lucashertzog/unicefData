@@ -86,8 +86,10 @@ program define _unicef_search_indicators, rclass
             * Work directly with the dataset in the frame
             frame `yaml_frame' {
                 * yaml.ado creates keys like: indicators_CME_MRM0_code, indicators_CME_MRM0_name, etc.
-                * Keep only code, name, category rows under indicators
-                keep if regexm(key, "^indicators_[A-Za-z0-9_]+_(code|name|category)$")
+                * Keep only code, name, category, dataflow rows under indicators
+                * Exclude description entries (keys containing _description_)
+                keep if regexm(key, "^indicators_[A-Za-z0-9_]+_(code|name|category|dataflow)$")
+                drop if regexm(key, "_description_")
                 
                 * Extract indicator ID and attribute type from key
                 * Key format: indicators_<INDICATOR_ID>_<attribute>
@@ -98,9 +100,10 @@ program define _unicef_search_indicators, rclass
                 replace attribute = "code" if regexm(key, "_code$")
                 replace attribute = "name" if regexm(key, "_name$")
                 replace attribute = "category" if regexm(key, "_category$")
+                replace attribute = "dataflow" if regexm(key, "_dataflow$")
                 
-                * Extract indicator ID (between "indicators_" and "_code/name/category")
-                gen ind_id = regexs(1) if regexm(key, "^indicators_(.+)_(code|name|category)$")
+                * Extract indicator ID (between "indicators_" and "_code/name/category/dataflow")
+                gen ind_id = regexs(1) if regexm(key, "^indicators_(.+)_(code|name|category|dataflow)$")
                 
                 * Reshape to wide: one row per indicator with code, name, category columns
                 keep ind_id attribute value
@@ -110,19 +113,23 @@ program define _unicef_search_indicators, rclass
                 capture rename valuecode code
                 capture rename valuename name
                 capture rename valuecategory category
+                capture rename valuedataflow dataflow
                 
                 * Handle missing values
                 capture replace code = ind_id if missing(code) | code == ""
                 capture replace name = "" if missing(name)
                 capture replace category = "N/A" if missing(category) | category == ""
+                capture replace dataflow = "N/A" if missing(dataflow) | dataflow == ""
                 
                 * Create lowercase versions for case-insensitive search
                 gen code_lower = lower(code)
                 gen name_lower = lower(name)
+                gen cat_lower = lower(category)
                 
-                * Search for keyword in code or name
+                * Search for keyword in code, name, or category
                 gen found = (strpos(code_lower, "`keyword_lower'") > 0) | ///
-                            (strpos(name_lower, "`keyword_lower'") > 0)
+                            (strpos(name_lower, "`keyword_lower'") > 0) | ///
+                            (strpos(cat_lower, "`keyword_lower'") > 0)
                 
                 * Apply dataflow filter if specified
                 if ("`dataflow'" != "") {
@@ -149,11 +156,11 @@ program define _unicef_search_indicators, rclass
                 forvalues i = 1/`n_matches' {
                     local ind_code = code[`i']
                     local ind_name = name[`i']
-                    local ind_cat = category[`i']
+                    local ind_df = dataflow[`i']
                     
                     local matches "`matches' `ind_code'"
                     local match_names `"`match_names' "`ind_name'""'
-                    local match_dataflows "`match_dataflows' `ind_cat'"
+                    local match_dataflows "`match_dataflows' `ind_df'"
                 }
             }
             
@@ -169,17 +176,20 @@ program define _unicef_search_indicators, rclass
             * Read YAML (replaces current dataset)
             yaml read using "`yaml_file'", replace
             
-            * Keep only code, name, category rows under indicators
-            keep if regexm(key, "^indicators_[A-Za-z0-9_]+_(code|name|category)$")
+            * Keep only code, name, category, dataflow rows under indicators
+            * Exclude description entries (keys containing _description_)
+            keep if regexm(key, "^indicators_[A-Za-z0-9_]+_(code|name|category|dataflow)$")
+            drop if regexm(key, "_description_")
             
             * Extract attribute type from key
             gen attribute = ""
             replace attribute = "code" if regexm(key, "_code$")
             replace attribute = "name" if regexm(key, "_name$")
             replace attribute = "category" if regexm(key, "_category$")
+            replace attribute = "dataflow" if regexm(key, "_dataflow$")
             
             * Extract indicator ID
-            gen ind_id = regexs(1) if regexm(key, "^indicators_(.+)_(code|name|category)$")
+            gen ind_id = regexs(1) if regexm(key, "^indicators_(.+)_(code|name|category|dataflow)$")
             
             * Reshape to wide
             keep ind_id attribute value
@@ -189,17 +199,21 @@ program define _unicef_search_indicators, rclass
             capture rename valuecode code
             capture rename valuename name
             capture rename valuecategory category
+            capture rename valuedataflow dataflow
             
             * Handle missing values
             capture replace code = ind_id if missing(code) | code == ""
             capture replace name = "" if missing(name)
             capture replace category = "N/A" if missing(category) | category == ""
+            capture replace dataflow = "N/A" if missing(dataflow) | dataflow == ""
             
             * Search
             gen code_lower = lower(code)
             gen name_lower = lower(name)
+            gen cat_lower = lower(category)
             gen found = (strpos(code_lower, "`keyword_lower'") > 0) | ///
-                        (strpos(name_lower, "`keyword_lower'") > 0)
+                        (strpos(name_lower, "`keyword_lower'") > 0) | ///
+                        (strpos(cat_lower, "`keyword_lower'") > 0)
             
             * Apply dataflow filter if specified
             if ("`dataflow'" != "") {
@@ -224,11 +238,11 @@ program define _unicef_search_indicators, rclass
             forvalues i = 1/`n_matches' {
                 local ind_code = code[`i']
                 local ind_name = name[`i']
-                local ind_cat = category[`i']
+                local ind_df = dataflow[`i']
                 
                 local matches "`matches' `ind_code'"
                 local match_names `"`match_names' "`ind_name'""'
-                local match_dataflows "`match_dataflows' `ind_cat'"
+                local match_dataflows "`match_dataflows' `ind_df'"
             }
             
             restore
@@ -250,7 +264,16 @@ program define _unicef_search_indicators, rclass
     else {
         noi di as text "Search Results for: " as result "`keyword'"
     }
-    noi di as text "{hline 70}"
+    
+    * Dynamic column widths based on screen size
+    local linesize = c(linesize)
+    local col_ind = 2
+    local col_df = 28
+    local col_name = 48
+    local name_width = `linesize' - `col_name' - 2
+    if (`name_width' < 20) local name_width = 20
+    
+    noi di as text "{hline `linesize'}"
     noi di ""
     
     if (`n_matches' == 0) {
@@ -267,7 +290,7 @@ program define _unicef_search_indicators, rclass
         noi di as text "  - Use {bf:unicefdata, search(keyword)} without dataflow filter"
     }
     else {
-        noi di as text _col(2) "{ul:Indicator}" _col(20) "{ul:Dataflow}" _col(35) "{ul:Name}"
+        noi di as text _col(`col_ind') "{ul:Indicator}" _col(`col_df') "{ul:Dataflow}" _col(`col_name') "{ul:Name (click for metadata)}"
         noi di ""
         
         forvalues i = 1/`n_matches' {
@@ -275,12 +298,21 @@ program define _unicef_search_indicators, rclass
             local df : word `i' of `match_dataflows'
             local nm : word `i' of `match_names'
             
-            * Truncate name if too long
-            if (length("`nm'") > 35) {
-                local nm = substr("`nm'", 1, 32) + "..."
+            * Truncate name based on available width
+            if (length("`nm'") > `name_width') {
+                local nm = substr("`nm'", 1, `name_width' - 3) + "..."
             }
             
-            noi di as result _col(2) "`ind'" as text _col(20) "`df'" _col(35) "`nm'"
+            * Hyperlinks:
+            * - Indicator: show sample usage with indicator() option
+            * - Dataflow: show dataflow schema with dataflow() option
+            * - Name: show metadata with info() option
+            if ("`df'" != "" & "`df'" != "N/A") {
+                noi di as text _col(`col_ind') "{stata unicefdata, indicator(`ind') countries(AFG BGD) clear:`ind'}" as text _col(`col_df') "{stata unicefdata, dataflow(`df'):`df'}" _col(`col_name') "{stata unicefdata, info(`ind'):`nm'}"
+            }
+            else {
+                noi di as text _col(`col_ind') "{stata unicefdata, indicator(`ind') countries(AFG BGD) clear:`ind'}" as text _col(`col_df') "`df'" _col(`col_name') "{stata unicefdata, info(`ind'):`nm'}"
+            }
         }
         
         if (`n_matches' >= `limit') {
@@ -290,9 +322,10 @@ program define _unicef_search_indicators, rclass
     }
     
     noi di ""
-    noi di as text "{hline 70}"
+    noi di as text "{hline `linesize'}"
     noi di as text "Found: " as result `n_matches' as text " indicator(s)"
-    noi di as text "{hline 70}"
+    noi di as text "{hline `linesize'}"
+    noi di as text "{it:Note: Search matches keyword in code, name, or category. Count may differ from categories table.}"
     
     *---------------------------------------------------------------------------
     * Return values

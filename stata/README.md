@@ -2,11 +2,13 @@
 
 [![Stata 14+](https://img.shields.io/badge/Stata-14+-1a5276.svg)](https://www.stata.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-1.3.1-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-1.5.0-blue.svg)]()
 
 **Stata package for downloading UNICEF child welfare indicators via SDMX API**
 
 This Stata implementation is part of the trilingual [unicefData](https://github.com/unicef-drp/unicefData) package, providing access to the [UNICEF SDMX Data Warehouse](https://sdmx.data.unicef.org/) with the same functionality as the R and Python versions.
+
+> 📦 **Other languages:** [R](../R/README.md) | [Python](../python/README.md) | [Main README](../README.md)
 
 ---
 
@@ -20,9 +22,10 @@ The **unicefData** repository provides consistent APIs in R, Python, and Stata:
 | **Search indicators** | `search_indicators()` | `search_indicators()` | `unicefdata, search()` |
 | **List categories** | `list_categories()` | `list_categories()` | `unicefdata, categories` |
 | **List dataflows** | `list_sdmx_flows()` | `list_dataflows()` | `unicefdata, flows` |
+| **Dataflow schema** | `dataflow_schema()` | `dataflow_schema()` | `unicefdata, dataflow()` |
 | **Indicator info** | `get_indicator_info()` | `get_indicator_info()` | `unicefdata, info()` |
 | Auto dataflow detection | ✅ | ✅ | ✅ |
-| 733+ indicators | ✅ | ✅ | ✅ |
+| 700+ indicators | ✅ | ✅ | ✅ |
 | Frames support (v16+) | N/A | N/A | ✅ |
 
 ---
@@ -81,6 +84,9 @@ unicefdata, indicators(CME)
 * Get detailed info about an indicator
 unicefdata, info(CME_MRY0T4)
 
+* View dataflow schema (dimensions and attributes)
+unicefdata, dataflow(CME)
+
 * List all available dataflows
 unicefdata, flows
 unicefdata, flows detail    // with names
@@ -112,9 +118,70 @@ unicefdata, dataflow(CME) countries(BGD NPL PAK) clear
 ```stata
 unicefdata, categories                     // List all categories with counts
 unicefdata, flows [detail]                 // List available dataflows
+unicefdata, dataflow(name)                 // View dataflow schema (dimensions/attributes)
 unicefdata, search(keyword) [dataflow()] [limit(#)]  // Search indicators
 unicefdata, indicators(dataflow)           // List indicators in dataflow
-unicefdata, info(indicator_code)           // Get indicator details
+unicefdata, info(indicator_code)           // Get indicator details + disaggregations
+```
+
+#### Example: Dataflow Schema
+
+```stata
+. unicefdata, dataflow(CME)
+
+----------------------------------------------------------------------
+Dataflow Schema: CME
+----------------------------------------------------------------------
+
+Name: Child Mortality
+Version: 1.0
+Agency: UNICEF
+
+Dimensions (4):
+  REF_AREA
+  INDICATOR
+  SEX
+  WEALTH_QUINTILE
+
+Attributes (8):
+  DATA_SOURCE
+  COUNTRY_NOTES
+  REF_PERIOD
+  UNIT_MEASURE
+  LOWER_BOUND
+  UPPER_BOUND
+  OBS_STATUS
+
+----------------------------------------------------------------------
+```
+
+#### Example: Indicator Info with Supported Disaggregations
+
+```stata
+. unicefdata, info(CME_MRY0T4)
+
+----------------------------------------------------------------------
+Indicator Information: CME_MRY0T4
+----------------------------------------------------------------------
+
+ Code:        CME_MRY0T4
+ Name:        Under-five mortality rate
+ Category:    CME
+
+ Description:
+   Probability of dying between birth and exactly 5 years of age, 
+   expressed per 1,000 live births
+
+ Supported Disaggregations:
+   sex:          Yes (SEX)
+   age:          No
+   wealth:       Yes (WEALTH_QUINTILE)
+   residence:    No
+   maternal_edu: No
+
+----------------------------------------------------------------------
+Usage: unicefdata, indicator(CME_MRY0T4) countries(AFG BGD) year(2020:2022)
+----------------------------------------------------------------------
 ```
 
 ### Data Retrieval
@@ -200,7 +267,7 @@ help unicefdata_sync
 stata/
 ├── src/
 │   ├── u/                              # Main user-facing commands
-│   │   ├── unicefdata.ado              # Main command (v1.3.1)
+│   │   ├── unicefdata.ado              # Main command (v1.5.0)
 │   │   ├── unicefdata.sthlp            # Help file
 │   │   ├── unicefdata_sync.ado         # Metadata sync command
 │   │   └── unicefdata_sync.sthlp       # Sync help file
@@ -211,10 +278,14 @@ stata/
 │   │   ├── _unicef_list_indicators.ado # Discovery: list indicators
 │   │   ├── _unicef_indicator_info.ado  # Discovery: indicator info
 │   │   ├── _unicefdata_dataflows.yaml  # Metadata: 69 dataflows
-│   │   ├── _unicefdata_indicators.yaml # Metadata: 733+ indicators
+│   │   ├── _unicefdata_indicators.yaml # Metadata: full indicator catalog
 │   │   ├── _unicefdata_codelists.yaml  # Metadata: valid codes
-│   │   ├── _unicefdata_countries.yaml  # Metadata: 453 country codes
-│   │   └── _unicefdata_regions.yaml    # Metadata: 111 regional codes
+│   │   ├── _unicefdata_countries.yaml  # Metadata: country codes
+│   │   ├── _unicefdata_regions.yaml    # Metadata: regional codes
+│   │   └── _dataflows/                 # Per-dataflow schemas (69 files)
+│   │       ├── CME.yaml                # Child mortality disaggregations
+│   │       ├── EDUCATION.yaml          # Education disaggregations
+│   │       └── ...                     # All 69 dataflow schemas
 │   ├── y/                              # YAML parser dependency
 │   │   ├── yaml.ado
 │   │   └── yaml.sthlp
@@ -326,6 +397,7 @@ If you're familiar with `wbopendata` (World Bank data), the syntax is very simil
 - `unicefdata, categories` - List all indicator categories
 - `unicefdata, search(keyword)` - Search indicators by keyword
 - `unicefdata, flows` - List available dataflows
+- `unicefdata, dataflow(CME)` - View dataflow schema (dimensions/attributes)
 - Auto-detect dataflow from indicator code
 
 ---
@@ -374,8 +446,7 @@ If you're familiar with `wbopendata` (World Bank data), the syntax is very simil
 ## Version History
 
 | Version | Date | Changes |
-|---------|------|---------|
-| 1.3.1 | Dec 2025 | Added `categories` command, `dataflow()` filter in search |
+|---------|------|---------|| 1.5.0 | Dec 2025 | Added `dataflow()` schema display, `dataflows` alias, improved search hyperlinks || 1.3.1 | Dec 2025 | Added `categories` command, `dataflow()` filter in search |
 | 1.3.0 | Dec 2025 | Discovery commands (flows, search, indicators, info), frames support |
 | 1.2.0 | Dec 2025 | YAML-based metadata, validation |
 | 1.1.0 | Dec 2025 | API alignment with R/Python |

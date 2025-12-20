@@ -62,6 +62,7 @@ print(head(df))
 * Don't know the indicator code? Search for it!
 unicefdata, categories        // List all categories
 unicefdata, search(mortality)  // Search by keyword
+unicefdata, dataflow(CME)     // Show dataflow schema (dimensions, attributes)
 
 * Fetch under-5 mortality for specific countries
 unicefdata, indicator(CME_MRY0T4) countries(ALB USA BRA) ///
@@ -139,22 +140,32 @@ search_indicators("stunting")
 search_indicators("immunization")
 ```
 
-**Output:**
+**Output (current, 2025-12-19):**
 ```
-====================================================================================================
-  UNICEF Indicators matching 'mortality'
-====================================================================================================
+----------------------------------------------------------------------
+Search Results for: mortality
+----------------------------------------------------------------------
 
-  Found 24 indicator(s) (showing first 10)
-----------------------------------------------------------------------------------------------------
-  CODE             CATEGORY    NAME                                 DESCRIPTION
-----------------------------------------------------------------------------------------------------
-  CME_MRM0         CME         Neonatal mortality rate              Probability of dying during..
-  CME_MRY0         CME         Infant mortality rate                Probability of dying between..
-  CME_MRY0T4       CME         Under-five mortality rate            Probability of dying between..
-  ...
-----------------------------------------------------------------------------------------------------
+ Indicator         Dataflow       Name
+
+ CME               CME            Child mortality
+ CME_ARR_10T19     N/A            Annual Rate of Reduction in Mort...
+ CME_MRM0          CME            Neonatal mortality rate
+ CME_MRM1T11       N/A            Mortality rate age 1-11 months
+ CME_MRM1T59       N/A            Mortality rate 1-59 months
+ CME_MRY0          CME            Infant mortality rate
+ CME_MRY0T4        CME            Under-five mortality rate
+ CME_MRY10T14      CME            Mortality rate age 10-14
+ CME_MRY10T19      CME            Mortality rate age 10-19
+ CME_MRY15T19      CME            Mortality rate age 15-19
+
+  (Showing first 10 matches. Use limit() option for more.)
+
+----------------------------------------------------------------------
+Found: 10 indicator(s)
+----------------------------------------------------------------------
 ```
+Note: Results may vary by API updates and sync date.
 
 ### List Categories
 
@@ -169,7 +180,7 @@ list_categories()
 list_categories()
 ```
 
-**Output:**
+**Output (current, 2025-12-20):**
 ```
 ==================================================
   Available Indicator Categories
@@ -177,18 +188,34 @@ list_categories()
 
   CATEGORY                       COUNT
 --------------------------------------------------
-  GLOBAL_DATAFLOW                  226
   NUTRITION                        112
+  CAUSE_OF_DEATH                    83
+  CHILD_RELATED_SDG                 77
   WASH_HOUSEHOLDS                   57
-  EDUCATION                         54
-  PT                                50
+  PT                                43
+  CHLD_PVTY                         43
   CME                               39
+  EDUCATION                         38
   HIV_AIDS                          38
   MNCH                              38
-  ...
+  DM                                26
+  MIGRATION                         26
+  IMMUNISATION                      18
+  EDUCATION_UIS_SDG                 16
+  GENDER                            16
+  ECON                              13
+  FUNCTIONAL_DIFF                   12
+  SOC_PROTECTION                    10
+  ECD                                8
+  PT_CM                              8
+  GLOBAL_DATAFLOW                    6
+  PT_FGM                             6
 --------------------------------------------------
   TOTAL                            733
+
+  Use search_indicators(category='CATEGORY_NAME') to see indicators
 ```
+Note: Counts may vary by sync date. Use `list_categories()` for current totals.
 
 ### Search by Category
 
@@ -391,7 +418,7 @@ df <- unicefData(
 
 ## Automatic Dataflow Detection
 
-The package automatically downloads the complete UNICEF indicator codelist (733 indicators across 15 categories) on first use and caches it locally. This enables:
+The package automatically downloads the complete UNICEF indicator codelist (700+ indicators across multiple categories) on first use and caches it locally. This enables:
 
 1. **No need to specify dataflow** - Just provide the indicator code
 2. **Accurate mapping** - Each indicator maps to its correct dataflow
@@ -402,9 +429,9 @@ The package automatically downloads the complete UNICEF indicator codelist (733 
 
 | Language | Cache Path |
 |----------|------------|
-| Python | `python/metadata/current/unicef_indicators_metadata.yaml` |
-| R | `R/metadata/current/unicef_indicators_metadata.yaml` |
-| Stata | `stata/metadata/current/unicef_indicators_metadata.yaml` |
+| Python | `~/.unicef_data/python/metadata/current/unicef_indicators_metadata.yaml` (env overrides: `UNICEF_DATA_HOME_PY`, `UNICEF_DATA_HOME`); dev: `python/metadata/current/` |
+| R | `tools::R_user_dir("unicefdata", "cache")/metadata/current/unicef_indicators_metadata.yaml` (fallback: `~/.unicef_data/r/metadata/current/...`; env overrides: `UNICEF_DATA_HOME_R`, `UNICEF_DATA_HOME`); dev: `R/metadata/current/` |
+| Stata | Installed under `PLUS` (`plus/_` for YAML helpers); dev: `stata/metadata/current/` |
 
 ### Manual cache refresh
 
@@ -470,23 +497,123 @@ No parameters. Displays all available categories with indicator counts.
 
 | Category | Count | Description |
 |----------|-------|-------------|
-| `GLOBAL_DATAFLOW` | 226 | General indicators |
 | `NUTRITION` | 112 | Nutrition (stunting, wasting, etc.) |
+| `CAUSE_OF_DEATH` | 83 | Causes of death |
+| `CHILD_RELATED_SDG` | 77 | SDG targets and goals |
 | `WASH_HOUSEHOLDS` | 57 | Water and Sanitation |
-| `EDUCATION` | 54 | Education indicators |
-| `PT` | 50 | Child Protection |
+| `PT` | 43 | Child Protection |
+| `CHLD_PVTY` | 43 | Child Poverty |
 | `CME` | 39 | Child Mortality Estimates |
+| `EDUCATION` | 38 | Education indicators |
 | `HIV_AIDS` | 38 | HIV/AIDS indicators |
 | `MNCH` | 38 | Maternal and Child Health |
 | `DM` | 26 | Demographics |
 | `MIGRATION` | 26 | Migration |
 | `IMMUNISATION` | 18 | Immunization coverage |
+| `EDUCATION_UIS_SDG` | 16 | UNESCO Education SDG indicators |
 | `GENDER` | 16 | Gender indicators |
 | `ECON` | 13 | Economic indicators |
 | `FUNCTIONAL_DIFF` | 12 | Functional difficulties |
+| `SOC_PROTECTION` | 10 | Social protection programs |
 | `ECD` | 8 | Early Childhood Development |
+| `PT_CM` | 8 | Child Marriage |
+| `GLOBAL_DATAFLOW` | 6 | General/uncategorized indicators |
+| `PT_FGM` | 6 | Female Genital Mutilation |
 
 Use `list_categories()` for the complete list.
+
+---
+
+## Dataflow Disaggregation Support
+
+Different dataflows support different disaggregation dimensions. Use the `unicefdata, info(INDICATOR)` command in Stata (or equivalent in R/Python) to check which disaggregations are available for a specific indicator.
+
+### Key Disaggregation Dimensions
+
+| Dimension | Description | API Parameter |
+|-----------|-------------|---------------|
+| **SEX** | Gender disaggregation | `sex=` |
+| **AGE** | Age group disaggregation | `age=` |
+| **WEALTH_QUINTILE** | Wealth quintile disaggregation | `wealth=` |
+| **RESIDENCE** | Urban/rural disaggregation | `residence=` |
+| **MATERNAL_EDU_LVL** | Mother's education level | `maternal_edu=` |
+
+### Disaggregation Availability by Dataflow
+
+The following table shows which disaggregation dimensions are available for each dataflow (as of 2025-12-20):
+
+| Dataflow | SEX | AGE | WEALTH | RESIDENCE | MATERNAL_EDU |
+|----------|:---:|:---:|:------:|:---------:|:------------:|
+| **CAUSE_OF_DEATH** | ✓ | ✓ | - | - | - |
+| **CCRI** | - | - | - | - | - |
+| **CHILD_RELATED_SDG** | ✓ | ✓ | ✓ | ✓ | - |
+| **CHLD_PVTY** | ✓ | - | - | ✓ | - |
+| **CME** | ✓ | - | ✓ | - | - |
+| **CME_CAUSE_OF_DEATH** | ✓ | - | - | - | - |
+| **CME_COUNTRY_PROFILES_DATA** | - | - | - | - | - |
+| **CME_DF_2021_WQ** | ✓ | - | ✓ | - | - |
+| **CME_SUBNATIONAL** | ✓ | - | ✓ | - | - |
+| **COVID** | ✓ | ✓ | ✓ | ✓ | - |
+| **COVID_CASES** | ✓ | ✓ | - | - | - |
+| **DM** | ✓ | ✓ | - | ✓ | - |
+| **DM_PROJECTIONS** | ✓ | ✓ | - | ✓ | - |
+| **ECD** | ✓ | ✓ | ✓ | ✓ | ✓ |
+| **ECONOMIC** | - | - | - | - | - |
+| **EDUCATION** | ✓ | - | ✓ | ✓ | - |
+| **EDUCATION_FLS** | ✓ | - | - | - | - |
+| **EDUCATION_UIS_SDG** | ✓ | - | ✓ | ✓ | - |
+| **FUNCTIONAL_DIFF** | ✓ | ✓ | ✓ | ✓ | - |
+| **GENDER** | ✓ | ✓ | - | ✓ | - |
+| **GLOBAL_DATAFLOW** | ✓ | ✓ | - | - | - |
+| **HIV_AIDS** | ✓ | ✓ | ✓ | ✓ | - |
+| **IMMUNISATION** | - | ✓ | - | - | - |
+| **MG** (Migration) | - | ✓ | - | - | - |
+| **MNCH** | ✓ | ✓ | ✓ | ✓ | ✓ |
+| **NUTRITION** | ✓ | ✓ | ✓ | ✓ | ✓ |
+| **PT** (Child Protection) | ✓ | ✓ | ✓ | ✓ | - |
+| **PT_CM** (Child Marriage) | ✓ | ✓ | ✓ | ✓ | - |
+| **PT_CONFLICT** | ✓ | ✓ | - | - | - |
+| **PT_FGM** | - | ✓ | ✓ | ✓ | - |
+| **SDG_PROG_ASSESSMENT** | - | - | - | - | - |
+| **SOC_PROTECTION** | ✓ | - | ✓ | ✓ | - |
+| **WASH_HEALTHCARE_FACILITY** | - | - | - | ✓ | - |
+| **WASH_HOUSEHOLDS** | - | - | ✓ | ✓ | - |
+| **WASH_HOUSEHOLD_MH** | ✓ | ✓ | - | ✓ | - |
+| **WASH_HOUSEHOLD_SUBNAT** | - | - | ✓ | ✓ | - |
+| **WASH_SCHOOLS** | - | - | - | ✓ | - |
+
+**Notes:**
+- ✓ = Dimension available for disaggregation
+- `-` = Dimension not available
+- **CME_SUBNAT_*** dataflows (country-specific subnational): All support SEX and WEALTH_QUINTILE
+- **MATERNAL_EDU** includes both `MATERNAL_EDU_LVL` and `MOTHER_EDUCATION` dimension names
+- Availability does not guarantee data exists for all values; use API to check actual data coverage
+
+### Checking Indicator Disaggregations
+
+```stata
+* Stata: Check what disaggregations are supported
+unicefdata, info(CME_MRY0T4)
+
+* Output shows:
+*  Supported Disaggregations:
+*    sex:          Yes (SEX)
+*    age:          No
+*    wealth:       Yes (WEALTH_QUINTILE)
+*    residence:    No
+*    maternal_edu: No
+```
+
+```python
+# Python: Get indicator info
+from unicef_api import indicator_info
+indicator_info("CME_MRY0T4")
+```
+
+```r
+# R: Get indicator info
+indicator_info("CME_MRY0T4")
+```
 
 ---
 
@@ -511,19 +638,20 @@ ms.sync_all(verbose=True)
 # Generate dataflow schemas (dataflows/*.yaml)
 sync_dataflow_schemas(output_dir='python/metadata/current')
 
-# Generate full indicator catalog (733 indicators)
+# Generate full indicator catalog (counts vary)
 refresh_indicator_cache()
 ```
 
 **Generated files:** `python/metadata/current/`
-- `_unicefdata_dataflows.yaml` - 69 dataflows
-- `_unicefdata_indicators.yaml` - 25 common SDG indicators
-- `_unicefdata_codelists.yaml` - 5 dimension codelists
-- `_unicefdata_countries.yaml` - 453 country codes
-- `_unicefdata_regions.yaml` - 111 regional codes
-- `unicef_indicators_metadata.yaml` - 733 indicators (full catalog)
+- `_unicefdata_dataflows.yaml` - dataflow catalog
+- `_unicefdata_indicators.yaml` - common SDG indicators (subset)
+- `_unicefdata_codelists.yaml` - dimension codelists
+- `_unicefdata_countries.yaml` - country codes
+- `_unicefdata_regions.yaml` - regional codes
+- `unicef_indicators_metadata.yaml` - full indicator catalog
 - `dataflow_index.yaml` - Dataflow schema index
-- `dataflows/*.yaml` - 69 individual dataflow schemas
+- `dataflows/*.yaml` - individual dataflow schemas
+Counts vary by API updates and sync date.
 
 ### R
 
@@ -601,12 +729,13 @@ python tests/report_metadata_status.py --detailed
 | Unified `unicefData()` / `unicefdata` API | ✅ | ✅ | ✅ |
 | **`search_indicators()`** | ✅ | ✅ | ✅ |
 | **`list_categories()`** | ✅ | ✅ | ✅ |
+| **Dataflow schema display** | ✅ | ✅ | ✅ |
 | Auto dataflow detection | ✅ | ✅ | ✅ |
 | Filter by country, year, sex | ✅ | ✅ | ✅ |
 | Unified `year` parameter | ✅ | ✅ | ✅ |
 | **`circa` nearest year matching** | ✅ | ✅ | ✅ |
 | Automatic retries | ✅ | ✅ | ✅ |
-| 733 indicators supported | ✅ | ✅ | ✅ |
+| 700+ indicators supported | ✅ | ✅ | ✅ |
 | **Post-production: `format`** | ✅ | ✅ | ✅ |
 | **Post-production: `latest`** | ✅ | ✅ | ✅ |
 | **Post-production: `mrv`** | ✅ | ✅ | ✅ |

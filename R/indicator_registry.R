@@ -49,54 +49,46 @@ CACHE_MAX_AGE_DAYS <- 30
 #' 
 #' @keywords internal
 .get_cache_path <- function() {
-  # Primary location: R/metadata/current/ directory
-  # Try to find R directory relative to current working directory
+  # 1. Environment override for unified cross-language cache
+  # Prefer R-specific override, then unified
+  env_home <- if (nzchar(Sys.getenv("UNICEF_DATA_HOME_R"))) Sys.getenv("UNICEF_DATA_HOME_R") else Sys.getenv("UNICEF_DATA_HOME")
+  if (nzchar(env_home)) {
+    metadata_dir <- file.path(env_home, "metadata", "current")
+    if (!dir.exists(metadata_dir)) dir.create(metadata_dir, recursive = TRUE, showWarnings = FALSE)
+    return(file.path(metadata_dir, CACHE_FILENAME))
+  }
+
+  # 2. Repo/dev path (when working in source tree)
   script_dir <- getwd()
-  
-  # Priority order: look for R/metadata/current first (project root case)
-  # then metadata/current (if already in R/ directory)
   candidates <- c(
-    file.path(script_dir, "R", "metadata", "current"),      # If in project root (highest priority)
-    file.path(script_dir, "metadata", "current"),           # If in R/
-    file.path(script_dir, "..", "R", "metadata", "current"), # If in project subdirectory
-    file.path(script_dir, "..", "metadata", "current")      # If in R/examples/
+    file.path(script_dir, "R", "metadata", "current"),      # Project root
+    file.path(script_dir, "metadata", "current"),           # Inside R/
+    file.path(script_dir, "..", "R", "metadata", "current"), # Subdirectory
+    file.path(script_dir, "..", "metadata", "current")      # R/examples/
   )
-  
   for (metadata_dir in candidates) {
-    # Check if the R/ or metadata/ parent exists to validate correct location
-    parent_dir <- dirname(metadata_dir)  # e.g., R/metadata or metadata
-    grandparent_dir <- dirname(parent_dir)  # e.g., R or .
-    
-    # For R/metadata/current, check if R/ exists
-    # For metadata/current (when in R/), check if metadata/ parent is within R structure
-    if (dir.exists(parent_dir) || 
-        (dir.exists(grandparent_dir) && basename(grandparent_dir) == "R")) {
-      # Create current/ if needed
-      if (!dir.exists(metadata_dir)) {
-        dir.create(metadata_dir, recursive = TRUE, showWarnings = FALSE)
-      }
-      if (dir.exists(metadata_dir)) {
-        return(file.path(metadata_dir, CACHE_FILENAME))
-      }
+    parent_dir <- dirname(metadata_dir)
+    grandparent_dir <- dirname(parent_dir)
+    if (dir.exists(parent_dir) || (dir.exists(grandparent_dir) && basename(grandparent_dir) == "R")) {
+      if (!dir.exists(metadata_dir)) dir.create(metadata_dir, recursive = TRUE, showWarnings = FALSE)
+      if (dir.exists(metadata_dir)) return(file.path(metadata_dir, CACHE_FILENAME))
     }
   }
-  
-  # Try package installation directory
-  package_dir <- system.file(package = "unicefdata")
-  if (nzchar(package_dir)) {
-    metadata_dir <- file.path(package_dir, "metadata", "current")
-    if (dir.exists(metadata_dir)) {
+
+  # 3. Cross-language user cache (no repo clone required)
+  # Prefer tools::R_user_dir if available; else use ~/.unicef_data/metadata/current
+  if (suppressWarnings(requireNamespace("tools", quietly = TRUE)) && exists("R_user_dir", envir = asNamespace("tools"))) {
+    base_dir <- tryCatch(tools::R_user_dir("unicefdata", "cache"), error = function(e) "")
+    if (nzchar(base_dir)) {
+      metadata_dir <- file.path(base_dir, "metadata", "current")
+      if (!dir.exists(metadata_dir)) dir.create(metadata_dir, recursive = TRUE, showWarnings = FALSE)
       return(file.path(metadata_dir, CACHE_FILENAME))
     }
   }
-  
-  # Fallback to user home directory
-  home_config <- file.path(Sys.getenv("HOME"), ".unicef_api")
-  if (!dir.exists(home_config)) {
-    dir.create(home_config, recursive = TRUE, showWarnings = FALSE)
-  }
-  
-  return(file.path(home_config, CACHE_FILENAME))
+  # Fallback to R-specific home path
+  home_dir <- file.path(Sys.getenv("HOME"), ".unicef_data", "r", "metadata", "current")
+  if (!dir.exists(home_dir)) dir.create(home_dir, recursive = TRUE, showWarnings = FALSE)
+  return(file.path(home_dir, CACHE_FILENAME))
 }
 
 #' Infer dataflow category from indicator code prefix
@@ -157,6 +149,31 @@ CACHE_MAX_AGE_DAYS <- 30
     return(indicator_overrides[[indicator_code]])
   }
   
+
+  # ===========================================================================
+  # DYNAMIC PATTERN-BASED OVERRIDES
+  # ===========================================================================
+  # These patterns catch indicators that belong to specific sub-dataflows
+
+  # based on content in their code, not just the prefix.
+  # More maintainable than hardcoding each indicator.
+  # ===========================================================================
+  
+  # FGM indicators: PT_*_FGM* -> PT_FGM
+  if (startsWith(indicator_code, "PT_") && grepl("_FGM", indicator_code)) {
+    return("PT_FGM")
+  }
+  
+  # Child Marriage indicators: PT_*_MRD_* -> PT_CM
+  if (startsWith(indicator_code, "PT_") && grepl("_MRD_", indicator_code)) {
+    return("PT_CM")
+  }
+  
+  # UIS SDG Education indicators: ED_*_UIS* -> EDUCATION_UIS_SDG
+  if (startsWith(indicator_code, "ED_") && grepl("_UIS", indicator_code)) {
+    return("EDUCATION_UIS_SDG")
+  }
+  
   # Mapping of prefixes to dataflows
   prefix_map <- list(
     CME = "CME",
@@ -177,7 +194,12 @@ CACHE_MAX_AGE_DAYS <- 30
     EMPH = "EMPH",
     EDUN = "EDUCATION",
     SDG4 = "EDUCATION_UIS_SDG",
-    PV = "CHLD_PVTY"
+    PV = "CHLD_PVTY",
+    # Added mappings to reduce GLOBAL_DATAFLOW catch-all
+    COD = "CAUSE_OF_DEATH",      # Cause of death indicators (83)
+    TRGT = "CHILD_RELATED_SDG",  # SDG/National targets (77)
+    SPP = "SOC_PROTECTION",      # Social protection programs (10)
+    WT = "PT"                    # Child labour/adolescent indicators (7)
   )
   
   # Extract prefix (first part before underscore)

@@ -1,5 +1,13 @@
 # unicefData Changelog
 
+## 1.5.0 (2025-12-19)
+
+### Cross-Platform Release
+* **Defaults**: Disaggregation filters now default to totals (`_T`) for sex, age, wealth, residence, and maternal education across Stata, R, and Python.
+* **Metadata caches**: Added per-language cache roots with environment overrides (`UNICEF_DATA_HOME_PY`, `UNICEF_DATA_HOME_R`) to keep Python and R YAML stores separate and install-friendly.
+* **Documentation**: Refreshed README examples (categories and mortality search) and help text to reflect current API outputs and default behavior.
+* **Version alignment**: Bumped package versions to 1.5.0 across R, Python, and Stata for the unified release.
+
 ## 0.2.3 (2025-12-08)
 
 ### Bug Fixes

@@ -1,6 +1,6 @@
 *******************************************************************************
 * unicefdata
-*! v 1.4.0   17Dec2025               by Joao Pedro Azevedo (UNICEF)
+*! v 1.5.0   19Dec2025               by Joao Pedro Azevedo (UNICEF)
 * Download indicators from UNICEF Data Warehouse via SDMX API
 * Aligned with R get_unicef() and Python unicef_api
 * Uses YAML metadata for dataflow detection and validation
@@ -26,8 +26,16 @@ program define unicefdata, rclass
         exit
     }
     
-    * Check for FLOWS subcommand
-    if (strpos("`0'", "flows") > 0) {
+    * Check for FLOWS subcommand (also accept "dataflows" as alias)
+    * But NOT if it has a parameter like dataflows(EDUCATION) - that goes to schema display
+    local is_flows_list = 0
+    if (strpos("`0'", "flows") > 0 | strpos("`0'", "dataflows") > 0) {
+        * Check if this is a parameterized call like dataflow(X) or dataflows(X)
+        if (strpos("`0'", "dataflow(") == 0 & strpos("`0'", "dataflows(") == 0) {
+            local is_flows_list = 1
+        }
+    }
+    if (`is_flows_list') {
         * Parse options (detail, verbose)
         local has_detail = (strpos("`0'", "detail") > 0)
         local has_verbose = (strpos("`0'", "verbose") > 0)
@@ -98,8 +106,44 @@ program define unicefdata, rclass
         local info_end = strpos(substr("`0'", `info_start', .), ")") + `info_start' - 2
         local info_indicator = substr("`0'", `info_start', `info_end' - `info_start' + 1)
         
-        _unicef_indicator_info, indicator("`info_indicator'")
+        * Check if verbose option was specified
+        local verbose_opt ""
+        if (strpos(lower("`0'"), "verbose") > 0) {
+            local verbose_opt "verbose"
+        }
+        
+        _unicef_indicator_info, indicator("`info_indicator'") `verbose_opt'
         exit
+    }
+    
+    * Check for DATAFLOW INFO subcommand (get dataflow schema details)
+    * Accept both "dataflow(X)" and "dataflows(X)" syntax
+    local has_df_param = (strpos("`0'", ", dataflow(") > 0 | strpos("`0'", ", dataflows(") > 0)
+    if (`has_df_param' & strpos("`0'", "indicator") == 0 & strpos("`0'", "search") == 0) {
+        * Extract dataflow code - this is for "unicefdata, dataflow(X)" without indicator()
+        * Handle both dataflow( and dataflows( syntax
+        local df_start = strpos("`0'", "dataflow(") + 9
+        if (strpos("`0'", "dataflows(") > 0) {
+            local df_start = strpos("`0'", "dataflows(") + 10
+        }
+        local df_end = strpos(substr("`0'", `df_start', .), ")") + `df_start' - 2
+        local df_code = substr("`0'", `df_start', `df_end' - `df_start' + 1)
+        
+        * Check if this looks like a discovery command (no countries, no indicator)
+        * If countries are present, it's a data retrieval command, not discovery
+        if (strpos("`0'", "countr") == 0) {
+            * Check if verbose option was specified
+            local verbose_opt ""
+            if (strpos(lower("`0'"), "verbose") > 0) {
+                local verbose_opt "verbose"
+            }
+            
+            _unicef_dataflow_info, dataflow("`df_code'") `verbose_opt'
+            
+            * Pass through return values
+            return add
+            exit
+        }
     }
     
     * Check for SYNC subcommand (route to unicefdata_sync)
@@ -163,6 +207,7 @@ program define unicefdata, rclass
                         VALIDATE                    /// Validate inputs against codelists
                         FALLBACK                    /// Try alternative dataflows on 404
                         NOFallback                  /// Disable dataflow fallback
+                        NOMETAdata                  /// Show brief summary instead of full metadata
                         *                           /// Legacy options
                  ]
 
@@ -175,16 +220,21 @@ program define unicefdata, rclass
         if ("`indicator'" == "") & ("`dataflow'" == "") {
             noi di as err "You must specify either indicator() or dataflow()."
             noi di as text ""
-            noi di as text "Discovery commands:"
-            noi di as text "  unicefdata, categories                - List categories with indicator counts"
-            noi di as text "  unicefdata, flows                     - List available dataflows"
-            noi di as text "  unicefdata, search(mortality)         - Search indicators by keyword"
-            noi di as text "  unicefdata, search(edu) dataflow(EDUCATION) - Search within a dataflow"
-            noi di as text "  unicefdata, indicators(CME)           - List indicators in a dataflow"
-            noi di as text "  unicefdata, info(CME_MRY0T4)          - Get indicator details"
+            noi di as text "{bf:Discovery commands:}"
+            noi di as text "  {stata unicefdata, categories}                " as text "- List categories with indicator counts"
+            noi di as text "  {stata unicefdata, flows}                     " as text "- List available dataflows"
+            noi di as text "  {stata unicefdata, search(mortality)}         " as text "- Search indicators by keyword"
+            noi di as text "  {stata unicefdata, search(edu) dataflow(EDUCATION)} " as text "- Search within a dataflow"
+            noi di as text "  {stata unicefdata, indicators(CME)}           " as text "- List indicators in a dataflow"
+            noi di as text "  {stata unicefdata, info(CME_MRY0T4)}          " as text "- Get indicator details"
             noi di as text ""
-            noi di as text "Data retrieval:"
-            noi di as text "  unicefdata, indicator(CME_MRY0T4) countries(BRA USA)"
+            noi di as text "{bf:Data retrieval examples:}"
+            noi di as text "  {stata unicefdata, indicator(CME_MRY0T4) clear}"
+            noi di as text "  {stata unicefdata, indicator(CME_MRY0T4) countries(BRA) clear}"
+            noi di as text "  {stata unicefdata, dataflow(NUTRITION) clear}"
+            noi di as text ""
+            noi di as text "{bf:Help:}"
+            noi di as text "  {stata help unicefdata}                       " as text "- Full documentation"
             exit 198
         }
         
@@ -201,6 +251,18 @@ program define unicefdata, rclass
         
         if ("`sex'" == "") {
             local sex "_T"
+        }
+        if ("`age'" == "") {
+            local age "_T"
+        }
+        if ("`wealth'" == "") {
+            local wealth "_T"
+        }
+        if ("`residence'" == "") {
+            local residence "_T"
+        }
+        if ("`maternal_edu'" == "") {
+            local maternal_edu "_T"
         }
         
         if ("`version'" == "") {
@@ -450,53 +512,85 @@ program define unicefdata, rclass
             }
             
             *-------------------------------------------------------------------
-            * Check and warn about supported disaggregations
+            * Check supported disaggregations (fast - reads dataflow schema directly)
             *-------------------------------------------------------------------
             
-            * Get indicator info to check supported disaggregations
-            capture _unicef_indicator_info, indicator("`indicator'") metapath("`metadata_path'") brief
-            if (_rc == 0) {
-                local has_sex = "`r(has_sex)'"
-                local has_age = "`r(has_age)'"
-                local has_wealth = "`r(has_wealth)'"
-                local has_residence = "`r(has_residence)'"
-                local has_maternal_edu = "`r(has_maternal_edu)'"
-                
-                * Warn if user specified a filter that's not supported
-                local unsupported_filters ""
-                
-                if ("`age'" != "" & "`age'" != "_T" & "`has_age'" == "0") {
-                    local unsupported_filters "`unsupported_filters' age"
+            * Get dimensions from dataflow schema (lightweight - doesn't parse indicator YAML)
+            local has_sex = 0
+            local has_age = 0
+            local has_wealth = 0
+            local has_residence = 0
+            local has_maternal_edu = 0
+            
+            if ("`dataflow'" != "") {
+                local schema_file "`metadata_path'_dataflows/`dataflow'.yaml"
+                capture confirm file "`schema_file'"
+                if (_rc == 0) {
+                    * Read dataflow schema and extract dimensions (fast - small file)
+                    tempname fh
+                    local in_dimensions = 0
+                    file open `fh' using "`schema_file'", read text
+                    file read `fh' line
+                    while r(eof) == 0 {
+                        local trimmed_line = strtrim(`"`line'"')
+                        if ("`trimmed_line'" == "dimensions:") {
+                            local in_dimensions = 1
+                        }
+                        else if (`in_dimensions' == 1) {
+                            * Check if we've left dimensions section
+                            local first_char = substr(`"`line'"', 1, 1)
+                            if ("`first_char'" != " " & "`first_char'" != "-" & "`first_char'" != "" & regexm(`"`line'"', "^[a-z_]+:")) {
+                                local in_dimensions = 0
+                            }
+                            else if (regexm("`trimmed_line'", "^- id: *([A-Z_0-9]+)")) {
+                                local dim_id = regexs(1)
+                                if ("`dim_id'" == "SEX") local has_sex = 1
+                                if ("`dim_id'" == "AGE") local has_age = 1
+                                if ("`dim_id'" == "WEALTH_QUINTILE") local has_wealth = 1
+                                if ("`dim_id'" == "RESIDENCE") local has_residence = 1
+                                if ("`dim_id'" == "MATERNAL_EDU_LVL" | "`dim_id'" == "MOTHER_EDUCATION") local has_maternal_edu = 1
+                            }
+                        }
+                        file read `fh' line
+                    }
+                    file close `fh'
                 }
-                if ("`wealth'" != "" & "`wealth'" != "_T" & "`has_wealth'" == "0") {
-                    local unsupported_filters "`unsupported_filters' wealth"
-                }
-                if ("`residence'" != "" & "`residence'" != "_T" & "`has_residence'" == "0") {
-                    local unsupported_filters "`unsupported_filters' residence"
-                }
-                if ("`maternal_edu'" != "" & "`maternal_edu'" != "_T" & "`has_maternal_edu'" == "0") {
-                    local unsupported_filters "`unsupported_filters' maternal_edu"
-                }
-                
-                if ("`unsupported_filters'" != "") {
-                    noi di ""
-                    noi di as error "Warning: The following disaggregation(s) are NOT supported by `indicator':"
-                    noi di as error "        `unsupported_filters'"
-                    noi di as text "  This indicator's dataflow (`dataflow') does not include these dimensions."
-                    noi di as text "  Your filter(s) will be ignored. Use 'unicefdata, info(`indicator')' for details."
-                    noi di ""
-                }
-                
-                * Show brief info about what IS supported (in verbose mode)
-                if ("`verbose'" != "") {
-                    noi di as text "Supported disaggregations: " _continue
-                    if ("`has_sex'" == "1") noi di as result "sex " _continue
-                    if ("`has_age'" == "1") noi di as result "age " _continue
-                    if ("`has_wealth'" == "1") noi di as result "wealth " _continue
-                    if ("`has_residence'" == "1") noi di as result "residence " _continue
-                    if ("`has_maternal_edu'" == "1") noi di as result "maternal_edu " _continue
-                    noi di ""
-                }
+            }
+            
+            * Warn if user specified a filter that's not supported
+            local unsupported_filters ""
+            
+            if ("`age'" != "" & "`age'" != "_T" & `has_age' == 0) {
+                local unsupported_filters "`unsupported_filters' age"
+            }
+            if ("`wealth'" != "" & "`wealth'" != "_T" & `has_wealth' == 0) {
+                local unsupported_filters "`unsupported_filters' wealth"
+            }
+            if ("`residence'" != "" & "`residence'" != "_T" & `has_residence' == 0) {
+                local unsupported_filters "`unsupported_filters' residence"
+            }
+            if ("`maternal_edu'" != "" & "`maternal_edu'" != "_T" & `has_maternal_edu' == 0) {
+                local unsupported_filters "`unsupported_filters' maternal_edu"
+            }
+            
+            if ("`unsupported_filters'" != "") {
+                noi di ""
+                noi di as error "Warning: The following disaggregation(s) are NOT supported by `indicator':"
+                noi di as error "        `unsupported_filters'"
+                noi di as text "  This indicator's dataflow (`dataflow') does not include these dimensions."
+                noi di as text "  Your filter(s) will be ignored. Use {stata unicefdata, info(`indicator')} for details."
+                noi di ""
+            }
+            
+            * Show brief info about what IS supported (in verbose mode)
+            if ("`verbose'" != "") {
+                noi di as text "Supported disaggregations: " _continue
+                if (`has_sex' == 1) noi di as result "sex " _continue
+                if (`has_age' == 1) noi di as result "age " _continue
+                if (`has_wealth' == 1) noi di as result "wealth " _continue
+                if (`has_residence' == 1) noi di as result "residence " _continue
+                if (`has_maternal_edu' == 1) noi di as result "maternal_edu " _continue
+                noi di ""
             }
         }
         
@@ -602,6 +696,7 @@ program define unicefdata, rclass
             if ("`indicator'" != "" & "`nofallback'" == "") {
                 noi di as text `"{p 4 4 2}(5) Try specifying a different dataflow().{p_end}"'
             }
+            noi di as text `"{p 4 4 2}(6) {browse "https://github.com/unicef-drp/unicefData/issues/new":Report an issue on GitHub} with a detailed description and, if possible, a log with {bf:set trace on} enabled.{p_end}"'
             exit 677
         }
         
@@ -802,25 +897,56 @@ program define unicefdata, rclass
                 }
             }
             
+            * Check maternal education disaggregation
+            capture confirm variable matedu
+            if (_rc == 0) {
+                quietly levelsof matedu, local(matedu_vals) clean
+                local n_matedu : word count `matedu_vals'
+                if (`n_matedu' > 1) {
+                    local avail_disagg "`avail_disagg'maternal_edu: `matedu_vals'; "
+                }
+            }
+            
             * Show note if disaggregations are available
             if ("`avail_disagg'" != "") {
                 noi di as text "Note: Disaggregated data available: " as result "`avail_disagg'"
                 
-                * Show applied filters
+                * Show applied filters (only for dimensions present in data)
                 local applied_filters ""
-                if ("`sex'" != "" & "`sex'" != "ALL") {
-                    local is_default = cond("`sex'" == "_T", " (Default)", "")
-                    local applied_filters "`applied_filters'sex: `sex'`is_default'; "
+                capture confirm variable sex
+                if (_rc == 0) {
+                    if ("`sex'" != "" & "`sex'" != "ALL") {
+                        local is_default = cond("`sex'" == "_T", " (Default)", "")
+                        local applied_filters "`applied_filters'sex: `sex'`is_default'; "
+                    }
                 }
-                if ("`wealth'" != "" & "`wealth'" != "ALL") {
-                    local is_default = cond("`wealth'" == "_T", " (Default)", "")
-                    local applied_filters "`applied_filters'wealth_quintile: `wealth'`is_default'; "
+                capture confirm variable wealth
+                if (_rc == 0) {
+                    if ("`wealth'" != "" & "`wealth'" != "ALL") {
+                        local is_default = cond("`wealth'" == "_T", " (Default)", "")
+                        local applied_filters "`applied_filters'wealth_quintile: `wealth'`is_default'; "
+                    }
                 }
-                if ("`age'" != "" & "`age'" != "ALL") {
-                    local applied_filters "`applied_filters'age: `age'; "
+                capture confirm variable age
+                if (_rc == 0) {
+                    if ("`age'" != "" & "`age'" != "ALL") {
+                        local is_default = cond("`age'" == "_T", " (Default)", "")
+                        local applied_filters "`applied_filters'age: `age'`is_default'; "
+                    }
                 }
-                if ("`residence'" != "" & "`residence'" != "ALL") {
-                    local applied_filters "`applied_filters'residence: `residence'; "
+                capture confirm variable residence
+                if (_rc == 0) {
+                    if ("`residence'" != "" & "`residence'" != "ALL") {
+                        local is_default = cond("`residence'" == "_T", " (Default)", "")
+                        local applied_filters "`applied_filters'residence: `residence'`is_default'; "
+                    }
+                }
+                capture confirm variable matedu
+                if (_rc == 0) {
+                    if ("`maternal_edu'" != "" & "`maternal_edu'" != "ALL") {
+                        local is_default = cond("`maternal_edu'" == "_T", " (Default)", "")
+                        local applied_filters "`applied_filters'maternal_edu: `maternal_edu'`is_default'; "
+                    }
                 }
                 
                 if ("`applied_filters'" != "") {
@@ -832,7 +958,14 @@ program define unicefdata, rclass
             if ("`sex'" != "" & "`sex'" != "ALL") {
                 capture confirm variable sex
                 if (_rc == 0) {
-                    keep if sex == "`sex'"
+                    quietly count if sex == "`sex'"
+                    local sex_keep = r(N)
+                    if (`sex_keep' > 0) {
+                        keep if sex == "`sex'"
+                    }
+                    else if ("`verbose'" != "") {
+                        noi di as text "  sex filter: value `sex' not found; keeping all"
+                    }
                 }
             }
             
@@ -840,7 +973,14 @@ program define unicefdata, rclass
             if ("`age'" != "" & "`age'" != "ALL") {
                 capture confirm variable age
                 if (_rc == 0) {
-                    keep if age == "`age'"
+                    quietly count if age == "`age'"
+                    local age_keep = r(N)
+                    if (`age_keep' > 0) {
+                        keep if age == "`age'"
+                    }
+                    else if ("`verbose'" != "") {
+                        noi di as text "  age filter: value `age' not found; keeping all"
+                    }
                 }
             }
             
@@ -848,7 +988,14 @@ program define unicefdata, rclass
             if ("`wealth'" != "" & "`wealth'" != "ALL") {
                 capture confirm variable wealth
                 if (_rc == 0) {
-                    keep if wealth == "`wealth'"
+                    quietly count if wealth == "`wealth'"
+                    local wealth_keep = r(N)
+                    if (`wealth_keep' > 0) {
+                        keep if wealth == "`wealth'"
+                    }
+                    else if ("`verbose'" != "") {
+                        noi di as text "  wealth filter: value `wealth' not found; keeping all"
+                    }
                 }
             }
             
@@ -856,7 +1003,14 @@ program define unicefdata, rclass
             if ("`residence'" != "" & "`residence'" != "ALL") {
                 capture confirm variable residence
                 if (_rc == 0) {
-                    keep if residence == "`residence'"
+                    quietly count if residence == "`residence'"
+                    local residence_keep = r(N)
+                    if (`residence_keep' > 0) {
+                        keep if residence == "`residence'"
+                    }
+                    else if ("`verbose'" != "") {
+                        noi di as text "  residence filter: value `residence' not found; keeping all"
+                    }
                 }
             }
             
@@ -864,7 +1018,14 @@ program define unicefdata, rclass
             if ("`maternal_edu'" != "" & "`maternal_edu'" != "ALL") {
                 capture confirm variable matedu
                 if (_rc == 0) {
-                    keep if matedu == "`maternal_edu'"
+                    quietly count if matedu == "`maternal_edu'"
+                    local matedu_keep = r(N)
+                    if (`matedu_keep' > 0) {
+                        keep if matedu == "`maternal_edu'"
+                    }
+                    else if ("`verbose'" != "") {
+                        noi di as text "  maternal_edu filter: value `maternal_edu' not found; keeping all"
+                    }
                 }
             }
             
@@ -1367,6 +1528,109 @@ program define unicefdata, rclass
         return local addmeta "`addmeta'"
         return local obs_count = _N
         return local url "`full_url'"
+        
+        *-----------------------------------------------------------------------
+        * Display indicator metadata
+        *-----------------------------------------------------------------------
+        
+        local n_indicators : word count `indicator'
+        
+        if (`n_indicators' == 1) {
+            * Get indicator info (now fast - direct file search, no full YAML parse)
+            capture _unicef_indicator_info, indicator("`indicator'") metapath("`metadata_path'") brief
+            if (_rc == 0) {
+                * Store metadata return values
+                return local indicator_name "`r(name)'"
+                return local indicator_category "`r(category)'"
+                return local indicator_dataflow "`r(dataflow)'"
+                return local indicator_description "`r(description)'"
+                return local indicator_urn "`r(urn)'"
+                return local has_sex "`r(has_sex)'"
+                return local has_age "`r(has_age)'"
+                return local has_wealth "`r(has_wealth)'"
+                return local has_residence "`r(has_residence)'"
+                return local has_maternal_edu "`r(has_maternal_edu)'"
+                return local supported_dims "`r(supported_dims)'"
+                
+                if ("`nometadata'" == "") {
+                    *-----------------------------------------------------------
+                    * FULL METADATA DISPLAY (default)
+                    *-----------------------------------------------------------
+                    noi di ""
+                    noi di as text "{hline 70}"
+                    noi di as text "Indicator Information: " as result "`indicator'"
+                    noi di as text "{hline 70}"
+                    noi di ""
+                    noi di as text _col(2) "Code:        " as result "`indicator'"
+                    noi di as text _col(2) "Name:        " as result "`r(name)'"
+                    noi di as text _col(2) "Category:    " as result "`r(category)'"
+                    if ("`r(dataflow)'" != "" & "`r(dataflow)'" != "`r(category)'") {
+                        noi di as text _col(2) "Dataflow:    " as result "`r(dataflow)'"
+                    }
+                    
+                    if ("`r(description)'" != "" & "`r(description)'" != ".") {
+                        noi di ""
+                        noi di as text _col(2) "Description:"
+                        noi di as result _col(4) "`r(description)'"
+                    }
+                    
+                    if ("`r(urn)'" != "" & "`r(urn)'" != ".") {
+                        noi di ""
+                        noi di as text _col(2) "URN:         " as result "`r(urn)'"
+                    }
+                    
+                    noi di ""
+                    noi di as text _col(2) "Supported Disaggregations:"
+                    noi di as text _col(4) "sex:          " as result cond("`r(has_sex)'" == "1", "Yes (SEX)", "No")
+                    noi di as text _col(4) "age:          " as result cond("`r(has_age)'" == "1", "Yes (AGE)", "No")
+                    noi di as text _col(4) "wealth:       " as result cond("`r(has_wealth)'" == "1", "Yes (WEALTH_QUINTILE)", "No")
+                    noi di as text _col(4) "residence:    " as result cond("`r(has_residence)'" == "1", "Yes (RESIDENCE)", "No")
+                    noi di as text _col(4) "maternal_edu: " as result cond("`r(has_maternal_edu)'" == "1", "Yes (MATERNAL_EDU_LVL)", "No")
+                    
+                    noi di ""
+                    noi di as text _col(2) "Observations: " as result _N
+                    noi di as text "{hline 70}"
+                }
+                else {
+                    *-----------------------------------------------------------
+                    * BRIEF DISPLAY (when nometadata specified)
+                    *-----------------------------------------------------------
+                    noi di ""
+                    noi di as text "{hline 70}"
+                    noi di as text "Indicator: " as result "`indicator'" as text " (Dataflow: " as result "`dataflow'" as text ")"
+                    noi di as text "Observations: " as result _N
+                    noi di as text "{hline 70}"
+                    noi di as text "{p 2 2 2}Use {stata unicefdata, info(`indicator')} for detailed metadata{p_end}"
+                    noi di as text "{hline 70}"
+                }
+            }
+            else {
+                * Fallback if metadata lookup failed
+                noi di ""
+                noi di as text "{hline 70}"
+                noi di as text "Indicator: " as result "`indicator'" as text " (Dataflow: " as result "`dataflow'" as text ")"
+                noi di as text "Observations: " as result _N
+                noi di as text "{hline 70}"
+                noi di as text "{p 2 2 2}Use {stata unicefdata, info(`indicator')} for detailed metadata{p_end}"
+                noi di as text "{hline 70}"
+            }
+        }
+        else if (`n_indicators' > 1) {
+            noi di ""
+            noi di as text "{hline 70}"
+            noi di as text "Retrieved " as result "`n_indicators'" as text " indicators from dataflow " as result "`dataflow'"
+            noi di as text "{hline 70}"
+            noi di as text " Observations: " as result _N
+            noi di as text "{hline 70}"
+        }
+        else {
+            noi di ""
+            noi di as text "{hline 70}"
+            noi di as text "Retrieved data from dataflow: " as result "`dataflow'"
+            noi di as text "{hline 70}"
+            noi di as text " Observations: " as result _N
+            noi di as text "{hline 70}"
+        }
         
         if ("`verbose'" != "") {
             noi di ""

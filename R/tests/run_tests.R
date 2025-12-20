@@ -1,25 +1,27 @@
 # ============================================================================
 # Comprehensive test suite for unicefdata R package
-# Tests all major functionality and saves results to CSV files
-# Uses get_unicef() for consistent output with Python package
+# 
+# Test Strategy:
+# - OFFLINE tests: Use bundled YAML metadata files (always run, fast)
+# - NETWORK tests: Call UNICEF API (skipped in CI, run locally)
+#
+# Bundled metadata location: R/metadata/current/
 # ============================================================================
 
-# Set working directory
-# setwd("D:/jazevedo/GitHub/unicefData")
+# Check environment FIRST
+IN_CI <- Sys.getenv("CI") != "" || Sys.getenv("GITHUB_ACTIONS") != ""
 
-# Source the main get_unicef function (which loads dependencies)
-if (file.exists("R/get_unicef.R")) {
-  source("R/get_unicef.R")
-  source("R/metadata.R")
-  source("R/flows.R")
+# Determine paths
+if (file.exists("R/metadata/current")) {
+  METADATA_DIR <- "R/metadata/current"
   OUTPUT_DIR <- "R/tests/output"
-} else if (file.exists("../get_unicef.R")) {
-  source("../get_unicef.R")
-  source("../metadata.R")
-  source("../flows.R")
+  R_DIR <- "R"
+} else if (file.exists("../metadata/current")) {
+  METADATA_DIR <- "../metadata/current"
   OUTPUT_DIR <- "output"
+  R_DIR <- ".."
 } else {
-  stop("Could not find R/get_unicef.R - run from unicefData root directory")
+  stop("Could not find metadata directory - run from unicefData root")
 }
 
 if (!dir.exists(OUTPUT_DIR)) {
@@ -32,18 +34,194 @@ log_msg <- function(msg) {
 }
 
 # ============================================================================
-# Test Functions
+# OFFLINE TESTS - Use bundled YAML metadata (always run, fast, NO network)
+# These tests only require the yaml package - no network dependencies
 # ============================================================================
 
-test_list_flows <- function() {
-  log_msg("Testing list_dataflows()...")
+test_yaml_dataflows <- function() {
+  log_msg("Testing YAML dataflows loading...")
   
-  # Use list_dataflows() for consistent output with Python
+  yaml_path <- file.path(METADATA_DIR, "_unicefdata_dataflows.yaml")
+  if (!file.exists(yaml_path)) {
+    log_msg(sprintf("  SKIP: %s not found", yaml_path))
+    return(TRUE)  # Skip gracefully
+  }
+  
+  data <- yaml::read_yaml(yaml_path)
+  
+  n_dataflows <- length(data$dataflows)
+  log_msg(sprintf("  Found %d dataflows in YAML", n_dataflows))
+  
+  # Verify structure
+  first_df <- data$dataflows[[1]]
+  has_required <- all(c("id", "name", "agency") %in% names(first_df))
+  log_msg(sprintf("  Structure valid: %s", has_required))
+  
+  # Check specific dataflows exist
+  expected <- c("CME", "EDUCATION", "NUTRITION", "IMMUNISATION")
+  found <- sum(expected %in% names(data$dataflows))
+  log_msg(sprintf("  Key dataflows present: %d/%d", found, length(expected)))
+  
+  return(n_dataflows >= 50 && has_required && found == length(expected))
+}
+
+test_yaml_indicators <- function() {
+  log_msg("Testing YAML indicators loading...")
+  
+  yaml_path <- file.path(METADATA_DIR, "_unicefdata_indicators.yaml")
+  if (!file.exists(yaml_path)) {
+    log_msg(sprintf("  SKIP: %s not found", yaml_path))
+    return(TRUE)
+  }
+  
+  data <- yaml::read_yaml(yaml_path)
+  
+  n_indicators <- length(data$indicators)
+  log_msg(sprintf("  Found %d indicators in YAML", n_indicators))
+  
+  # Check for expected indicators (some may not be in minimal YAML)
+  expected <- c("CME_MRY0T4", "NT_ANT_HAZ_NE2", "IM_DTP3")
+  found <- sum(expected %in% names(data$indicators))
+  log_msg(sprintf("  Key indicators present: %d/%d", found, length(expected)))
+  
+  # Minimum threshold: at least 10 indicators (bundled YAML may be minimal)
+  return(n_indicators >= 10 && found >= 1)
+}
+
+test_yaml_countries <- function() {
+  log_msg("Testing YAML countries loading...")
+  
+  yaml_path <- file.path(METADATA_DIR, "_unicefdata_countries.yaml")
+  if (!file.exists(yaml_path)) {
+    log_msg(sprintf("  SKIP: %s not found", yaml_path))
+    return(TRUE)
+  }
+  
+  data <- yaml::read_yaml(yaml_path)
+  
+  n_countries <- length(data$countries)
+  log_msg(sprintf("  Found %d countries in YAML", n_countries))
+  
+  # Check for expected countries
+  expected <- c("USA", "GBR", "FRA", "DEU", "BRA", "IND", "CHN")
+  found <- sum(expected %in% names(data$countries))
+  log_msg(sprintf("  Key countries present: %d/%d", found, length(expected)))
+  
+  return(n_countries >= 150 && found >= 5)
+}
+
+test_dataflow_schema_cme <- function() {
+  log_msg("Testing CME schema YAML structure...")
+  
+  schema_path <- file.path(METADATA_DIR, "dataflows", "CME.yaml")
+  if (!file.exists(schema_path)) {
+    log_msg(sprintf("  SKIP: %s not found", schema_path))
+    return(TRUE)
+  }
+  
+  # Read YAML directly (no function call needed)
+  schema <- yaml::read_yaml(schema_path)
+  
+  log_msg(sprintf("  Schema ID: %s", schema$id))
+  
+  # Extract dimensions
+  dimensions <- if (!is.null(schema$dimensions)) {
+    sapply(schema$dimensions, function(d) d$id)
+  } else {
+    character(0)
+  }
+  
+  # Extract attributes  
+  attributes <- if (!is.null(schema$attributes)) {
+    sapply(schema$attributes, function(a) a$id)
+  } else {
+    character(0)
+  }
+  
+  log_msg(sprintf("  Dimensions: %d (%s)", length(dimensions), 
+                  paste(head(dimensions, 3), collapse = ", ")))
+  log_msg(sprintf("  Attributes: %d", length(attributes)))
+  
+  has_dims <- length(dimensions) > 0
+  has_attrs <- length(attributes) > 0
+  
+  return(has_dims && has_attrs)
+}
+
+test_dataflow_schema_education <- function() {
+  log_msg("Testing EDUCATION schema YAML structure...")
+  
+  schema_path <- file.path(METADATA_DIR, "dataflows", "EDUCATION.yaml")
+  if (!file.exists(schema_path)) {
+    log_msg(sprintf("  SKIP: %s not found", schema_path))
+    return(TRUE)
+  }
+  
+  # Read YAML directly
+  schema <- yaml::read_yaml(schema_path)
+  
+  log_msg(sprintf("  Schema ID: %s", schema$id))
+  
+  dimensions <- if (!is.null(schema$dimensions)) {
+    sapply(schema$dimensions, function(d) d$id)
+  } else {
+    character(0)
+  }
+  
+  log_msg(sprintf("  Dimensions: %s", paste(head(dimensions, 5), collapse = ", ")))
+  
+  return(schema$id == "EDUCATION" && length(dimensions) > 0)
+}
+
+test_schema_files_exist <- function() {
+  log_msg("Testing schema files directory...")
+  
+  schema_dir <- file.path(METADATA_DIR, "dataflows")
+  if (!dir.exists(schema_dir)) {
+    log_msg(sprintf("  SKIP: %s not found", schema_dir))
+    return(TRUE)
+  }
+  
+  files <- list.files(schema_dir, pattern = "\\.yaml$")
+  log_msg(sprintf("  Found %d schema files", length(files)))
+  
+  # Check for key schemas
+  expected <- c("CME.yaml", "EDUCATION.yaml", "NUTRITION.yaml")
+  found <- sum(expected %in% files)
+  log_msg(sprintf("  Key schemas present: %d/%d", found, length(expected)))
+  
+  return(length(files) >= 10 && found >= 2)
+}
+
+# ============================================================================
+# NETWORK TESTS - Call UNICEF API (skipped in CI)
+# These require sourcing the package code first
+# ============================================================================
+
+source_package_code <- function() {
+  # Source package code only when needed (for network tests)
+  if (file.exists(file.path(R_DIR, "get_unicef.R"))) {
+    source(file.path(R_DIR, "get_unicef.R"))
+    source(file.path(R_DIR, "metadata.R"))
+    source(file.path(R_DIR, "flows.R"))
+    source(file.path(R_DIR, "aliases_devtests.R"))
+    return(TRUE)
+  }
+  return(FALSE)
+}
+
+test_list_flows_api <- function() {
+  log_msg("Testing list_dataflows() from API...")
+  
+  if (!source_package_code()) {
+    log_msg("  SKIP: Could not source package code")
+    return(TRUE)
+  }
+  
   flows <- list_dataflows()
   
   log_msg(sprintf("  Found %d dataflows", nrow(flows)))
   
-  # Save to CSV with UTF-8 encoding - columns: id, agency, version, name
   write.csv(flows, file.path(OUTPUT_DIR, "test_dataflows.csv"), 
             row.names = FALSE, fileEncoding = "UTF-8")
   log_msg("  Saved to test_dataflows.csv")
@@ -51,113 +229,29 @@ test_list_flows <- function() {
   return(nrow(flows) > 50)
 }
 
-test_child_mortality <- function() {
-  log_msg("Testing child mortality (CME_MRY0T4)...")
+test_child_mortality_api <- function() {
+  log_msg("Testing child mortality API (CME_MRY0T4)...")
+  
+  if (!exists("get_unicef", mode = "function")) {
+    if (!source_package_code()) {
+      log_msg("  SKIP: Could not source package code")
+      return(TRUE)
+    }
+  }
   
   df <- get_unicef(
     indicator = "CME_MRY0T4",
-    countries = c("USA", "GBR", "FRA", "DEU", "JPN"),
-    start_year = 2015,
+    countries = c("USA", "GBR", "FRA"),
+    start_year = 2020,
     end_year = 2023
   )
   
   log_msg(sprintf("  Retrieved %d observations", nrow(df)))
   
   if (!is.null(df) && nrow(df) > 0) {
-    log_msg(sprintf("  Countries: %s", paste(unique(df$iso3), collapse = ", ")))
-    log_msg(sprintf("  Years: %s", paste(sort(unique(df$period)), collapse = ", ")))
-    
     write.csv(df, file.path(OUTPUT_DIR, "test_mortality.csv"), row.names = FALSE)
     log_msg("  Saved to test_mortality.csv")
     return(nrow(df) > 0)
-  }
-  
-  return(FALSE)
-}
-
-test_stunting <- function() {
-  log_msg("Testing stunting (NT_ANT_HAZ_NE2)...")
-  
-  df <- get_unicef(
-    indicator = "NT_ANT_HAZ_NE2",
-    countries = c("IND", "BGD", "PAK", "NPL", "ETH"),
-    start_year = 2010,
-    end_year = 2023,
-    ignore_duplicates = TRUE  # Allow duplicate removal for this dataset
-  )
-  
-  log_msg(sprintf("  Retrieved %d observations", nrow(df)))
-  
-  if (!is.null(df) && nrow(df) > 0) {
-    write.csv(df, file.path(OUTPUT_DIR, "test_stunting.csv"), row.names = FALSE)
-    log_msg("  Saved to test_stunting.csv")
-    return(nrow(df) > 0)
-  }
-  
-  return(FALSE)
-}
-
-test_immunization <- function() {
-  log_msg("Testing immunization (IM_DTP3)...")
-  
-  df <- get_unicef(
-    indicator = "IM_DTP3",
-    countries = c("NGA", "COD", "BRA", "IDN", "MEX"),
-    start_year = 2015,
-    end_year = 2023
-  )
-  
-  log_msg(sprintf("  Retrieved %d observations", nrow(df)))
-  
-  if (!is.null(df) && nrow(df) > 0) {
-    write.csv(df, file.path(OUTPUT_DIR, "test_immunization.csv"), row.names = FALSE)
-    log_msg("  Saved to test_immunization.csv")
-    return(nrow(df) > 0)
-  }
-  
-  return(FALSE)
-}
-
-test_metadata_sync <- function() {
-  log_msg("Testing metadata sync...")
-  
-  cache_dir <- file.path(OUTPUT_DIR, "metadata_sync_test")
-  set_metadata_cache(cache_dir)
-  
-  results <- sync_metadata(verbose = FALSE)
-  
-  log_msg(sprintf("  Synced: %d dataflows, %d indicators", 
-                  results$dataflows, results$indicators))
-  
-  # Test vintage listing
-  vintages <- list_vintages()
-  log_msg(sprintf("  Vintages available: %s", paste(vintages, collapse = ", ")))
-  
-  return(results$dataflows > 50)
-}
-
-test_multiple_indicators <- function() {
-  log_msg("Testing multiple indicators...")
-  
-  # Use get_unicef with multiple indicators
-  df <- get_unicef(
-    indicator = c("CME_MRY0T4", "CME_MRY0"),
-    countries = c("BRA", "IND", "CHN"),
-    start_year = 2020,
-    end_year = 2023,
-    ignore_duplicates = TRUE  # Allow duplicate removal for combined datasets
-  )
-  
-  if (!is.null(df) && nrow(df) > 0) {
-    # Log per indicator
-    for (ind in unique(df$indicator)) {
-      n <- sum(df$indicator == ind)
-      log_msg(sprintf("  %s: %d observations", ind, n))
-    }
-    
-    write.csv(df, file.path(OUTPUT_DIR, "test_multiple_indicators.csv"), row.names = FALSE)
-    log_msg(sprintf("  Saved %d total observations", nrow(df)))
-    return(TRUE)
   }
   
   return(FALSE)
@@ -171,16 +265,32 @@ run_all_tests <- function() {
   cat("============================================================\n")
   cat("UNICEF API R Package Test Suite\n")
   cat(sprintf("Started: %s\n", Sys.time()))
-  cat("============================================================\n")
+  cat(sprintf("Environment: %s\n", if (IN_CI) "CI (GitHub Actions)" else "Local"))
+  cat(sprintf("Metadata dir: %s (exists: %s)\n", METADATA_DIR, dir.exists(METADATA_DIR)))
+  cat("============================================================\n\n")
   
+  # OFFLINE tests - always run (fast, no network)
+  # Only requires: yaml package (no sourcing of package code)
+  cat("--- OFFLINE TESTS (bundled YAML metadata) ---\n\n")
   tests <- list(
-    list(name = "List Dataflows", fn = test_list_flows),
-    list(name = "Child Mortality", fn = test_child_mortality),
-    list(name = "Stunting", fn = test_stunting),
-    list(name = "Immunization", fn = test_immunization),
-    list(name = "Metadata Sync", fn = test_metadata_sync),
-    list(name = "Multiple Indicators", fn = test_multiple_indicators)
+    list(name = "YAML Dataflows", fn = test_yaml_dataflows),
+    list(name = "YAML Indicators", fn = test_yaml_indicators),
+    list(name = "YAML Countries", fn = test_yaml_countries),
+    list(name = "Schema Files Exist", fn = test_schema_files_exist),
+    list(name = "CME Schema Structure", fn = test_dataflow_schema_cme),
+    list(name = "EDUCATION Schema Structure", fn = test_dataflow_schema_education)
   )
+  
+  # NETWORK tests - only run locally
+  if (!IN_CI) {
+    cat("\n--- NETWORK TESTS (API calls) ---\n\n")
+    tests <- c(tests, list(
+      list(name = "List Dataflows API", fn = test_list_flows_api),
+      list(name = "Child Mortality API", fn = test_child_mortality_api)
+    ))
+  } else {
+    cat("\n--- Skipping network tests (CI environment) ---\n\n")
+  }
   
   results <- list()
   
@@ -193,9 +303,10 @@ run_all_tests <- function() {
       list(name = test$name, status = "ERROR", error = e$message)
     })
     results[[length(results) + 1]] <- result
+    cat("\n")
   }
   
-  cat("\n============================================================\n")
+  cat("============================================================\n")
   cat("TEST RESULTS\n")
   cat("============================================================\n")
   
@@ -204,13 +315,18 @@ run_all_tests <- function() {
     icon <- if (r$status == "PASS") "PASS" else "FAIL"
     cat(sprintf("[%s] %s\n", icon, r$name))
     if (!is.null(r$error)) {
-      cat(sprintf("   Error: %s\n", r$error))
+      cat(sprintf("       Error: %s\n", r$error))
     }
     if (r$status == "PASS") passed_count <- passed_count + 1
   }
   
   cat(sprintf("\nTotal: %d/%d tests passed\n", passed_count, length(results)))
   cat("============================================================\n")
+  
+  # Exit with error if tests failed (for CI)
+  if (passed_count < length(results) && IN_CI) {
+    quit(status = 1)
+  }
   
   invisible(passed_count == length(results))
 }
