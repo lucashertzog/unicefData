@@ -186,7 +186,7 @@ program define _unicef_list_categories, rclass
     
     noi di ""
     noi di as text "{hline 50}"
-    noi di as text "  Available Indicator Categories"
+    noi di as text "  Available Indicator Categories (click to explore)"
     noi di as text "{hline 50}"
     noi di ""
     noi di as text _col(3) "{ul:Category}" _col(35) "{ul:Count}"
@@ -195,20 +195,13 @@ program define _unicef_list_categories, rclass
     local i = 1
     foreach cat of local sorted_categories {
         local count_val : word `i' of `sorted_counts'
-        noi di as result _col(3) "`cat'" as text _col(35) %6.0f `count_val'
+        noi di as text _col(3) "{stata unicefdata, indicators(`cat'):`cat'}" as text _col(35) %6.0f `count_val'
         local ++i
     }
     
     noi di as text "{hline 50}"
     noi di as text _col(3) "{bf:TOTAL}" _col(35) as result %6.0f `total_indicators'
     noi di as text "{hline 50}"
-    noi di ""
-    noi di as text "  Use {stata unicefdata, search(keyword) dataflow(CATEGORY):unicefdata, search(keyword) dataflow(CATEGORY)}"
-    noi di as text "  to search indicators within a specific category."
-    noi di ""
-    noi di as text "  Use {stata unicefdata, indicators(CATEGORY):unicefdata, indicators(CATEGORY)} to list all"
-    noi di as text "  indicators in a specific category."
-    noi di ""
     
     *---------------------------------------------------------------------------
     * Return values

@@ -267,7 +267,7 @@ program define _unicef_search_indicators, rclass
         noi di as text "  - Use {bf:unicefdata, search(keyword)} without dataflow filter"
     }
     else {
-        noi di as text _col(2) "{ul:Indicator}" _col(20) "{ul:Dataflow}" _col(35) "{ul:Name}"
+        noi di as text _col(2) "{ul:Indicator}" _col(22) "{ul:Dataflow}" _col(40) "{ul:Name}"
         noi di ""
         
         forvalues i = 1/`n_matches' {
@@ -276,16 +276,16 @@ program define _unicef_search_indicators, rclass
             local nm : word `i' of `match_names'
             
             * Truncate name if too long
-            if (length("`nm'") > 35) {
-                local nm = substr("`nm'", 1, 32) + "..."
+            if (length("`nm'") > 30) {
+                local nm = substr("`nm'", 1, 27) + "..."
             }
             
-            * Make indicator clickable - use dataflow if available
+            * Make indicator and dataflow clickable
             if ("`df'" != "" & "`df'" != "N/A") {
-                noi di as text _col(2) "{stata unicefdata, indicator(`ind') dataflow(`df') clear:`ind'}" as text _col(20) "`df'" _col(35) "`nm'"
+                noi di as text _col(2) "{stata unicefdata, indicator(`ind') dataflow(`df') clear:`ind'}" as text _col(22) "{stata unicefdata, indicators(`df'):`df'}" _col(40) "`nm'"
             }
             else {
-                noi di as text _col(2) "{stata unicefdata, indicator(`ind') clear:`ind'}" as text _col(20) "`df'" _col(35) "`nm'"
+                noi di as text _col(2) "{stata unicefdata, indicator(`ind') clear:`ind'}" as text _col(22) "`df'" _col(40) "`nm'"
             }
         }
         

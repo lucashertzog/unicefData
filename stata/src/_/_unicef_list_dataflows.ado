@@ -201,22 +201,22 @@ program define _unicef_list_dataflows, rclass
     local n_flows = _N
     
     if ("`detail'" != "") {
-        noi di as text _col(2) "{ul:Dataflow ID}" _col(25) "{ul:Name}"
+        noi di as text _col(2) "{ul:Dataflow ID}" _col(27) "{ul:Name}"
         noi di ""
         
         forvalues i = 1/`n_flows' {
             local id = dataflow_id[`i']
             local nm = name[`i']
             * Truncate name if too long
-            if (length("`nm'") > 45) {
-                local nm = substr("`nm'", 1, 42) + "..."
+            if (length("`nm'") > 43) {
+                local nm = substr("`nm'", 1, 40) + "..."
             }
-            noi di as result _col(2) "`id'" as text _col(25) "`nm'"
+            noi di as text _col(2) "{stata unicefdata, indicators(`id'):`id'}" as text _col(27) "`nm'"
         }
     }
     else {
-        * Compact display - 3 columns
-        noi di as text _col(2) "Dataflow IDs:"
+        * Compact display - 3 columns with clickable links
+        noi di as text _col(2) "Dataflow IDs (click to list indicators):"
         noi di ""
         
         local col = 2
@@ -226,8 +226,8 @@ program define _unicef_list_dataflows, rclass
                 noi di ""
                 local col = 2
             }
-            noi di as result _col(`col') "`id'" _continue
-            local col = `col' + 22
+            noi di as text _col(`col') "{stata unicefdata, indicators(`id'):`id'}" _continue
+            local col = `col' + 24
         }
         noi di ""
     }
@@ -238,9 +238,6 @@ program define _unicef_list_dataflows, rclass
     noi di as text "{hline 70}"
     noi di as text "Total: " as result `n_flows' as text " dataflows available"
     noi di as text "{hline 70}"
-    noi di ""
-    noi di as text "Usage: {stata unicefdata, indicator(<code>) dataflow(<ID>):unicefdata, indicator(<code>) dataflow(<ID>)}"
-    noi di as text "   or: {stata unicefdata, indicators(<ID>):unicefdata, indicators(<ID>)}" as text " to list indicators in a dataflow"
     
     *---------------------------------------------------------------------------
     * Return values
