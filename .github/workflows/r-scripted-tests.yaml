@@ -28,7 +28,7 @@ jobs:
 
       - name: Install R dependencies
         run: |
-          Rscript -e "install.packages(c('httr','xml2','memoise','countrycode','digest','tibble','readr','dplyr','tidyr','purrr','magrittr','jsonlite','yaml'), repos='https://cloud.r-project.org', dependencies=TRUE)"
+          Rscript -e "install.packages('yaml', repos='https://cloud.r-project.org')"
           Rscript -e "cat('Installed packages:', paste(installed.packages()[,'Package'], collapse=', '))"
 
       - name: Run scripted tests
