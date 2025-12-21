@@ -6,10 +6,44 @@
 # - NETWORK tests: Call UNICEF API (skipped in CI, run locally)
 #
 # Bundled metadata location: R/metadata/current/
+#
+# Dependencies:
+# - Only 'yaml' package needed - CI runs OFFLINE tests that parse bundled
+#   metadata files using yaml::read_yaml() without requiring full package
+#   dependencies (httr, jsonlite, etc.). Network tests source the full
+#   package code only when actually running.
 # ============================================================================
 
 # Check environment FIRST
 IN_CI <- Sys.getenv("CI") != "" || Sys.getenv("GITHUB_ACTIONS") != ""
+
+# Check actual network connectivity (for true offline detection)
+check_network <- function(timeout = 5) {
+  old_timeout <- getOption("timeout")
+  on.exit(options(timeout = old_timeout), add = TRUE)
+  options(timeout = timeout)
+  tryCatch({
+    # Try to reach UNICEF SDMX API
+    con <- url("https://sdmx.data.unicef.org/ws/public/sdmxapi/rest/dataflow", open = "r")
+    on.exit(try(close(con), silent = TRUE), add = TRUE)
+    TRUE
+  }, error = function(e) {
+    FALSE
+  }, warning = function(w) {
+    FALSE
+  })
+}
+
+# Determine if network tests should run
+# Skip if: (1) in CI environment, OR (2) no network connectivity
+if (IN_CI) {
+  NETWORK_AVAILABLE <- FALSE
+  SKIP_REASON <- "CI environment"
+} else {
+  cat("Checking network connectivity...\n")
+  NETWORK_AVAILABLE <- check_network()
+  SKIP_REASON <- if (!NETWORK_AVAILABLE) "no network connectivity" else NULL
+}
 
 # Determine paths
 if (file.exists("R/metadata/current")) {
@@ -266,6 +300,7 @@ run_all_tests <- function() {
   cat("UNICEF API R Package Test Suite\n")
   cat(sprintf("Started: %s\n", Sys.time()))
   cat(sprintf("Environment: %s\n", if (IN_CI) "CI (GitHub Actions)" else "Local"))
+  cat(sprintf("Network available: %s\n", if (NETWORK_AVAILABLE) "Yes" else sprintf("No (%s)", SKIP_REASON)))
   cat(sprintf("Metadata dir: %s (exists: %s)\n", METADATA_DIR, dir.exists(METADATA_DIR)))
   cat("============================================================\n\n")
   
@@ -281,15 +316,15 @@ run_all_tests <- function() {
     list(name = "EDUCATION Schema Structure", fn = test_dataflow_schema_education)
   )
   
-  # NETWORK tests - only run locally
-  if (!IN_CI) {
+  # NETWORK tests - only run when network is available (not in CI, and connectivity confirmed)
+  if (NETWORK_AVAILABLE) {
     cat("\n--- NETWORK TESTS (API calls) ---\n\n")
     tests <- c(tests, list(
       list(name = "List Dataflows API", fn = test_list_flows_api),
       list(name = "Child Mortality API", fn = test_child_mortality_api)
     ))
   } else {
-    cat("\n--- Skipping network tests (CI environment) ---\n\n")
+    cat(sprintf("\n--- Skipping network tests (%s) ---\n\n", SKIP_REASON))
   }
   
   results <- list()
