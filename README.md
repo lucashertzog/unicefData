@@ -801,6 +801,44 @@ unicefData/
 
 ---
 
+## Author
+
+**Joao Pedro Azevedo** ([@jpazvd](https://github.com/jpazvd))  
+Chief Statistician, UNICEF Data and Analytics Section
+
+---
+
+## Contributing
+
+Contributions are welcome! Whether it's bug reports, feature requests, or code contributions, we appreciate your help in improving this package.
+
+### How to Contribute
+
+1. **Report bugs** — Open an [issue](https://github.com/unicef-drp/unicefData/issues) with a clear description
+2. **Request features** — Suggest new indicators, filters, or functionality
+3. **Submit code** — Fork the repo, create a branch, and open a pull request
+
+### Development Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/unicef-drp/unicefData.git
+cd unicefData
+
+# For Python development
+cd python && pip install -e .
+
+# For R development
+# Open unicefData.Rproj in RStudio
+
+# For Stata development
+cd stata && do install_local.do
+```
+
+Please ensure your contributions pass the existing tests before submitting a PR.
+
+---
+
 ## Links
 
 - UNICEF Data Portal: <https://data.unicef.org/>
