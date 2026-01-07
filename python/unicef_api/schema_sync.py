@@ -18,6 +18,7 @@ Usage:
 import os
 import yaml
 import requests
+from . import build_user_agent
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from typing import Dict, List, Optional, Any
@@ -46,7 +47,7 @@ def get_dataflow_list(max_retries: int = 3) -> List[Dict[str, str]]:
     
     for attempt in range(max_retries):
         try:
-            response = requests.get(url, timeout=60)
+            response = requests.get(url, timeout=60, headers={'User-Agent': build_user_agent()})
             response.raise_for_status()
             
             root = ET.fromstring(response.content)
@@ -83,7 +84,7 @@ def get_dataflow_schema(dataflow_id: str, version: str = '1.0', max_retries: int
     
     for attempt in range(max_retries):
         try:
-            response = requests.get(url, timeout=120)
+            response = requests.get(url, timeout=120, headers={'User-Agent': build_user_agent()})
             
             if response.status_code == 404:
                 logger.warning(f"Dataflow {dataflow_id} not found (404)")
@@ -199,7 +200,7 @@ def get_sample_data(
     
     for attempt in range(max_retries):
         try:
-            response = requests.get(url, timeout=180, stream=True)
+            response = requests.get(url, timeout=180, stream=True, headers={'User-Agent': build_user_agent()})
             
             if response.status_code == 404:
                 return None
