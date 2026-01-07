@@ -194,6 +194,8 @@ program define unicefdata, rclass
                         LONG                        /// Long format (default)
                         WIDE                        /// Wide format
                         WIDE_indicators             /// Wide format with indicators as columns
+                        WIDE_attributes             /// Wide format with attributes as suffixes
+                        ATTRIBUTES(string)          /// Attributes to keep for wide_indicators (_T _M _F _Q1 etc., or ALL)
                         LATEST                      /// Most recent value only
                         MRV(integer 0)              /// N most recent values
                         DROPNA                      /// Drop missing values
@@ -1314,8 +1316,101 @@ program define unicefdata, rclass
         * Format output (long/wide/wide_indicators) - aligned with R/Python
         *-----------------------------------------------------------------------
         
+        * Check for conflicting options: cannot use wide_attributes and wide_indicators together
+        if ("`wide_attributes'" != "" & "`wide_indicators'" != "") {
+            noi di as error "Error: wide_attributes and wide_indicators cannot be used together."
+            noi di as error "Choose one: wide_attributes (pivots disaggregation suffixes) OR wide_indicators (pivots indicators as columns)"
+            error 198
+        }
+        
+        * Apply attribute filtering FIRST (if specified with wide_attributes or wide_indicators)
+        local pre_filter_n = _N
+        if (("`wide_attributes'" != "" | "`wide_indicators'" != "") & "`attributes'" != "") {
+            * Set default if attributes() is specified but empty string
+            if (lower("`attributes'") == "all") {
+                * Keep all attributes - no filtering
+                if ("`verbose'" != "") {
+                    noi di as text "  keeping all attributes (attributes=ALL)"
+                }
+            }
+            else {
+                * Filter: keep rows where ANY disaggregation variable matches ANY specified attribute
+                tempvar attr_match
+                gen `attr_match' = 0
+                
+                * Check sex
+                capture confirm variable sex
+                if (_rc == 0) {
+                    foreach attr in `attributes' {
+                        replace `attr_match' = 1 if upper(sex) == upper("`attr'")
+                    }
+                }
+                
+                * Check age
+                capture confirm variable age
+                if (_rc == 0) {
+                    foreach attr in `attributes' {
+                        replace `attr_match' = 1 if upper(age) == upper("`attr'")
+                    }
+                }
+                
+                * Check wealth
+                capture confirm variable wealth
+                if (_rc == 0) {
+                    foreach attr in `attributes' {
+                        replace `attr_match' = 1 if upper(wealth) == upper("`attr'")
+                    }
+                }
+                
+                * Check residence
+                capture confirm variable residence
+                if (_rc == 0) {
+                    foreach attr in `attributes' {
+                        replace `attr_match' = 1 if upper(residence) == upper("`attr'")
+                    }
+                }
+                
+                * Check maternal education
+                capture confirm variable matedu
+                if (_rc == 0) {
+                    foreach attr in `attributes' {
+                        replace `attr_match' = 1 if upper(matedu) == upper("`attr'")
+                    }
+                }
+                
+                * If no disaggregation variables exist (all missing), keep the row
+                capture confirm variable sex
+                local has_any_disag = (_rc == 0)
+                capture confirm variable age
+                if (_rc == 0) local has_any_disag = 1
+                capture confirm variable wealth
+                if (_rc == 0) local has_any_disag = 1
+                capture confirm variable residence
+                if (_rc == 0) local has_any_disag = 1
+                capture confirm variable matedu
+                if (_rc == 0) local has_any_disag = 1
+                
+                if (!`has_any_disag') {
+                    replace `attr_match' = 1
+                }
+                
+                count if `attr_match'
+                local attr_match_n = r(N)
+                if (`attr_match_n' > 0) {
+                    keep if `attr_match'
+                    if ("`verbose'" != "") {
+                        noi di as text "  attributes filter: kept `attr_match_n' of `pre_filter_n' obs for attributes: `attributes'"
+                    }
+                }
+                else if ("`verbose'" != "") {
+                    noi di as text "  attributes filter: no matches for specified attributes `attributes', keeping all"
+                }
+                drop `attr_match'
+            }
+        }
+        
         if ("`wide_indicators'" != "") {
-            * NEW: Reshape with indicators as columns (like Python wide_indicators)
+            * Reshape with indicators as columns (like Python wide_indicators)
             
             * Warn if only one indicator (matches R/Python behavior)
             if (`n_indicators' <= 1) {
@@ -1330,96 +1425,82 @@ program define unicefdata, rclass
             capture confirm variable indicator
             capture confirm variable value
             if (_rc == 0) {
-                local pre_filter_n = _N
-                
                 if ("`verbose'" != "") {
                     noi di as text "wide_indicators: Starting with `pre_filter_n' observations"
                 }
                 
-                * First, collapse to handle duplicate disaggregations
-                * Keep only the total/aggregate values where possible
-                * Use capture to avoid dropping all data if filter doesn't match
-                capture confirm variable sex
-                if (_rc == 0) {
-                    tempvar sex_match
-                    gen `sex_match' = inlist(upper(sex), "_T", "T", "TOTAL", "BOTHSEX", "") | missing(sex)
-                    count if `sex_match'
-                    local sex_match_n = r(N)
-                    if (`sex_match_n' > 0) {
-                        keep if `sex_match'
-                        if ("`verbose'" != "") {
-                            noi di as text "  sex filter: kept `sex_match_n' of `pre_filter_n' obs"
-                        }
-                    }
-                    else if ("`verbose'" != "") {
-                        noi di as text "  sex filter: no matches for _T/TOTAL/BOTHSEX, keeping all"
-                    }
-                    drop `sex_match'
+                * If attributes() not specified with wide_indicators, default to _T
+                if ("`attributes'" == "") {
+                    local attributes "_T"
                     local pre_filter_n = _N
-                }
-                capture confirm variable age
-                if (_rc == 0) {
-                    tempvar age_match
-                    * Expanded age filter to include CME-specific codes
-                    * CME uses detailed age codes like Y0T4 (0-4), Y5T14 (5-14), etc.
-                    gen `age_match' = inlist(upper(age), "_T", "T", "TOTAL", "") | missing(age) | ///
-                                      inlist(upper(age), "Y0T4", "Y0T17", "LT5", "0-4", "Y00T04") | ///
-                                      inlist(upper(age), "Y0T0", "Y1T4", "Y5T9", "Y5T14", "Y10T14") | ///
-                                      inlist(upper(age), "Y10T19", "Y15T24", "Y15T19", "Y20T24")
-                    count if `age_match'
-                    local age_match_n = r(N)
-                    if (`age_match_n' > 0) {
-                        keep if `age_match'
+                    
+                    * Apply default filtering for backward compatibility
+                    tempvar attr_match
+                    gen `attr_match' = 0
+                    
+                    * Check sex
+                    capture confirm variable sex
+                    if (_rc == 0) {
+                        replace `attr_match' = 1 if upper(sex) == "_T"
+                    }
+                    
+                    * Check age
+                    capture confirm variable age
+                    if (_rc == 0) {
+                        replace `attr_match' = 1 if upper(age) == "_T"
+                    }
+                    
+                    * Check wealth
+                    capture confirm variable wealth
+                    if (_rc == 0) {
+                        replace `attr_match' = 1 if upper(wealth) == "_T"
+                    }
+                    
+                    * Check residence
+                    capture confirm variable residence
+                    if (_rc == 0) {
+                        replace `attr_match' = 1 if upper(residence) == "_T"
+                    }
+                    
+                    * Check maternal education
+                    capture confirm variable matedu
+                    if (_rc == 0) {
+                        replace `attr_match' = 1 if upper(matedu) == "_T"
+                    }
+                    
+                    * If no disaggregation variables exist, keep the row
+                    capture confirm variable sex
+                    local has_any_disag = (_rc == 0)
+                    capture confirm variable age
+                    if (_rc == 0) local has_any_disag = 1
+                    capture confirm variable wealth
+                    if (_rc == 0) local has_any_disag = 1
+                    capture confirm variable residence
+                    if (_rc == 0) local has_any_disag = 1
+                    capture confirm variable matedu
+                    if (_rc == 0) local has_any_disag = 1
+                    
+                    if (!`has_any_disag') {
+                        replace `attr_match' = 1
+                    }
+                    
+                    count if `attr_match'
+                    local attr_match_n = r(N)
+                    if (`attr_match_n' > 0) {
+                        keep if `attr_match'
                         if ("`verbose'" != "") {
-                            noi di as text "  age filter: kept `age_match_n' of `pre_filter_n' obs"
+                            noi di as text "  default attributes filter (_T only): kept `attr_match_n' of `pre_filter_n' obs"
                         }
                     }
-                    else if ("`verbose'" != "") {
-                        noi di as text "  age filter: no matches for standard/CME age codes, keeping all"
-                        noi di as text "  NOTE: Unique age values in data:"
-                        noi tab age, missing
-                    }
-                    drop `age_match'
-                    local pre_filter_n = _N
-                }
-                capture confirm variable wealth
-                if (_rc == 0) {
-                    tempvar wealth_match
-                    gen `wealth_match' = inlist(upper(wealth), "_T", "T", "TOTAL", "_Z", "") | missing(wealth)
-                    count if `wealth_match'
-                    local wealth_match_n = r(N)
-                    if (`wealth_match_n' > 0) {
-                        keep if `wealth_match'
-                        if ("`verbose'" != "") {
-                            noi di as text "  wealth filter: kept `wealth_match_n' of `pre_filter_n' obs"
-                        }
-                    }
-                    else if ("`verbose'" != "") {
-                        noi di as text "  wealth filter: no matches for _T/TOTAL/_Z, keeping all"
-                    }
-                    drop `wealth_match'
-                    local pre_filter_n = _N
-                }
-                capture confirm variable residence
-                if (_rc == 0) {
-                    tempvar res_match
-                    gen `res_match' = inlist(upper(residence), "_T", "T", "TOTAL", "_Z", "") | missing(residence)
-                    count if `res_match'
-                    local res_match_n = r(N)
-                    if (`res_match_n' > 0) {
-                        keep if `res_match'
-                        if ("`verbose'" != "") {
-                            noi di as text "  residence filter: kept `res_match_n' of `pre_filter_n' obs"
-                        }
-                    }
-                    else if ("`verbose'" != "") {
-                        noi di as text "  residence filter: no matches for _T/TOTAL/_Z, keeping all"
-                    }
-                    drop `res_match'
+                    drop `attr_match'
                 }
                 
                 * Keep columns needed for reshape
                 local keep_vars "iso3 country period indicator value"
+                foreach var in sex age wealth residence matedu sex_name age_name wealth_name residence_name maternal_edu_name unit unit_name lb ub status status_name source refper notes {
+                    capture confirm variable `var'
+                    if (_rc == 0) local keep_vars "`keep_vars' `var'"
+                }
                 if ("`addmeta'" != "") {
                     foreach v in region income_group continent geo_type {
                         capture confirm variable `v'
@@ -1451,22 +1532,109 @@ program define unicefdata, rclass
                     }
                 }
                 else {
-                    noi di as error "Warning: No data remaining after applying disaggregation filters for wide_indicators."
-                    noi di as text "Try without wide_indicators option or check data disaggregations."
+                    noi di as error "Warning: No data remaining after applying attribute filters for wide_indicators."
+                    noi di as text "Try without wide_indicators option or check the attributes() option."
                 }
             }
         }
-        else if ("`wide'" != "") {
-            * Reshape to wide format (years as columns)
+        if ("`wide_attributes'" != "") {
+            * Reshape to wide format (disaggregation attributes as suffixes)
+            * Result: iso3, country, period, and columns like CME_MRY0T4_T, CME_MRY0T4_M, etc.
             capture confirm variable iso3
             capture confirm variable period
             capture confirm variable indicator
             capture confirm variable value
             if (_rc == 0) {
-                keep iso3 country period indicator value
-                capture reshape wide value, i(iso3 country period) j(indicator) string
-                if (_rc != 0) {
-                    noi di as text "Note: Could not reshape to wide format."
+                * Build composite suffix from available disaggregation variables
+                tempvar disag_suffix
+                gen `disag_suffix' = ""
+                
+                * Add sex suffix if present
+                capture confirm variable sex
+                if (_rc == 0) {
+                    replace `disag_suffix' = `disag_suffix' + "_" + sex
+                }
+                
+                * Add wealth suffix if present
+                capture confirm variable wealth
+                if (_rc == 0) {
+                    replace `disag_suffix' = `disag_suffix' + "_" + wealth
+                }
+                
+                * Add age suffix if present
+                capture confirm variable age
+                if (_rc == 0) {
+                    replace `disag_suffix' = `disag_suffix' + "_" + age
+                }
+                
+                * Add residence suffix if present
+                capture confirm variable residence
+                if (_rc == 0) {
+                    replace `disag_suffix' = `disag_suffix' + "_" + residence
+                }
+                
+                * Add maternal education suffix if present
+                capture confirm variable matedu
+                if (_rc == 0) {
+                    replace `disag_suffix' = `disag_suffix' + "_" + matedu
+                }
+                
+                * If no disaggregation variables, use empty suffix
+                replace `disag_suffix' = "" if `disag_suffix' == ""
+                
+                * Create composite variable name: indicator + suffix
+                tempvar ind_disag
+                gen `ind_disag' = indicator + `disag_suffix'
+                
+                * Keep only essential columns for reshape
+                keep iso3 country period `ind_disag' value
+                
+                * Reshape: each indicator+disaggregation combination becomes a column
+                capture reshape wide value, i(iso3 country period) j(`ind_disag') string
+                if (_rc == 0) {
+                    * Rename value* variables to remove the "value" prefix
+                    quietly ds value*
+                    foreach var in `r(varlist)' {
+                        local newname = subinstr("`var'", "value", "", 1)
+                        rename `var' `newname'
+                    }
+                    sort iso3 period
+                }
+                else {
+                    noi di as text "Note: Could not reshape to wide_attributes format."
+                }
+            }
+        }
+        else if ("`wide'" != "") {
+            * Reshape to wide format (years as columns with yr prefix)
+            * Result: iso3, country, indicator, sex, wealth, age, residence, etc., and columns like yr2019, yr2020, yr2021
+            capture confirm variable iso3
+            capture confirm variable period
+            capture confirm variable indicator
+            capture confirm variable value
+            if (_rc == 0) {
+                * Keep all dimensions except period
+                local keep_vars "iso3 country indicator value period"
+                foreach var in sex age wealth residence matedu sex_name age_name wealth_name residence_name maternal_edu_name unit unit_name lb ub status status_name source refper notes {
+                    capture confirm variable `var'
+                    if (_rc == 0) local keep_vars "`keep_vars' `var'"
+                }
+                keep `keep_vars'
+                
+                * Reshape: years become columns
+                capture reshape wide value, i(iso3 country indicator sex age wealth residence matedu) j(period) string
+                if (_rc == 0) {
+                    * Rename value* variables to have yr prefix
+                    quietly ds value*
+                    foreach var in `r(varlist)' {
+                        local year = subinstr("`var'", "value", "", 1)
+                        local newname = "yr" + `year'
+                        rename `var' `newname'
+                    }
+                    sort iso3 indicator
+                }
+                else {
+                    noi di as text "Note: Could not reshape to wide format (years as columns)."
                 }
             }
         }
