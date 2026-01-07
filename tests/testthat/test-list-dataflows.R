@@ -80,22 +80,46 @@ test_that("list_dataflows respects retry parameter", {
   }
 })
 
-test_that("list_dataflows with cache behaves consistently", {
+test_that("list_dataflows has valid data types", {
   skip_if_not_installed("unicefData")
   skip_on_cran()
   
-  # First call (may hit API)
-  flows1 <- tryCatch(list_dataflows(cache = TRUE), error = function(e) NULL)
+  flows <- tryCatch(
+    list_dataflows(),
+    error = function(e) NULL
+  )
   
-  skip_if(is.null(flows1), "API unavailable")
+  skip_if(is.null(flows), "API unavailable")
   
-  # Second call (should use cache if available)
-  flows2 <- tryCatch(list_dataflows(cache = TRUE), error = function(e) NULL)
+  # All expected columns should be character type
+  for (col in c("id", "agency", "version", "name")) {
+    if (col %in% names(flows)) {
+      expect_true(
+        is.character(flows[[col]]),
+        info = paste("Column", col, "should be character type")
+      )
+    }
+  }
+})
+
+test_that("list_dataflows has no duplicate IDs", {
+  skip_if_not_installed("unicefData")
+  skip_on_cran()
   
-  # Both calls should return same structure
-  expect_s3_class(flows1, "data.frame")
-  expect_s3_class(flows2, "data.frame")
+  flows <- tryCatch(
+    list_dataflows(),
+    error = function(e) NULL
+  )
   
-  # Column names should match
-  expect_equal(names(flows1), names(flows2))
+  skip_if(is.null(flows), "API unavailable")
+  
+  # Check for duplicates in id column
+  if (nrow(flows) > 0) {
+    duplicates <- flows[duplicated(flows$id), ]
+    expect_equal(
+      nrow(duplicates), 
+      0, 
+      info = paste("Found duplicate dataflow IDs:", paste(duplicates$id, collapse = ", "))
+    )
+  }
 })

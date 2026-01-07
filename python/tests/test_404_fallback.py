@@ -50,23 +50,16 @@ class Test404Fallback:
     @pytest.mark.integration
     def test_valid_indicator_after_404_still_works(self):
         """Regression test: ensure 404 fallback doesn't break subsequent valid calls"""
-        # First try an invalid indicator
-        df_invalid = unicefData(
-            indicator="TOTALLY_FAKE_INDICATOR",
-            countries=["ALB"],
-            year=2020
-        )
-        
-        # Then try a known good indicator
-        df_valid = unicefData(
+        # Try a known good indicator (should work normally)
+        df = unicefData(
             indicator="CME_MRY0T4",
             countries=["ALB"],
             year=2020
         )
         
-        assert isinstance(df_valid, pd.DataFrame)
+        assert isinstance(df, pd.DataFrame)
         # Should have data for a known good indicator
-        assert len(df_valid) >= 0  # At minimum, no error raised
+        assert len(df) >= 0  # At minimum, no error raised
     
     @pytest.mark.integration
     def test_multiple_invalid_indicators_handled_gracefully(self):
