@@ -140,8 +140,13 @@ class UNICEFSDMXClient:
         self.metadata_manager = MetadataManager()
         
         # Set default headers
+        try:
+            from . import build_user_agent
+            ua = build_user_agent()
+        except Exception:
+            ua = 'unicefData-Python/unknown (+https://github.com/unicef-drp/unicefData)'
         self.session.headers.update({
-            'User-Agent': 'unicef-api-python/0.1.0',
+            'User-Agent': ua,
             'Accept-Encoding': 'gzip, deflate',
         })
 
