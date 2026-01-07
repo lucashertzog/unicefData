@@ -38,7 +38,7 @@ if (!requireNamespace("readr", quietly = TRUE)) stop("Package 'readr' required")
 #' @param retry Number of retries
 #' @return Content as text
 #' @keywords internal
-fetch_sdmx_text <- function(url, ua, retry) {
+fetch_sdmx_text <- function(url, ua = .unicefData_ua, retry) {
   resp <- httr::RETRY("GET", url, ua, times = retry, pause_base = 1)
   status <- httr::status_code(resp)
   # 404 error
@@ -135,7 +135,8 @@ get_fallback_dataflows <- function(original_flow) {
   if (!is.null(start_year_str)) full_url <- paste0(full_url, "&startPeriod=", start_year_str)
   if (!is.null(end_year_str))   full_url <- paste0(full_url, "&endPeriod=", end_year_str)
 
-  ua <- httr::user_agent("unicefData/1.0 (+https://github.com/jpazvd/unicefData)")
+  # Shared dynamic User-Agent
+  ua <- .unicefData_ua
 
   pages <- list()
   page <- 0L
@@ -147,7 +148,7 @@ get_fallback_dataflows <- function(original_flow) {
     # IMPORTANT: catch 404 as a signal, not a fatal error
     out <- tryCatch(
       {
-        txt <- fetch_sdmx_text(page_url, ua, max_retries)     # may throw http_404
+        txt <- fetch_sdmx_text(page_url, ua = ua, max_retries)     # may throw http_404
         readr::read_csv(txt, show_col_types = FALSE)
       },
       error = function(e) e
