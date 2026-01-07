@@ -6,7 +6,12 @@ version 11
 * Aligned with R get_unicef() and Python unicef_api
 * Uses YAML metadata for dataflow detection and validation
 *
-* NEW in v1.5.2: Enhanced help file documentation, attributes() improvements
+* NEW in v1.5.2: 
+* - Enhanced wide_indicators: now creates empty columns for all requested indicators
+*   (prevents reshape failures when some indicators have zero observations)
+* - Network robustness: curl with User-Agent header (better SSL/proxy/retry support)
+* - Cross-platform consistency improvements
+*
 * NEW in v1.5.1: CI test improvements (offline YAML-based tests)
     
     * Check for FLOWS subcommand (list available dataflows)

@@ -20,6 +20,26 @@
 {p2colreset}{...}
 
 
+{marker whatsnew}{...}
+{title:What's New in v1.5.2}
+
+{pstd}
+{bf:wide_indicators Enhancements:} The {opt wide_indicators} reshape now ensures all requested 
+indicators have columns in the output, even when some indicators have zero observations after 
+filtering. This prevents "variable not found" errors and improves reliability for cross-indicator analysis.
+{p_end}
+
+{pstd}
+{bf:Network Robustness:} All HTTP requests now use curl with proper User-Agent identification 
+("unicefdata/1.5.2 (Stata)"), providing:
+{phang2}• Better SSL/TLS support across platforms{p_end}
+{phang2}• Improved proxy handling{p_end}
+{phang2}• Automatic retry logic{p_end}
+{phang2}• Reduced rate-limiting issues{p_end}
+{phang2}• Automatic fallback to Stata's import delimited if curl unavailable{p_end}
+{p_end}
+
+
 {marker syntax}{...}
 {title:Syntax}
 
@@ -106,6 +126,8 @@
 {synopt:{opt nometadata}}show brief summary instead of full indicator metadata{p_end}
 {synopt:{opt clear}}replace data in memory{p_end}
 {synopt:{opt verbose}}display progress messages{p_end}
+{synopt:{opt curl}}use curl for HTTP requests with User-Agent header {it:(v1.5.2, default)}{p_end}
+{synopt:{opt nocurl}}disable curl; use Stata's import delimited instead{p_end}
 {synoptline}
 
 
@@ -317,14 +339,17 @@ as separate columns.
 {phang2}Use {opt attributes()} to filter which suffixes appear in output{p_end}
 
 {phang}
-{opt wide_indicators} {it:(v1.3.0)} reshapes data so that different indicators 
+{opt wide_indicators} {it:(v1.3.0; enhanced v1.5.2)} reshapes data so that different indicators 
 become separate columns. Use this for cross-indicator analysis.
 {p_end}
 {phang2}Result structure:{p_end}
 {phang2}Rows: iso3 x country x period (and optionally disaggregations if attributes=ALL){p_end}
 {phang2}Columns: CME_MRY0T4, IM_DTP3, NT_ANT_HAZ_NE2, etc. (indicators as columns){p_end}
 {phang2}Default behavior: Keeps only _T (total) for all disaggregations (backward compatible){p_end}
-{phang2}Use case: Compare multiple indicators side-by-side, correlation analysis{p_end}
+{phang2}v1.5.2 improvement: Now creates empty numeric columns for all requested indicators, {p_end}
+{phang2}even when some indicators have zero observations after filtering. This prevents reshape{p_end}
+{phang2}failures and "variable not found" errors.{p_end}
+{phang2}Use case: Compare multiple indicators side-by-side, correlation analysis, reliable batch processing{p_end}
 
 {phang}
 {opt attributes(string)} {it:(v1.5.1)} specifies which disaggregation attribute values 
@@ -455,6 +480,19 @@ Useful for cross-sectional analysis.
 {opt raw} returns raw SDMX data without variable renaming or standardization.
 
 {dlgtab:Technical}
+
+{phang}
+{opt curl} {it:(v1.5.2, default)} uses curl for HTTP requests with proper User-Agent identification.
+This provides robust network handling with:
+{phang2}• Better SSL/TLS and HTTPS support across platforms{p_end}
+{phang2}• Automatic proxy detection and handling{p_end}
+{phang2}• Automatic retry logic for temporary network failures{p_end}
+{phang2}• User-Agent header: "unicefdata/1.5.2 (Stata)"{p_end}
+{phang2}• Automatic fallback to Stata's import delimited if curl is unavailable{p_end}
+{pstd}
+If your Stata installation lacks curl support or you prefer Stata's default import method,
+use {opt nocurl} to disable curl and use Stata's import delimited instead.
+{p_end}
 
 {phang}
 {opt max_retries(#)} specifies the number of retry attempts (default: 3). 
