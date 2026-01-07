@@ -1,6 +1,6 @@
 /*******************************************************************************
 * unicefdata Automated Test Suite
-* Version: 1.5.1
+* Version: 1.5.2
 * Date: January 2026
 * 
 * Usage: 
@@ -195,7 +195,28 @@ di as text "{hline 78}"
 di as text "{bf:{center 78:unicefdata AUTOMATED TEST SUITE}}"
 di as text "{hline 78}"
 di as text ""
-di as text "  Version:       1.5.1"
+* Resolve ado package version from unicefdata.ado header
+local ado_version "unknown"
+cap findfile unicefdata.ado
+if _rc == 0 {
+    local fn = r(fn)
+    local fnsafe = subinstr("`fn'","\\","/",.)
+    tempname fh
+    cap file open `fh' using "`fnsafe'", read
+    if _rc == 0 {
+        file read `fh' line
+        while r(eof)==0 & "`ado_version'"=="unknown" {
+            if regexm("`line'", "^\*! v ([0-9]+\.[0-9]+\.[0-9]+)") {
+                local ado_version = regexs(1)
+            }
+            file read `fh' line
+        }
+        file close `fh'
+    }
+}
+
+di as text "  Test Suite:   1.5.2"
+di as text "  Ado Version:  " as result "`ado_version'"
 di as text "  Date:          `c(current_date)' `c(current_time)'"
 di as text "  Stata:         `c(stata_version)'"
 di as text "  OS:            `c(os)'"
@@ -2527,7 +2548,7 @@ if "`target_test'" == "" {
     file write history "Started:  `start_time'" _n
     file write history "Ended:    `end_time'" _n
     file write history "Duration: `duration_str'" _n
-    file write history "Version:  1.5.1" _n
+    file write history "Version:  1.5.2" _n
     file write history "Stata:    `c(stata_version)'" _n
     file write history "Tests:    $test_count run, $pass_count passed, $fail_count failed" _n
     
