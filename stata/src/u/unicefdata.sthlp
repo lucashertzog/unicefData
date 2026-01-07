@@ -998,6 +998,47 @@ WASH urban-rural gap analysis:{p_end}
 {txt}      ({stata "unicefdata_examples example07":click to run})
 
 {pstd}
+Using {opt wide} option - Time series format:{p_end}
+{cmd}
+        . unicefdata, indicator(CME_MRY0T4) countries(USA BRA IND CHN) ///
+            year(2015:2023) wide clear
+        . keep if sex == "_T"
+        . list iso3 country yr2015 yr2020 yr2023, sep(0) noobs
+        . gen change_2015_2023 = yr2023 - yr2015
+        . gen pct_change = (change_2015_2023 / yr2015) * 100
+{txt}      ({stata "unicefdata_examples example08":click to run})
+
+{pstd}
+Using {opt wide_indicators} - Multiple indicators as columns (v1.5.2):{p_end}
+{cmd}
+        . unicefdata, indicator(CME_MRY0T4 CME_MRY0 IM_DTP3 IM_MCV1) ///
+            countries(AFG ETH PAK NGA) latest wide_indicators clear
+        . keep if sex == "_T"
+        . describe CME_MRY0T4 CME_MRY0 IM_DTP3 IM_MCV1
+        . list iso3 country CME_MRY0T4 CME_MRY0 IM_DTP3 IM_MCV1, sep(0) noobs
+        . correlate CME_MRY0T4 IM_DTP3
+{txt}      ({stata "unicefdata_examples example09":click to run})
+
+{pstd}
+Using {opt wide_attributes} - Disaggregations as columns (v1.5.1):{p_end}
+{cmd}
+        . unicefdata, indicator(CME_MRY0T4) countries(IND PAK BGD) ///
+            year(2020) sex(ALL) wide_attributes clear
+        . list iso3 country CME_MRY0T4_T CME_MRY0T4_M CME_MRY0T4_F, sep(0) noobs
+        . gen mf_gap = CME_MRY0T4_M - CME_MRY0T4_F
+{txt}      ({stata "unicefdata_examples example10":click to run})
+
+{pstd}
+Using {opt attributes()} filter - Targeted disaggregation:{p_end}
+{cmd}
+        . unicefdata, indicator(NT_ANT_HAZ_NE2) countries(IND PAK BGD ETH) ///
+            latest attributes(_T _Q1 _Q5) wide_attributes clear
+        . list iso3 country NT_ANT_HAZ_NE2_T NT_ANT_HAZ_NE2_Q1 NT_ANT_HAZ_NE2_Q5, ///
+            sep(0) noobs
+        . gen wealth_gap = NT_ANT_HAZ_NE2_Q1 - NT_ANT_HAZ_NE2_Q5
+{txt}      ({stata "unicefdata_examples example11":click to run})
+
+{pstd}
 {ul:Metadata Sync}
 
 {pstd}
