@@ -12,36 +12,54 @@
 #' @importFrom memoise memoise cache_filesystem
 #' @importFrom tools R_user_dir
 list_sdmx_flows <- local({
-  fn <- function(
+  memo_env <- new.env(parent = emptyenv())
+
+  fetch_flows <- function(
     agency    = "UNICEF",
     retry     = 3L,
-    cache_dir = tools::R_user_dir("get_sdmx", "cache")
+    cache_dir = tools::R_user_dir("unicefdata", "cache")
   ) {
     if (!dir.exists(cache_dir)) dir.create(cache_dir, recursive = TRUE)
-    # Use the dataflow endpoint to list all flows for an agency
+
     url <- sprintf(
       "https://sdmx.data.unicef.org/ws/public/sdmxapi/rest/dataflow/%s?references=none&detail=full",
       agency
     )
-    ua <- httr::user_agent("unicefData/1.0 (+https://github.com/jpazvd/unicefData)")
-    xml_text <- fetch_sdmx(url, ua, retry)
+
+    xml_text <- .fetch_sdmx(url, retry = retry)
     doc <- xml2::read_xml(xml_text)
     dfs <- xml2::xml_find_all(doc, ".//str:Dataflow")
+
     tibble::tibble(
       id      = xml2::xml_attr(dfs, "id"),
       agency  = xml2::xml_attr(dfs, "agencyID"),
       version = xml2::xml_attr(dfs, "version"),
-      # Extract the English name/label of each flow
       name    = xml2::xml_text(
-        xml2::xml_find_first(
-          dfs,
-          "./com:Name[@xml:lang='en']"
-        )
+        xml2::xml_find_first(dfs, "./com:Name[@xml:lang='en']")
       )
     )
   }
-  cache <- memoise::cache_filesystem(tools::R_user_dir("get_sdmx", "cache"))
-  memoise::memoise(fn, cache = cache)
+
+  get_memoised <- function(cache_dir) {
+    key <- normalizePath(cache_dir, winslash = "/", mustWork = FALSE)
+    if (!nzchar(key)) key <- cache_dir
+
+    if (!exists(key, envir = memo_env, inherits = FALSE)) {
+      cache <- memoise::cache_filesystem(cache_dir)
+      assign(key, memoise::memoise(fetch_flows, cache = cache), envir = memo_env)
+    }
+
+    get(key, envir = memo_env, inherits = FALSE)
+  }
+
+  function(
+    agency    = "UNICEF",
+    retry     = 3L,
+    cache_dir = tools::R_user_dir("unicefdata", "cache")
+  ) {
+    memoised_fn <- get_memoised(cache_dir)
+    memoised_fn(agency = agency, retry = retry, cache_dir = cache_dir)
+  }
 })
 
 

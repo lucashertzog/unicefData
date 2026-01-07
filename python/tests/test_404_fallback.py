@@ -28,7 +28,7 @@ class Test404Fallback:
         
         # Empty result is expected for invalid indicator
         # (404 fallback should have tried GLOBAL_DATAFLOW and found nothing)
-        assert len(df) == 0 or len(df) > 0  # Either outcome valid
+        assert df.empty
     
     @pytest.mark.integration
     def test_404_fallback_preserves_column_structure(self):
@@ -59,7 +59,7 @@ class Test404Fallback:
         
         assert isinstance(df, pd.DataFrame)
         # Should have data for a known good indicator
-        assert len(df) >= 0  # At minimum, no error raised
+        assert len(df) > 0
     
     @pytest.mark.integration
     def test_multiple_invalid_indicators_handled_gracefully(self):

@@ -189,7 +189,7 @@ fetch_sdmx <- function(url, ua, retry) {
 #' @export
 list_unicef_flows <- memoise::memoise(
   function(cache_dir = tools::R_user_dir("unicefData","cache"), retry = 3) {
-    ua <- httr::user_agent("unicefData/1.0 (+https://github.com/jpazvd/unicefData)")
+    ua <- .unicefData_ua
     url <- "https://sdmx.data.unicef.org/ws/public/sdmxapi/rest/dataflow/UNICEF?references=none&detail=full"
     xml_text <- fetch_sdmx(url, ua, retry)
     doc <- xml2::read_xml(xml_text)
@@ -215,7 +215,7 @@ list_unicef_flows <- memoise::memoise(
 list_unicef_codelist <- memoise::memoise(
   function(flow, dimension, cache_dir = tools::R_user_dir("unicefData","cache"), retry = 3) {
     stopifnot(is.character(flow), is.character(dimension), length(flow) == 1, length(dimension) == 1)
-    ua <- httr::user_agent("unicefData/1.0 (+https://github.com/jpazvd/unicefData)")
+    ua <- .unicefData_ua
     url <- sprintf(
       "https://sdmx.data.unicef.org/ws/public/sdmxapi/rest/structure/codelist/UNICEF.%s.%s?references=none&detail=full",
       flow, dimension
@@ -395,7 +395,7 @@ unicefData <- function(
   if (detail == "structure") {
     if (is.null(dataflow)) stop("Dataflow must be specified for structure request.")
     # Use legacy fetch_sdmx for structure as unicefData_raw is for data
-    ua <- httr::user_agent("unicefData/1.0")
+    ua <- .unicefData_ua
     base <- "https://sdmx.data.unicef.org/ws/public/sdmxapi/rest"
     url <- sprintf("%s/structure/dataflow/UNICEF.%s?references=all&detail=full", base, dataflow[1])
     return(xml2::read_xml(fetch_sdmx(url, ua, max_retries)))

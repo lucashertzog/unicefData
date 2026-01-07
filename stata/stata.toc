@@ -5,7 +5,7 @@ d This package provides Stata commands to access the UNICEF Data Warehouse
 d via the SDMX REST API. Download 733+ indicators covering child health,
 d nutrition, education, protection, HIV/AIDS, WASH, and more.
 d
-d Version: 1.5.2 (January 2026)
+d Version: 1.5.2 (2026-01-07)
 d
 d Commands:
 d   unicefdata - Main data download command with discovery features
