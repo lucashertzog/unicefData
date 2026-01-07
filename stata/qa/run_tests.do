@@ -35,6 +35,14 @@ set more off
 cap log close _all
 
 *===============================================================================
+* SYNC REPO AND STATA (ALWAYS RUN FIRST)
+*===============================================================================
+
+* Always start by making sure unicefdata in REPO and in Stata are aligned
+* This ensures tests run against the latest code from the repository
+net install unicefdata, from("C:\GitHub\myados\unicefData\stata") replace
+
+*===============================================================================
 * PARSE COMMAND LINE ARGUMENTS
 *===============================================================================
 
@@ -1624,30 +1632,38 @@ if $run_discovery == 1 | "`target_test'" == "DISC-03" {
 
 if $run_transform == 1 | "`target_test'" == "TRANS-01" {
     *==========================================================================
-    * TRANS-01: Wide format reshape (years stay rows, indicator becomes column)
+    * TRANS-01: Wide format reshape (years as columns with yr prefix)
     *==========================================================================
-    test_start, id("TRANS-01") desc("Wide format reshape creates indicator column")
+    test_start, id("TRANS-01") desc("Wide format reshape creates yr#### columns")
 
     clear
     cap noi unicefdata, indicator(CME_MRY0T4) countries(USA BRA) year(2019:2021) wide clear
 
     if _rc == 0 {
         local ok = 1
-        cap confirm variable CME_MRY0T4
+        * Check for year columns (yr2019, yr2020, yr2021)
+        cap confirm variable yr2019
         if _rc != 0 {
             local ok = 0
-            di as err "  Expected column CME_MRY0T4 after wide reshape"
+            di as err "  Expected yr2019 column after wide reshape"
         }
-        else {
-            qui duplicates report iso3 period
+        cap confirm variable yr2020
+        if _rc != 0 {
+            local ok = 0
+            di as err "  Expected yr2020 column after wide reshape"
+        }
+        
+        if `ok' {
+            * Rows should be iso3 × indicator (× attributes if present)
+            qui duplicates report iso3 indicator
             if r(unique_value) != r(N) {
                 local ok = 0
-                di as err "  Duplicate iso3×period rows after wide reshape"
+                di as err "  Duplicate iso3×indicator rows after wide reshape"
             }
         }
 
         if `ok' {
-            test_pass, id("TRANS-01") msg("Wide reshape succeeded with CME_MRY0T4 column")
+            test_pass, id("TRANS-01") msg("Wide reshape succeeded with yr#### columns")
         }
         else {
             test_fail, id("TRANS-01") msg("Wide reshape output invalid")
