@@ -1,52 +1,23 @@
-*******************************************************************************
-* unicefdata
 *! v 1.5.2   06Jan2026               by Joao Pedro Azevedo (UNICEF)
+cap program drop unicefdata
+program define unicefdata, rclass
+version 11
 * Download indicators from UNICEF Data Warehouse via SDMX API
 * Aligned with R get_unicef() and Python unicef_api
 * Uses YAML metadata for dataflow detection and validation
 *
 * NEW in v1.5.2: Enhanced help file documentation, attributes() improvements
 * NEW in v1.5.1: CI test improvements (offline YAML-based tests)
-* NEW in v1.4.0: sync subcommand (routes to unicefdata_sync)
-* NEW in v1.3.1: categories subcommand, dataflow() filter in search
-* NEW in v1.3.0: Discovery subcommands (flows, search, indicators, info)
-*******************************************************************************
-
-program define unicefdata, rclass
-
-    version 14.0
-
-    *---------------------------------------------------------------------------
-    * Check for discovery subcommands FIRST (before regular syntax parsing)
-    *---------------------------------------------------------------------------
     
-    * Check for CATEGORIES subcommand (list categories with counts)
-    if (strpos("`0'", "categor") > 0) {
-        * Support both "categories" and "category"
-        local has_verbose = (strpos("`0'", "verbose") > 0)
-        _unicef_list_categories `=cond(`has_verbose', ", verbose", "")'
-        exit
-    }
-    
-    * Check for FLOWS subcommand (also accept "dataflows" as alias)
-    * But NOT if it has a parameter like dataflows(EDUCATION) - that goes to schema display
-    local is_flows_list = 0
-    if (strpos("`0'", "flows") > 0 | strpos("`0'", "dataflows") > 0) {
-        * Check if this is a parameterized call like dataflow(X) or dataflows(X)
-        if (strpos("`0'", "dataflow(") == 0 & strpos("`0'", "dataflows(") == 0) {
-            local is_flows_list = 1
-        }
-    }
-    if (`is_flows_list') {
-        * Parse options (detail, verbose)
+    * Check for FLOWS subcommand (list available dataflows)
+    if (strpos("`0'", "flows") > 0) {
         local has_detail = (strpos("`0'", "detail") > 0)
         local has_verbose = (strpos("`0'", "verbose") > 0)
-        
         if (`has_detail') {
             _unicef_list_dataflows, detail `=cond(`has_verbose', "verbose", "")'
         }
         else {
-            _unicef_list_dataflows `=cond(`has_verbose', ", verbose", "")'
+            _unicef_list_dataflows `=cond(`has_verbose', "verbose", "")'
         }
         exit
     }
@@ -220,6 +191,8 @@ program define unicefdata, rclass
         *-----------------------------------------------------------------------
         * Validate inputs
         *-----------------------------------------------------------------------
+        * Preserve the requested indicator list for later formatting steps
+        local indicator_requested `indicator'
         
         if ("`indicator'" == "") & ("`dataflow'" == "") {
             noi di as err "You must specify either indicator() or dataflow()."
@@ -1435,65 +1408,50 @@ program define unicefdata, rclass
                     local attributes "_T"
                     local pre_filter_n = _N
                     
-                    * Apply default filtering for backward compatibility
-                    tempvar attr_match
-                    gen `attr_match' = 0
+                    * Apply strict default filtering: require all present disaggregations == _T
+                    tempvar all_tot
+                    gen byte `all_tot' = 1
                     
-                    * Check sex
+                    * Constrain by sex if present
                     capture confirm variable sex
                     if (_rc == 0) {
-                        replace `attr_match' = 1 if upper(sex) == "_T"
+                        replace `all_tot' = `all_tot' & (upper(sex) == "_T")
                     }
                     
-                    * Check age
+                    * Constrain by age if present
                     capture confirm variable age
                     if (_rc == 0) {
-                        replace `attr_match' = 1 if upper(age) == "_T"
+                        replace `all_tot' = `all_tot' & (upper(age) == "_T")
                     }
                     
-                    * Check wealth
+                    * Constrain by wealth if present
                     capture confirm variable wealth
                     if (_rc == 0) {
-                        replace `attr_match' = 1 if upper(wealth) == "_T"
+                        replace `all_tot' = `all_tot' & (upper(wealth) == "_T")
                     }
                     
-                    * Check residence
+                    * Constrain by residence if present
                     capture confirm variable residence
                     if (_rc == 0) {
-                        replace `attr_match' = 1 if upper(residence) == "_T"
+                        replace `all_tot' = `all_tot' & (upper(residence) == "_T")
                     }
                     
-                    * Check maternal education
+                    * Constrain by maternal education if present
                     capture confirm variable matedu
                     if (_rc == 0) {
-                        replace `attr_match' = 1 if upper(matedu) == "_T"
+                        replace `all_tot' = `all_tot' & (upper(matedu) == "_T")
                     }
                     
-                    * If no disaggregation variables exist, keep the row
-                    capture confirm variable sex
-                    local has_any_disag = (_rc == 0)
-                    capture confirm variable age
-                    if (_rc == 0) local has_any_disag = 1
-                    capture confirm variable wealth
-                    if (_rc == 0) local has_any_disag = 1
-                    capture confirm variable residence
-                    if (_rc == 0) local has_any_disag = 1
-                    capture confirm variable matedu
-                    if (_rc == 0) local has_any_disag = 1
-                    
-                    if (!`has_any_disag') {
-                        replace `attr_match' = 1
-                    }
-                    
-                    count if `attr_match'
+                    * Keep only rows where all present disaggregations equal _T
+                    count if `all_tot'
                     local attr_match_n = r(N)
                     if (`attr_match_n' > 0) {
-                        keep if `attr_match'
+                        keep if `all_tot'
                         if ("`verbose'" != "") {
-                            noi di as text "  default attributes filter (_T only): kept `attr_match_n' of `pre_filter_n' obs"
+                            noi di as text "  default attributes filter (_T across all present dims): kept `attr_match_n' of `pre_filter_n' obs"
                         }
                     }
-                    drop `attr_match'
+                    drop `all_tot'
                 }
                 
                 * Keep columns needed for reshape
@@ -1522,6 +1480,19 @@ program define unicefdata, rclass
                             local newname = subinstr("`v'", "value", "", 1)
                             rename `v' `newname'
                         }
+
+                        * Ensure columns exist for all requested indicators
+                        * (create empty numeric columns when an indicator has no data)
+                        local n_req : word count `indicator_requested'
+                        if (`n_req' > 0) {
+                            foreach ind of local indicator_requested {
+                                capture confirm variable `ind'
+                                if (_rc != 0) {
+                                    gen double `ind' = .
+                                }
+                            }
+                        }
+
                         sort iso3 period
                         
                         if ("`verbose'" != "") {
@@ -1614,28 +1585,77 @@ program define unicefdata, rclass
             capture confirm variable indicator
             capture confirm variable value
             if (_rc == 0) {
-                * Keep all dimensions except period
-                local keep_vars "iso3 country indicator value period"
-                foreach var in sex age wealth residence matedu sex_name age_name wealth_name residence_name maternal_edu_name unit unit_name lb ub status status_name source refper notes {
-                    capture confirm variable `var'
-                    if (_rc == 0) local keep_vars "`keep_vars' `var'"
+                * Build alias_id from iso3, indicator, and any non-missing disaggregations
+                capture confirm variable alias_id
+                if (_rc != 0) {
+                    gen str200 alias_id = iso3 + "_" + indicator
+                    foreach v in sex age wealth residence matedu {
+                        capture confirm variable `v'
+                        if (_rc == 0) {
+                            replace alias_id = alias_id + "_" + `v' if length(`v') > 0
+                        }
+                    }
                 }
-                keep `keep_vars'
-                
-                * Reshape: years become columns
-                capture reshape wide value, i(iso3 country indicator sex age wealth residence matedu) j(period) string
-                if (_rc == 0) {
+
+                * Preserve identifier metadata to merge back after reshape
+                preserve
+                local meta_vars "alias_id iso3 country indicator"
+                foreach v in sex age wealth residence matedu {
+                    capture confirm variable `v'
+                    if (_rc == 0) local meta_vars "`meta_vars' `v'"
+                }
+                keep `meta_vars'
+                duplicates drop alias_id, force
+                tempfile alias_meta
+                save `alias_meta', replace
+                restore
+
+                * Ensure period is numeric for reshape j()
+                capture confirm numeric variable period
+                if (_rc != 0) {
+                    cap destring period, replace
+                }
+
+                * Keep only alias_id, period and value for pivot
+                local __wide_ready 1
+                capture keep alias_id period value
+                if (_rc != 0) {
+                    noi di as text "Note: Required variables missing for wide reshape; leaving data in long format."
+                    local __wide_ready 0
+                }
+
+                if "`__wide_ready'" == "1" {
+                    * Ensure uniqueness on alias_id × period
+                    capture duplicates drop alias_id period, force
+                    sort alias_id period
+                    by alias_id period: gen byte __first_key = _n==1
+                    keep if __first_key
+                    drop __first_key
+                }
+
+                if "`__wide_ready'" == "1" {
+                    * Reshape: years become columns (period is numeric)
+                    capture reshape wide value, i(alias_id) j(period)
+                    if (_rc == 0) {
                     * Rename value* variables to have yr prefix
                     quietly ds value*
                     foreach var in `r(varlist)' {
                         local year = subinstr("`var'", "value", "", 1)
-                        local newname = "yr" + `year'
-                        rename `var' `newname'
+                        rename `var' yr`year'
                     }
-                    sort iso3 indicator
-                }
-                else {
-                    noi di as text "Note: Could not reshape to wide format (years as columns)."
+                    * Merge back metadata
+                        capture merge 1:1 alias_id using `alias_meta'
+                        if (_rc == 0) {
+                            drop _merge
+                            sort iso3 indicator
+                        }
+                        else {
+                            noi di as text "Note: Metadata merge failed; proceeding without merged identifiers."
+                        }
+                    }
+                    else {
+                        noi di as text "Note: Could not reshape to wide format (years as columns)."
+                    }
                 }
             }
         }
