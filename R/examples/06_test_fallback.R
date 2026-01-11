@@ -63,18 +63,18 @@ total_start <- Sys.time()
 for (t in tests) {
   cat(sprintf("\n--- Testing: %s ---\n", t$name))
   cat(sprintf("Indicator: %s\n", t$indicator))
-  
+
   start <- Sys.time()
-  
+
   tryCatch({
     df <- unicefData(
       indicator = t$indicator,
       countries = t$countries,
       year = "2015:2024"
     )
-    
+
     elapsed <- as.numeric(difftime(Sys.time(), start, units = "secs"))
-    
+
     if (nrow(df) > 0) {
       cat(sprintf("[OK] %d rows in %.1fs\n", nrow(df), elapsed))
       results[[t$name]] <- "OK"
