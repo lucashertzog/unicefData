@@ -1,3 +1,26 @@
+# =============================================================================
+# unicefData.R
+#
+# High-level user-facing interface to the UNICEF SDMX data warehouse.
+#
+# This file defines `unicefData()`, which orchestrates indicator resolution,
+# raw data retrieval, post-fetch cleaning, filtering, reshaping, and metadata
+# enrichment into a consistent analytical output.
+#
+# Design principles:
+# - Separate concerns clearly:
+#   * Low-level SDMX access is delegated to `unicefData_raw()` (see unicef_core.R)
+#   * Data cleaning, filtering, and reshaping are applied after retrieval
+# - Prefer explicit, readable logic over premature optimisation
+# - Align parameter names and behaviour with the Python unicefdata client
+#
+# Notes:
+# - Raw fetching is intentionally minimal and schema-agnostic
+# - Tidy/analysis-ready transformations occur only in this layer
+# =============================================================================
+
+#### Packages & Setup ####
+
 # Load required packages for pipe operator
 #' @import dplyr
 #' @importFrom magrittr %>%
@@ -22,6 +45,84 @@ if (!requireNamespace("httr", quietly = TRUE)) {
 
 # Null coalescing operator
 `%||%` <- function(x, y) if (is.null(x)) y else x
+
+#### Discovery & Registry ####
+#' @title List available UNICEF SDMX “flows”
+#' @description
+#' Download and cache the SDMX data-flow definitions from UNICEF’s REST endpoint.
+#' @param cache_dir Character path to cache directory.
+#' @param retry Integer, number of retries.
+#' @return A tibble with columns \code{id}, \code{agency}, and \code{version}
+#' @export
+
+#' @title List available UNICEF SDMX dataflows
+#' @description Convenience wrapper around \code{list_sdmx_flows()} for parity with Python.
+#' @param agency Character agency ID (default "UNICEF").
+#' @param retry Integer. Number of retries for transient HTTP failures.
+#' @param cache_dir Directory for memoised cache.
+#' @return A tibble with columns \code{id}, \code{agency}, \code{version}, \code{name}.
+#' @export
+list_dataflows <- function(
+    agency = "UNICEF",
+    retry = NULL,
+    cache_dir = tools::R_user_dir("unicefdata", "cache"),
+    max_retries = 3
+) {
+  # Backwards-compatible: if retry not provided, use max_retries
+  if (is.null(retry)) {
+    retry <- max_retries
+  } else if (!missing(max_retries) && !identical(max_retries, 3)) {
+    warning("Both 'retry' and 'max_retries' were supplied; using 'retry'.")
+  }
+
+  list_sdmx_flows(agency = agency, retry = retry, cache_dir = cache_dir)
+}
+
+list_unicef_flows <- memoise::memoise(
+  function(cache_dir = tools::R_user_dir("unicefData","cache"), retry = 3) {
+    ua <- .unicefData_ua
+    url <- "https://sdmx.data.unicef.org/ws/public/sdmxapi/rest/dataflow/UNICEF?references=none&detail=full"
+    xml_text <- fetch_sdmx(url, ua, retry)
+    doc <- xml2::read_xml(xml_text)
+    # Use namespace-aware XPath
+    ns <- xml2::xml_ns(doc)
+    dfs <- xml2::xml_find_all(doc, ".//str:Dataflow", ns)
+    tibble::tibble(
+      id      = xml2::xml_attr(dfs, "id"),
+      agency  = xml2::xml_attr(dfs, "agencyID"),
+      version = xml2::xml_attr(dfs, "version"),
+      name    = xml2::xml_text(xml2::xml_find_first(dfs, "./com:Name[@xml:lang='en']", ns))
+    )
+  }
+)
+
+#' @title List SDMX codelist for a given flow + dimension
+#' @param flow character flow ID, e.g. "NUTRITION"
+#' @param dimension character dimension ID within that flow, e.g. "INDICATOR"
+#' @param cache_dir Character path to cache directory.
+#' @param retry Integer, number of retries.
+#' @return A tibble with columns \code{code} and \code{description}
+#' @export
+
+list_unicef_codelist <- memoise::memoise(
+  function(flow, dimension, cache_dir = tools::R_user_dir("unicefData","cache"), retry = 3) {
+    stopifnot(is.character(flow), is.character(dimension), length(flow) == 1, length(dimension) == 1)
+    ua <- .unicefData_ua
+    url <- sprintf(
+      "https://sdmx.data.unicef.org/ws/public/sdmxapi/rest/structure/codelist/UNICEF.%s.%s?references=none&detail=full",
+      flow, dimension
+    )
+    xml_text <- fetch_sdmx(url, ua, retry)
+    doc <- xml2::read_xml(xml_text)
+    codes <- xml2::xml_find_all(doc, ".//Code")
+    tibble::tibble(
+      code        = xml2::xml_attr(codes, "value"),
+      description = xml2::xml_text(xml2::xml_find_first(codes, "./Description"))
+    )
+  }
+)
+
+#### Core Data Access ####
 
 #' Parse year parameter into start_year, end_year, and year_list
 #'
@@ -97,255 +198,7 @@ parse_year <- function(year) {
   ))
 }
 
-#' Apply circa matching to find closest available years
-#'
-#' For each country, find observations closest to the target year(s).
-#' Different countries may have different actual years in the result.
-#'
-#' @param df Data frame with iso3, period, value columns
-#' @param target_years Vector of target years to match
-#' @return Data frame with observations closest to each target year
-#' @keywords internal
-apply_circa <- function(df, target_years) {
-  if (!"period" %in% names(df) || !"iso3" %in% names(df)) {
-    return(df)
-  }
 
-  if (nrow(df) == 0) {
-    return(df)
-  }
-
-  # Drop NA values before finding closest
-  if ("value" %in% names(df)) {
-    df <- df %>% dplyr::filter(!is.na(value))
-  }
-
-  # Determine grouping columns
-  group_cols <- "iso3"
-  if ("indicator" %in% names(df)) {
-    group_cols <- c("iso3", "indicator")
-  }
-
-  results <- list()
-
-  for (target in target_years) {
-    # For each group, find the observation closest to target
-    closest <- df %>%
-      dplyr::group_by(dplyr::across(dplyr::all_of(group_cols))) %>%
-      dplyr::mutate(dist = abs(period - target)) %>%
-      dplyr::filter(dist == min(dist)) %>%
-      dplyr::slice(1) %>%  # In case of ties, take first
-      dplyr::ungroup() %>%
-      dplyr::select(-dist) %>%
-      dplyr::mutate(target_year = target)
-
-    results[[length(results) + 1]] <- closest
-  }
-
-  result <- dplyr::bind_rows(results)
-
-  # Remove duplicates if same observation is closest to multiple targets
-  result <- result %>%
-    dplyr::distinct(dplyr::across(-target_year), .keep_all = TRUE)
-
-  return(result)
-}
-
-# Source core functions (only needed when sourcing directly, not as a package)
-# When loaded as a package, unicefData_raw is already available via namespace
-if (!exists("unicefData_raw", mode = "function")) {
-  # Only try to source if we're running as a standalone script (not as package)
-  script_file <- sys.frame(1)$ofile
-  if (!is.null(script_file)) {
-    script_dir <- dirname(script_file)
-    core_path <- file.path(script_dir, "unicef_core.R")
-    if (file.exists(core_path)) {
-      source(core_path, local = FALSE)
-    }
-  }
-  # No warning needed - when loaded as package, unicef_core.R is loaded via NAMESPACE
-}
-
-# Internal helper to perform HTTP GET and return text
-#' Fetch SDMX content from URL
-#'
-#' @param url URL to fetch
-#' @param ua User agent string
-#' @param retry Number of retries
-#' @return Content as text
-#' @keywords internal
-fetch_sdmx <- function(url, ua, retry) {
-  resp <- httr::RETRY("GET", url, ua, times = retry, pause_base = 1)
-  httr::stop_for_status(resp)
-  httr::content(resp, as = "text", encoding = "UTF-8")
-}
-
-#' @title List available UNICEF SDMX “flows”
-#' @description
-#' Download and cache the SDMX data-flow definitions from UNICEF’s REST endpoint.
-#' @param cache_dir Character path to cache directory.
-#' @param retry Integer, number of retries.
-#' @return A tibble with columns \code{id}, \code{agency}, and \code{version}
-#' @export
-list_unicef_flows <- memoise::memoise(
-  function(cache_dir = tools::R_user_dir("unicefData","cache"), retry = 3) {
-    ua <- .unicefData_ua
-    url <- "https://sdmx.data.unicef.org/ws/public/sdmxapi/rest/dataflow/UNICEF?references=none&detail=full"
-    xml_text <- fetch_sdmx(url, ua, retry)
-    doc <- xml2::read_xml(xml_text)
-    # Use namespace-aware XPath
-    ns <- xml2::xml_ns(doc)
-    dfs <- xml2::xml_find_all(doc, ".//str:Dataflow", ns)
-    tibble::tibble(
-      id      = xml2::xml_attr(dfs, "id"),
-      agency  = xml2::xml_attr(dfs, "agencyID"),
-      version = xml2::xml_attr(dfs, "version"),
-      name    = xml2::xml_text(xml2::xml_find_first(dfs, "./com:Name[@xml:lang='en']", ns))
-    )
-  }
-)
-
-#' @title List SDMX codelist for a given flow + dimension
-#' @param flow character flow ID, e.g. "NUTRITION"
-#' @param dimension character dimension ID within that flow, e.g. "INDICATOR"
-#' @param cache_dir Character path to cache directory.
-#' @param retry Integer, number of retries.
-#' @return A tibble with columns \code{code} and \code{description}
-#' @export
-list_unicef_codelist <- memoise::memoise(
-  function(flow, dimension, cache_dir = tools::R_user_dir("unicefData","cache"), retry = 3) {
-    stopifnot(is.character(flow), is.character(dimension), length(flow) == 1, length(dimension) == 1)
-    ua <- .unicefData_ua
-    url <- sprintf(
-      "https://sdmx.data.unicef.org/ws/public/sdmxapi/rest/structure/codelist/UNICEF.%s.%s?references=none&detail=full",
-      flow, dimension
-    )
-    xml_text <- fetch_sdmx(url, ua, retry)
-    doc <- xml2::read_xml(xml_text)
-    codes <- xml2::xml_find_all(doc, ".//Code")
-    tibble::tibble(
-      code        = xml2::xml_attr(codes, "value"),
-      description = xml2::xml_text(xml2::xml_find_first(codes, "./Description"))
-    )
-  }
-)
-
-#' @title Fetch UNICEF SDMX data or structure
-#' @description
-#' Download UNICEF indicator data from the SDMX data warehouse.
-#' Supports automatic paging, retrying on transient failure, memoisation, and tidy-up.
-#'
-#' This function uses unified parameter names consistent with the Python package.
-#'
-#' @section Time Period Handling:
-#' The UNICEF SDMX API returns TIME_PERIOD values in various formats (annual "2020"
-#' or monthly "2020-03"). This function automatically converts monthly periods to
-#' decimal years for consistent time-series analysis:
-#' \itemize{
-#'   \item "2020" becomes 2020.0 (integer year)
-#'   \item "2020-01" becomes 2020.0833 (2020 + 1/12, January)
-#'   \item "2020-06" becomes 2020.5000 (2020 + 6/12, June)
-#'   \item "2020-11" becomes 2020.9167 (2020 + 11/12, November)
-#' }
-#' Formula: decimal_year = year + month/12
-#'
-#' @param indicator Character vector of indicator codes (e.g., "CME_MRY0T4").
-#' @param dataflow Character vector of dataflow IDs (e.g., "CME", "NUTRITION").
-#' @param countries Character vector of ISO3 country codes (e.g., c("ALB", "USA")).
-#'   If NULL (default), fetches all countries.
-#' @param year Year specification. Supports multiple formats:
-#'   \itemize{
-#'     \item NULL: All available years (default)
-#'     \item Single integer: Just that year (e.g., 2020)
-#'     \item String with colon: Range (e.g., "2015:2023")
-#'     \item String with comma: Non-contiguous years (e.g., "2015,2018,2020")
-#'     \item Integer vector: Explicit list of years (e.g., c(2015, 2018, 2020))
-#'   }
-#' @param sex Sex disaggregation: "_T" (total, default), "F" (female), "M" (male).
-#' @param age Filter by age group. Default is NULL (keeps totals).
-#' @param wealth Filter by wealth quintile. Default is NULL (keeps totals).
-#' @param residence Filter by residence (e.g. "URBAN", "RURAL"). Default is NULL (keeps totals).
-#' @param maternal_edu Filter by maternal education. Default is NULL (keeps totals).
-#' @param tidy Logical; if TRUE (default), returns cleaned tibble with standardized column names.
-#' @param country_names Logical; if TRUE (default), adds country name column.
-#' @param max_retries Number of retry attempts on failure (default: 3).
-#'   Previously called 'retry'. Both parameter names are supported.
-#' @param cache Logical; if TRUE, memoises results.
-#' @param page_size Integer rows per page (default: 100000).
-#' @param detail "data" (default) or "structure" for metadata.
-#' @param version Optional SDMX version; if NULL, auto-detected.
-#' @param format Output format: "long" (default), "wide" (years as columns),
-#'   "wide_indicators" (indicators as columns), or wide by dimension:
-#'   "wide_sex", "wide_age", "wide_wealth", "wide_residence", "wide_maternal_edu".
-#' @param latest Logical; if TRUE, keep only the most recent non-missing value per country.
-#'   The year may differ by country. Useful for cross-sectional analysis.
-#' @param circa Logical; if TRUE, for each specified year find the closest available
-#'   data point. When exact years aren't available, returns observations with periods
-#'   closest to the requested year(s). Different countries may have different actual
-#'   years. Only applies when specific years are requested.
-#' @param add_metadata Character vector of metadata to add: "region", "income_group",
-#'   "continent", "indicator_name", "indicator_category".
-#' @param dropna Logical; if TRUE, remove rows with missing values.
-#' @param simplify Logical; if TRUE, keep only essential columns.
-#' @param mrv Integer; keep only the N most recent values per country (Most Recent Values).
-#' @param raw Logical; if TRUE, return raw SDMX data without column standardization.
-#'   Default is FALSE (clean, standardized output matching Python package).
-#' @param ignore_duplicates Logical; if FALSE (default), raises an error when exact
-#'   duplicate rows are found (all column values identical). Set to TRUE to allow
-#'   automatic removal of duplicates.
-#' @return Tibble with indicator data, or xml_document if detail="structure".
-#'   The 'period' column contains decimal years (see Time Period Handling section).
-#'
-#' @examples
-#' \dontrun{
-#' # Fetch under-5 mortality for year range
-#' df <- unicefData(
-#'   indicator = "CME_MRY0T4",
-#'   countries = c("ALB", "USA", "BRA"),
-#'   year = "2015:2023"
-#' )
-#'
-#' # Single year
-#' df <- unicefData(
-#'   indicator = "CME_MRY0T4",
-#'   countries = c("ALB", "USA"),
-#'   year = 2020
-#' )
-#'
-#' # Non-contiguous years
-#' df <- unicefData(
-#'   indicator = "CME_MRY0T4",
-#'   year = "2015,2018,2020"
-#' )
-#'
-#' # Circa mode - find closest available year
-#' df <- unicefData(
-#'   indicator = "CME_MRY0T4",
-#'   year = 2015,
-#'   circa = TRUE  # Returns closest to 2015 for each country
-#' )
-#'
-#' # Get latest value per country (cross-sectional)
-#' df <- unicefData(
-#'   indicator = "CME_MRY0T4",
-#'   latest = TRUE
-#' )
-#'
-#' # Wide format with region metadata
-#' df <- unicefData(
-#'   indicator = "CME_MRY0T4",
-#'   format = "wide",
-#'   add_metadata = c("region", "income_group")
-#' )
-#'
-#' # Multiple indicators merged automatically
-#' df <- unicefData(
-#'   indicator = c("CME_MRY0T4", "NT_ANT_HAZ_NE2_MOD"),
-#'   format = "wide_indicators",
-#'   latest = TRUE
-#' )
-#' }
-#' @export
 unicefData <- function(
     # New unified parameter names
     indicator     = NULL,
@@ -545,56 +398,60 @@ unicefData <- function(
   return(result)
 }
 
-#' Add country-level metadata columns
+#### Post-processing & Formats ####
+#' Apply circa matching to find closest available years
+#'
+#' For each country, find observations closest to the target year(s).
+#' Different countries may have different actual years in the result.
+#'
+#' @param df Data frame with iso3, period, value columns
+#' @param target_years Vector of target years to match
+#' @return Data frame with observations closest to each target year
 #' @keywords internal
-add_country_metadata <- function(df, metadata_list) {
-  if ("region" %in% metadata_list) {
-    region_map <- get_country_regions()
-    df <- df %>% dplyr::mutate(region = region_map[iso3])
+apply_circa <- function(df, target_years) {
+  if (!"period" %in% names(df) || !"iso3" %in% names(df)) {
+    return(df)
   }
 
-  if ("income_group" %in% metadata_list) {
-    income_map <- get_income_groups()
-    df <- df %>% dplyr::mutate(income_group = income_map[iso3])
+  if (nrow(df) == 0) {
+    return(df)
   }
 
-  if ("continent" %in% metadata_list) {
-    continent_map <- get_continents()
-    df <- df %>% dplyr::mutate(continent = continent_map[iso3])
+  # Drop NA values before finding closest
+  if ("value" %in% names(df)) {
+    df <- df %>% dplyr::filter(!is.na(value))
   }
 
-  df
+  # Determine grouping columns
+  group_cols <- "iso3"
+  if ("indicator" %in% names(df)) {
+    group_cols <- c("iso3", "indicator")
+  }
+
+  results <- list()
+
+  for (target in target_years) {
+    # For each group, find the observation closest to target
+    closest <- df %>%
+      dplyr::group_by(dplyr::across(dplyr::all_of(group_cols))) %>%
+      dplyr::mutate(dist = abs(period - target)) %>%
+      dplyr::filter(dist == min(dist)) %>%
+      dplyr::slice(1) %>%  # In case of ties, take first
+      dplyr::ungroup() %>%
+      dplyr::select(-dist) %>%
+      dplyr::mutate(target_year = target)
+
+    results[[length(results) + 1]] <- closest
+  }
+
+  result <- dplyr::bind_rows(results)
+
+  # Remove duplicates if same observation is closest to multiple targets
+  result <- result %>%
+    dplyr::distinct(dplyr::across(-target_year), .keep_all = TRUE)
+
+  return(result)
 }
-
-
-#' Add indicator-level metadata columns
-#' @keywords internal
-add_indicator_metadata <- function(df, metadata_list) {
-  if (!"indicator" %in% names(df)) return(df)
-
-  if ("indicator_name" %in% metadata_list || "indicator_category" %in% metadata_list) {
-    unique_inds <- unique(df$indicator)
-
-    for (ind in unique_inds) {
-      info <- tryCatch(get_indicator_info(ind), error = function(e) NULL)
-      if (!is.null(info)) {
-        if ("indicator_name" %in% metadata_list) {
-          df <- df %>% dplyr::mutate(
-            indicator_name = dplyr::if_else(indicator == ind, info$name, indicator_name)
-          )
-        }
-        if ("indicator_category" %in% metadata_list) {
-          df <- df %>% dplyr::mutate(
-            indicator_category = dplyr::if_else(indicator == ind, info$category, indicator_category)
-          )
-        }
-      }
-    }
-  }
-
-  df
-}
-
 
 #' Apply Most Recent Values filter
 #' @keywords internal
@@ -613,7 +470,6 @@ apply_mrv <- function(df, n) {
       dplyr::ungroup()
   }
 }
-
 
 #' Apply latest value filter
 #' @keywords internal
@@ -634,7 +490,6 @@ apply_latest <- function(df) {
       dplyr::ungroup()
   }
 }
-
 
 #' Apply format transformation
 #' @keywords internal
@@ -723,7 +578,6 @@ apply_format <- function(df, format) {
   }
 }
 
-
 #' Simplify columns to essentials
 #' @keywords internal
 simplify_columns <- function(df, format) {
@@ -737,7 +591,58 @@ simplify_columns <- function(df, format) {
   }
 }
 
+#### Metadata ####
+#' Add country-level metadata columns
+#' @keywords internal
+add_country_metadata <- function(df, metadata_list) {
+  if ("region" %in% metadata_list) {
+    region_map <- get_country_regions()
+    df <- df %>% dplyr::mutate(region = region_map[iso3])
+  }
 
+  if ("income_group" %in% metadata_list) {
+    income_map <- get_income_groups()
+    df <- df %>% dplyr::mutate(income_group = income_map[iso3])
+  }
+
+  if ("continent" %in% metadata_list) {
+    continent_map <- get_continents()
+    df <- df %>% dplyr::mutate(continent = continent_map[iso3])
+  }
+
+  df
+}
+
+
+#' Add indicator-level metadata columns
+#' @keywords internal
+add_indicator_metadata <- function(df, metadata_list) {
+  if (!"indicator" %in% names(df)) return(df)
+
+  if ("indicator_name" %in% metadata_list || "indicator_category" %in% metadata_list) {
+    unique_inds <- unique(df$indicator)
+
+    for (ind in unique_inds) {
+      info <- tryCatch(get_indicator_info(ind), error = function(e) NULL)
+      if (!is.null(info)) {
+        if ("indicator_name" %in% metadata_list) {
+          df <- df %>% dplyr::mutate(
+            indicator_name = dplyr::if_else(indicator == ind, info$name, indicator_name)
+          )
+        }
+        if ("indicator_category" %in% metadata_list) {
+          df <- df %>% dplyr::mutate(
+            indicator_category = dplyr::if_else(indicator == ind, info$category, indicator_category)
+          )
+        }
+      }
+    }
+  }
+
+  df
+}
+
+#### Static Mappings ####
 #' Get ISO3 to UNICEF region mapping
 #' @keywords internal
 get_country_regions <- function() {
@@ -816,7 +721,6 @@ get_country_regions <- function() {
   )
 }
 
-
 #' Get ISO3 to World Bank income group mapping
 #' @keywords internal
 get_income_groups <- function() {
@@ -885,7 +789,6 @@ get_income_groups <- function() {
   )
 }
 
-
 #' Get ISO3 to continent mapping
 #' @keywords internal
 get_continents <- function() {
@@ -941,26 +844,138 @@ get_continents <- function() {
   )
 }
 
-#' @title List available UNICEF SDMX dataflows
-#' @description Convenience wrapper around \code{list_sdmx_flows()} for parity with Python.
-#' @param agency Character agency ID (default "UNICEF").
-#' @param retry Integer. Number of retries for transient HTTP failures.
-#' @param cache_dir Directory for memoised cache.
-#' @return A tibble with columns \code{id}, \code{agency}, \code{version}, \code{name}.
-#' @export
-list_dataflows <- function(
-    agency = "UNICEF",
-    retry = NULL,
-    cache_dir = tools::R_user_dir("unicefdata", "cache"),
-    max_retries = 3
-) {
-  # Backwards-compatible: if retry not provided, use max_retries
-  if (is.null(retry)) {
-    retry <- max_retries
-  } else if (!missing(max_retries) && !identical(max_retries, 3)) {
-    warning("Both 'retry' and 'max_retries' were supplied; using 'retry'.")
-  }
 
-  list_sdmx_flows(agency = agency, retry = retry, cache_dir = cache_dir)
-}
+#### Developer Space ####
+
+# # Source core functions (only needed when sourcing directly, not as a package)
+# # When loaded as a package, unicefData_raw is already available via namespace
+# if (!exists("unicefData_raw", mode = "function")) {
+#   # Only try to source if we're running as a standalone script (not as package)
+#   script_file <- sys.frame(1)$ofile
+#   if (!is.null(script_file)) {
+#     script_dir <- dirname(script_file)
+#     core_path <- file.path(script_dir, "unicef_core.R")
+#     if (file.exists(core_path)) {
+#       source(core_path, local = FALSE)
+#     }
+#   }
+#   # No warning needed - when loaded as package, unicef_core.R is loaded via NAMESPACE
+# }
+
+#' @title Fetch UNICEF SDMX data or structure
+#' @description
+#' Download UNICEF indicator data from the SDMX data warehouse.
+#' Supports automatic paging, retrying on transient failure, memoisation, and tidy-up.
+#'
+#' This function uses unified parameter names consistent with the Python package.
+#'
+#' @section Time Period Handling:
+#' The UNICEF SDMX API returns TIME_PERIOD values in various formats (annual "2020"
+#' or monthly "2020-03"). This function automatically converts monthly periods to
+#' decimal years for consistent time-series analysis:
+#' \itemize{
+#'   \item "2020" becomes 2020.0 (integer year)
+#'   \item "2020-01" becomes 2020.0833 (2020 + 1/12, January)
+#'   \item "2020-06" becomes 2020.5000 (2020 + 6/12, June)
+#'   \item "2020-11" becomes 2020.9167 (2020 + 11/12, November)
+#' }
+#' Formula: decimal_year = year + month/12
+#'
+#' @param indicator Character vector of indicator codes (e.g., "CME_MRY0T4").
+#' @param dataflow Character vector of dataflow IDs (e.g., "CME", "NUTRITION").
+#' @param countries Character vector of ISO3 country codes (e.g., c("ALB", "USA")).
+#'   If NULL (default), fetches all countries.
+#' @param year Year specification. Supports multiple formats:
+#'   \itemize{
+#'     \item NULL: All available years (default)
+#'     \item Single integer: Just that year (e.g., 2020)
+#'     \item String with colon: Range (e.g., "2015:2023")
+#'     \item String with comma: Non-contiguous years (e.g., "2015,2018,2020")
+#'     \item Integer vector: Explicit list of years (e.g., c(2015, 2018, 2020))
+#'   }
+#' @param sex Sex disaggregation: "_T" (total, default), "F" (female), "M" (male).
+#' @param age Filter by age group. Default is NULL (keeps totals).
+#' @param wealth Filter by wealth quintile. Default is NULL (keeps totals).
+#' @param residence Filter by residence (e.g. "URBAN", "RURAL"). Default is NULL (keeps totals).
+#' @param maternal_edu Filter by maternal education. Default is NULL (keeps totals).
+#' @param tidy Logical; if TRUE (default), returns cleaned tibble with standardized column names.
+#' @param country_names Logical; if TRUE (default), adds country name column.
+#' @param max_retries Number of retry attempts on failure (default: 3).
+#'   Previously called 'retry'. Both parameter names are supported.
+#' @param cache Logical; if TRUE, memoises results.
+#' @param page_size Integer rows per page (default: 100000).
+#' @param detail "data" (default) or "structure" for metadata.
+#' @param version Optional SDMX version; if NULL, auto-detected.
+#' @param format Output format: "long" (default), "wide" (years as columns),
+#'   "wide_indicators" (indicators as columns), or wide by dimension:
+#'   "wide_sex", "wide_age", "wide_wealth", "wide_residence", "wide_maternal_edu".
+#' @param latest Logical; if TRUE, keep only the most recent non-missing value per country.
+#'   The year may differ by country. Useful for cross-sectional analysis.
+#' @param circa Logical; if TRUE, for each specified year find the closest available
+#'   data point. When exact years aren't available, returns observations with periods
+#'   closest to the requested year(s). Different countries may have different actual
+#'   years. Only applies when specific years are requested.
+#' @param add_metadata Character vector of metadata to add: "region", "income_group",
+#'   "continent", "indicator_name", "indicator_category".
+#' @param dropna Logical; if TRUE, remove rows with missing values.
+#' @param simplify Logical; if TRUE, keep only essential columns.
+#' @param mrv Integer; keep only the N most recent values per country (Most Recent Values).
+#' @param raw Logical; if TRUE, return raw SDMX data without column standardization.
+#'   Default is FALSE (clean, standardized output matching Python package).
+#' @param ignore_duplicates Logical; if FALSE (default), raises an error when exact
+#'   duplicate rows are found (all column values identical). Set to TRUE to allow
+#'   automatic removal of duplicates.
+#' @return Tibble with indicator data, or xml_document if detail="structure".
+#'   The 'period' column contains decimal years (see Time Period Handling section).
+#'
+#' @examples
+#' \dontrun{
+#' # Fetch under-5 mortality for year range
+#' df <- unicefData(
+#'   indicator = "CME_MRY0T4",
+#'   countries = c("ALB", "USA", "BRA"),
+#'   year = "2015:2023"
+#' )
+#'
+#' # Single year
+#' df <- unicefData(
+#'   indicator = "CME_MRY0T4",
+#'   countries = c("ALB", "USA"),
+#'   year = 2020
+#' )
+#'
+#' # Non-contiguous years
+#' df <- unicefData(
+#'   indicator = "CME_MRY0T4",
+#'   year = "2015,2018,2020"
+#' )
+#'
+#' # Circa mode - find closest available year
+#' df <- unicefData(
+#'   indicator = "CME_MRY0T4",
+#'   year = 2015,
+#'   circa = TRUE  # Returns closest to 2015 for each country
+#' )
+#'
+#' # Get latest value per country (cross-sectional)
+#' df <- unicefData(
+#'   indicator = "CME_MRY0T4",
+#'   latest = TRUE
+#' )
+#'
+#' # Wide format with region metadata
+#' df <- unicefData(
+#'   indicator = "CME_MRY0T4",
+#'   format = "wide",
+#'   add_metadata = c("region", "income_group")
+#' )
+#'
+#' # Multiple indicators merged automatically
+#' df <- unicefData(
+#'   indicator = c("CME_MRY0T4", "NT_ANT_HAZ_NE2_MOD"),
+#'   format = "wide_indicators",
+#'   latest = TRUE
+#' )
+#' }
+#' @export
 

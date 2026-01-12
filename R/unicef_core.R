@@ -1,21 +1,41 @@
 # =============================================================================
-# unicef_core.R - Core composable functions for UNICEF API
+# unicef_core.R
+#
+# Core composable utilities for interacting with the UNICEF SDMX API.
+#
+# This file contains low-level helpers responsible for:
+# - HTTP communication and error classification
+# - SDMX paging and retrieval
+# - Dataflow detection and fallback resolution
+# - Minimal validation and schema-aware checks
+#
+# Design principles:
+# - Keep SDMX access logic isolated from user-facing transformations
+# - Treat SDMX 404 responses as "indicator not present" signals, not fatal errors
+# - Favour explicit control flow to support robust fallback strategies
+#
+# Notes:
+# - Functions in this file should avoid opinionated data reshaping
+# - Post-fetch cleaning and filtering are handled in unicefData.R
+# - Some developer-only or experimental utilities are grouped at the end
 # =============================================================================
 
+if (!exists(".unicefData_ua", mode = "function")) {
+  warning(
+    "Developer mode: .unicefData_ua not found. ",
+    "Did you forget to call devtools::load_all()?"
+  )
+  .unicefData_ua <- httr::user_agent("unicefData/dev")
+}
+
+#### Imports & Setup ####
 #' @import dplyr
 #' @importFrom magrittr %>%
 #' @importFrom stats na.omit setNames
 #' @importFrom utils capture.output head write.csv
 NULL
 
-# Ensure required packages are loaded
-if (!requireNamespace("magrittr", quietly = TRUE)) stop("Package 'magrittr' required")
-if (!requireNamespace("dplyr", quietly = TRUE)) stop("Package 'dplyr' required")
-if (!requireNamespace("httr", quietly = TRUE)) stop("Package 'httr' required")
-if (!requireNamespace("readr", quietly = TRUE)) stop("Package 'readr' required")
-
-`%>%` <- magrittr::`%>%`
-
+#### Error Classification ####
 # 404 detector before anything else
 .is_http_404 <- function(e) {
   if (inherits(e, "sdmx_404")) return(TRUE)
@@ -29,7 +49,22 @@ if (!requireNamespace("readr", quietly = TRUE)) stop("Package 'readr' required")
   FALSE
 }
 
-# --- Helper: Fetch SDMX ---
+#### HTTP & SDMX Utilities ####
+
+# Internal helper to perform HTTP GET and return text
+#' Fetch SDMX content from URL
+#'
+#' @param url URL to fetch
+#' @param ua User agent string
+#' @param retry Number of retries
+#' @return Content as text
+#' @keywords internal
+
+fetch_sdmx <- function(url, ua, retry) {
+  resp <- httr::RETRY("GET", url, ua, times = retry, pause_base = 1)
+  httr::stop_for_status(resp)
+  httr::content(resp, as = "text", encoding = "UTF-8")
+}
 
 #' Fetch SDMX content as text
 #'
@@ -38,6 +73,7 @@ if (!requireNamespace("readr", quietly = TRUE)) stop("Package 'readr' required")
 #' @param retry Number of retries
 #' @return Content as text
 #' @keywords internal
+
 fetch_sdmx_text <- function(url, ua = .unicefData_ua, retry) {
   resp <- httr::RETRY("GET", url, ua, times = retry, pause_base = 1)
   status <- httr::status_code(resp)
@@ -55,11 +91,13 @@ fetch_sdmx_text <- function(url, ua = .unicefData_ua, retry) {
   httr::content(resp, as = "text", encoding = "UTF-8")
 }
 
+#### Dataflow Resolution ####
 #' @title Detect Dataflow from Indicator
 #' @description Auto-detects the correct dataflow for a given indicator code.
 #' @param indicator Indicator code (e.g. "CME_MRY0T4")
 #' @return Character string of dataflow ID
 #' @export
+
 detect_dataflow <- function(indicator) {
   if (is.null(indicator)) return(NULL)
 
@@ -108,6 +146,7 @@ detect_dataflow <- function(indicator) {
 # in Python the failing indicator is succeeded by GLOBAL_DATAFLOW, we need the
 # same in R. Let's try detected flow first and if 404, GLOBAL_DATAFLOW. We need
 # a helper function for that:
+
 get_fallback_dataflows <- function(original_flow) {
   if (!is.null(original_flow) && !identical(original_flow, "GLOBAL_DATAFLOW")) {
     return("GLOBAL_DATAFLOW")
@@ -115,6 +154,8 @@ get_fallback_dataflows <- function(original_flow) {
   character(0)
 }
 
+
+#### Low-level SDMX Fetchers ####
 # helper function to fetch and signals 404
 .fetch_one_flow <- function(
     indicator,
@@ -128,6 +169,7 @@ get_fallback_dataflows <- function(original_flow) {
     verbose = TRUE
 ) {
   base <- "https://sdmx.data.unicef.org/ws/public/sdmxapi/rest"
+
   indicator_str <- paste0(".", paste(indicator, collapse = "+"), ".")
   rel_path <- sprintf("data/UNICEF,%s,%s/%s", dataflow, version, indicator_str)
 
@@ -135,20 +177,25 @@ get_fallback_dataflows <- function(original_flow) {
   if (!is.null(start_year_str)) full_url <- paste0(full_url, "&startPeriod=", start_year_str)
   if (!is.null(end_year_str))   full_url <- paste0(full_url, "&endPeriod=", end_year_str)
 
-  # Shared dynamic User-Agent
   ua <- .unicefData_ua
 
   pages <- list()
-  page <- 0L
+  page  <- 0L
 
   repeat {
-    page_url <- paste0(full_url, "&startIndex=", page * page_size, "&count=", page_size)
-    if (verbose) message(sprintf("Fetching page %d...", page + 1))
+    page_url <- paste0(
+      full_url,
+      "&startIndex=", page * page_size,
+      "&count=", page_size
+    )
 
-    # IMPORTANT: catch 404 as a signal, not a fatal error
+    if (verbose) {
+      message(sprintf("Fetching page %d...", page + 1))
+    }
+
     out <- tryCatch(
       {
-        txt <- fetch_sdmx_text(page_url, ua = ua, max_retries)     # may throw http_404
+        txt <- fetch_sdmx_text(page_url, ua = ua, retry = max_retries)
         readr::read_csv(txt, show_col_types = FALSE)
       },
       error = function(e) e
@@ -156,10 +203,8 @@ get_fallback_dataflows <- function(original_flow) {
 
     if (inherits(out, "error")) {
       if (.is_http_404(out)) {
-        # "Not in this dataflow"
         return(list(status = "not_found", df = NULL))
       }
-      # Any other error is still fatal (transient errors should be handled by RETRY)
       stop(out)
     }
 
@@ -173,17 +218,21 @@ get_fallback_dataflows <- function(original_flow) {
     Sys.sleep(0.2)
   }
 
+  if (length(pages) == 0) {
+    return(list(status = "ok", df = dplyr::tibble()))
+  }
+
   df_all <- dplyr::bind_rows(pages)
 
-  # Filter countries (post-fetch)
-  if (!is.null(countries) && nrow(df_all) > 0 && "REF_AREA" %in% names(df_all)) {
+  # Filter countries *only if column exists*
+  if (!is.null(countries) && "REF_AREA" %in% names(df_all)) {
     df_all <- df_all %>% dplyr::filter(REF_AREA %in% countries)
   }
 
   list(status = "ok", df = df_all)
 }
 
-
+#### Raw Data Retrieval ####
 #' @title Fetch Raw UNICEF Data
 #' @description Low-level fetcher for UNICEF SDMX API.
 #' @param indicator Character vector of indicator codes.
@@ -210,40 +259,42 @@ unicefData_raw <- function(
     page_size = 100000,
     verbose = TRUE
 ) {
-  # Validate inputs
-  if (is.null(dataflow) && is.null(indicator)) {
+  if (is.null(indicator) && is.null(dataflow)) {
     stop("Either 'indicator' or 'dataflow' must be specified.")
   }
 
-  # Validate year
   validate_year <- function(x) {
-    if (!is.null(x)) {
-      x_chr <- as.character(x)
-      if (!grepl("^\\d{4}$", x_chr)) stop("Year must be 4 digits")
-      return(x_chr)
+    if (is.null(x)) return(NULL)
+    x_chr <- as.character(x)
+    if (!grepl("^\\d{4}$", x_chr)) {
+      stop("Year must be a 4-digit string (YYYY).")
     }
-    NULL
+    x_chr
   }
+
   start_year_str <- validate_year(start_year)
-  end_year_str <- validate_year(end_year)
+  end_year_str   <- validate_year(end_year)
 
-  # Get version if needed
-  ver <- version %||% "1.0" # Simplified version handling for raw fetch
+  ver <- version %||% "1.0"
 
-  # determine primary dataflow
+  # Determine primary dataflow
   if (is.null(dataflow)) {
     dataflow <- detect_dataflow(indicator[1])
-    if (verbose) message(sprintf("Auto-detected dataflow '%s'", dataflow))
+    if (verbose) {
+      message(sprintf("Auto-detected dataflow '%s'", dataflow))
+    }
   }
 
-  # Candidate flows: primary + fallbacks
   flows <- dataflow
   if (!is.null(indicator)) {
-    fb <- get_fallback_dataflows(original_flow = dataflow)
-    if (length(fb) > 0) flows <- unique(c(dataflow, fb))
+    fb <- get_fallback_dataflows(dataflow)
+    if (length(fb) > 0) {
+      flows <- unique(c(dataflow, fb))
+    }
   }
 
   last_not_found <- FALSE
+
   for (flow in flows) {
     if (verbose && !identical(flow, dataflow)) {
       message(sprintf("Trying fallback dataflow '%s'...", flow))
@@ -271,72 +322,89 @@ unicefData_raw <- function(
     }
   }
 
-  # If all candidates were 404 (indicator not found in any attempted flow), return empty
   if (last_not_found) {
-    if (verbose) message(sprintf(
-      "No data found: indicator '%s' not present in tried dataflows: %s",
-      indicator[1], paste(flows, collapse = ", ")
-    ))
+    if (verbose) {
+      message(sprintf(
+        "No data found: indicator '%s' not present in tried dataflows: %s",
+        indicator[1],
+        paste(flows, collapse = ", ")
+      ))
+    }
     return(dplyr::tibble())
   }
 
-  # Otherwise: no pages but not 404 -> empty
   dplyr::tibble()
 }
 
-#
-#
-#   # Build URL
-#   base <- "https://sdmx.data.unicef.org/ws/public/sdmxapi/rest"
-#   indicator_str <- if (!is.null(indicator)) paste0(".", paste(indicator, collapse = "+"), ".") else "."
-#   rel_path <- sprintf("data/UNICEF,%s,%s/%s", dataflow, ver, indicator_str)
-#   full_url <- paste0(base, "/", rel_path, "?format=csv&labels=both")
-#
-#   if (!is.null(start_year_str)) full_url <- paste0(full_url, "&startPeriod=", start_year_str)
-#   if (!is.null(end_year_str)) full_url <- paste0(full_url, "&endPeriod=", end_year_str)
-#
-#   # Paging
-#   ua <- httr::user_agent("unicefData/1.0")
-#   pages <- list()
-#   page <- 0L
-#
-#   repeat {
-#     page_url <- paste0(full_url, "&startIndex=", page * page_size, "&count=", page_size)
-#     if (verbose) message(sprintf("Fetching page %d...", page + 1))
-#     # this NULL here masks 404, let's fix and make fallback possible:
-#     df <- tryCatch(
-#       readr::read_csv(fetch_sdmx_text(page_url, ua, max_retries), show_col_types = FALSE),
-#       error = function(e) {
+#### Schema Validation ####
 
-#' @title Validate Data Against Schema
-#' @description Checks if dataframe matches expected schema. Warns on mismatch.
+#' Validate UNICEF Data Against SDMX Schema
+#'
+#' Checks whether the retrieved data frame conforms to the expected SDMX
+#' schema for a given dataflow. Dimension mismatches trigger warnings;
+#' attributes are checked silently as they are often optional.
+#'
+#' @param df Data frame to validate.
+#' @param dataflow_id Character string. UNICEF SDMX dataflow ID.
+#'
+#' @return The input data frame.
 #' @export
-validate_unicef_schema <- function(df, dataflow) {
-  # Ensure schema_sync is loaded
-  if (!exists("load_dataflow_schema", mode = "function")) {
-    script_dir <- dirname(sys.frame(1)$ofile %||% ".")
-    schema_script <- file.path(script_dir, "schema_sync.R")
-    if (file.exists(schema_script)) source(schema_script)
+validate_unicef_schema <- function(df, dataflow_id) {
+
+  # Defensive: nothing to validate
+  if (is.null(df) || nrow(df) == 0) {
+    return(df)
   }
 
-  if (exists("load_dataflow_schema", mode = "function")) {
-    schema <- load_dataflow_schema(dataflow)
-    if (!is.null(schema)) {
-      # Check dimensions
-      expected_dims <- sapply(schema$dimensions, function(d) d$id)
-      missing_dims <- setdiff(expected_dims, names(df))
-      if (length(missing_dims) > 0) {
-        warning(sprintf("Dataflow '%s': Missing expected dimensions: %s",
-                        dataflow, paste(missing_dims, collapse = ", ")))
-      }
+  # Ensure schema loader is available
+  if (!exists("load_dataflow_schema", mode = "function")) {
+    warning(
+      "Schema validation tools not available; skipping schema validation."
+    )
+    return(df)
+  }
 
-      # Check attributes (optional but good to know)
-      expected_attrs <- sapply(schema$attributes, function(a) a$id)
-      missing_attrs <- setdiff(expected_attrs, names(df))
-      # Don't warn for attributes as they are often optional
+  schema <- load_dataflow_schema(dataflow_id)
+  if (is.null(schema)) {
+    return(df)
+  }
+
+  # Dimension validation (strict)
+  if (!is.null(schema$dimensions)) {
+    expected_dims <- vapply(
+      schema$dimensions,
+      function(d) d$id,
+      character(1)
+    )
+
+    missing_dims <- setdiff(expected_dims, names(df))
+    if (length(missing_dims) > 0) {
+      warning(sprintf(
+        "Dataflow '%s': missing expected dimensions: %s",
+        dataflow_id,
+        paste(missing_dims, collapse = ", ")
+      ))
     }
   }
+
+  # Attribute validation (informational only)
+  # Attributes are often optional in SDMX extracts; we do not warn by default.
+  # This block is intentionally non-fatal and silent.
+  if (!is.null(schema$attributes)) {
+    expected_attrs <- vapply(
+      schema$attributes,
+      function(a) a$id,
+      character(1)
+    )
+    # Potential future use: diagnostics / verbose mode
+    invisible(expected_attrs)
+  }
+
+  return(df)
 }
+
+
+#### Cleaning & Standardisation ####
 
 #' @title Clean and Standardize UNICEF Data
 #' @description Renames columns and converts types.
@@ -427,6 +495,10 @@ clean_unicef_data <- function(df) {
 #' @param maternal_edu Character string for maternal education filter.
 #' @param verbose Logical, print progress messages.
 #' @export
+
+
+
+#### Filtering ####
 filter_unicef_data <- function(df, sex = NULL, age = NULL, wealth = NULL, residence = NULL, maternal_edu = NULL, verbose = TRUE) {
   if (nrow(df) == 0) return(df)
 
@@ -529,36 +601,70 @@ filter_unicef_data <- function(df, sex = NULL, age = NULL, wealth = NULL, reside
   return(df)
 }
 
-#' @title Validate Data Against Schema
-#' @description Checks if the data matches the expected schema for the dataflow.
-#' @param df Data frame to validate
-#' @param dataflow_id Dataflow ID
-#' @return Validated data frame (warnings issued if mismatch)
-#' @export
-validate_unicef_schema <- function(df, dataflow_id) {
-  # Ensure schema_sync.R is loaded
-  if (!exists("load_dataflow_schema", mode = "function")) {
-    script_file <- sys.frame(1)$ofile
-    script_dir <- if (is.null(script_file)) "." else dirname(script_file)
-    schema_path <- file.path(script_dir, "schema_sync.R")
-    if (file.exists(schema_path)) {
-      source(schema_path, local = FALSE)
-    }
-  }
 
-  if (!exists("load_dataflow_schema", mode = "function")) {
-    warning("Could not load schema validation functions. Skipping validation.")
-    return(df)
-  }
-
-  expected_cols <- get_expected_columns(dataflow_id)
-  if (length(expected_cols) == 0) return(df)
-
-  missing_cols <- setdiff(expected_cols, names(df))
-  if (length(missing_cols) > 0) {
-    warning(sprintf("Data for %s is missing expected columns: %s",
-                    dataflow_id, paste(missing_cols, collapse = ", ")))
-  }
-
-  return(df)
-}
+#### Developer Space ####
+#' # Ensure required packages are loaded
+#' if (!requireNamespace("magrittr", quietly = TRUE)) stop("Package 'magrittr' required")
+#' if (!requireNamespace("dplyr", quietly = TRUE)) stop("Package 'dplyr' required")
+#' if (!requireNamespace("httr", quietly = TRUE)) stop("Package 'httr' required")
+#' if (!requireNamespace("readr", quietly = TRUE)) stop("Package 'readr' required")
+#'
+#' # manual pipe assignment
+#' `%>%` <- magrittr::`%>%`
+#'
+#' #' @title Validate Data Against Schema
+#' #' @description Checks if the data matches the expected schema for the dataflow.
+#' #' @param df Data frame to validate
+#' #' @param dataflow_id Dataflow ID
+#' #' @return Validated data frame (warnings issued if mismatch)
+#' #' @export
+#'
+#' validate_unicef_schema <- function(df, dataflow_id) {
+#'   # Ensure schema_sync.R is loaded
+#'   if (!exists("load_dataflow_schema", mode = "function")) {
+#'     script_file <- sys.frame(1)$ofile
+#'     script_dir <- if (is.null(script_file)) "." else dirname(script_file)
+#'     schema_path <- file.path(script_dir, "schema_sync.R")
+#'     if (file.exists(schema_path)) {
+#'       source(schema_path, local = FALSE)
+#'     }
+#'   }
+#'
+#'   if (!exists("load_dataflow_schema", mode = "function")) {
+#'     warning("Could not load schema validation functions. Skipping validation.")
+#'     return(df)
+#'   }
+#'
+#'   expected_cols <- get_expected_columns(dataflow_id)
+#'   if (length(expected_cols) == 0) return(df)
+#'
+#'   missing_cols <- setdiff(expected_cols, names(df))
+#'   if (length(missing_cols) > 0) {
+#'     warning(sprintf("Data for %s is missing expected columns: %s",
+#'                     dataflow_id, paste(missing_cols, collapse = ", ")))
+#'   }
+#'
+#'   return(df)
+#' }
+#'
+#' #   # Build URL
+#' #   base <- "https://sdmx.data.unicef.org/ws/public/sdmxapi/rest"
+#' #   indicator_str <- if (!is.null(indicator)) paste0(".", paste(indicator, collapse = "+"), ".") else "."
+#' #   rel_path <- sprintf("data/UNICEF,%s,%s/%s", dataflow, ver, indicator_str)
+#' #   full_url <- paste0(base, "/", rel_path, "?format=csv&labels=both")
+#' #
+#' #   if (!is.null(start_year_str)) full_url <- paste0(full_url, "&startPeriod=", start_year_str)
+#' #   if (!is.null(end_year_str)) full_url <- paste0(full_url, "&endPeriod=", end_year_str)
+#' #
+#' #   # Paging
+#' #   ua <- httr::user_agent("unicefData/1.0")
+#' #   pages <- list()
+#' #   page <- 0L
+#' #
+#' #   repeat {
+#' #     page_url <- paste0(full_url, "&startIndex=", page * page_size, "&count=", page_size)
+#' #     if (verbose) message(sprintf("Fetching page %d...", page + 1))
+#' #     # this NULL here masks 404, let's fix and make fallback possible:
+#' #     df <- tryCatch(
+#' #       readr::read_csv(fetch_sdmx_text(page_url, ua, max_retries), show_col_types = FALSE),
+#' #       error = function(e) {
